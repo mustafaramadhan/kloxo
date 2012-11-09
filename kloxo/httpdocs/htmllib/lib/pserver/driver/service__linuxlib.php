@@ -22,14 +22,22 @@ static function getServiceList()
 static function getMainServiceList()
 {
 	global $gbl, $sgbl, $login, $ghtml; 
+
 	$nval['httpd'] = '';
+	$nval['nginx'] = '';
+	$nval['lighttpd'] = '';
+
+	$nval['php-fpm'] = '';
+
 	$nval['named'] = 'named';
+	$nval['djbdns'] = "tinydns";
+
 	$nval['qmail'] = 'qmail';
 	$nval['courier-imap'] = 'courier';
-	$nval['lighttpd'] = '';
 	$nval['spamassassin'] = '';
+
 	$nval['iptables'] = "";
-	$nval['djbdns'] = "tinydns";
+
 	return $nval;
 }
 

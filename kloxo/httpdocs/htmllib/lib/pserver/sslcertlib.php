@@ -77,11 +77,11 @@ function updateform($subaction, $param)
 		$vlist['text_key_content'] = null;
 	}
 
-	/*
+/*
 	if ($this->getParentO()->isAdmin()) {
 		$vlist['__m_message_pre'] = 'sslcert_updateform_update_pre_admin';
 	} else {
-		$vlist['__m_message_pre'] = 'sslcert_updateform_update_pre_client';
+		$vlist['__m_message_pre'] = 'sslcert_updateform_update_pre';
 	}
 */
 
@@ -164,7 +164,9 @@ function updateSetProgramSSL($param)
 	}
 	sslcert::checkAndThrow($contentscer, $contentskey, null);
 
-	$contentpem = "$contentscer\n$contentskey";
+//	$contentpem = "$contentscer\n$contentskey";
+	// MR -- make the same as program.pem; like inside lighttpd.conf example inside
+	$contentpem = "$contentskey\n$contentscer";
 
 	rl_exec_get(null, $param['slave_id'], array("sslcert", "setProgramSsl"), array($contentpem, $contentsca));
 
@@ -275,6 +277,9 @@ static function addform($parent, $class, $typetd = null)
 		$vlist["ssl_data_b_s_emailAddress_r"]  = null;
 	}
 
+	// MR -- add 'message inbox'
+	$vlist['__m_message_pre'] = 'sslcert_updateform_update_pre';
+
 	$ret['action'] = 'add';
 	$ret['variable'] = $vlist;
 
@@ -303,7 +308,8 @@ function createNewcertificate()
 		$ltemp[$key] = $name;
 	}
 
-	$config['private_key_bits'] = 1024;
+//	$config['private_key_bits'] = 1024;
+	$config['private_key_bits'] = 2048;
 	$privkey = openssl_pkey_new($config);
 	openssl_pkey_export($privkey, $text_key_content);
 	$csr = openssl_csr_new($ltemp, $privkey);

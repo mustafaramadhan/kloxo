@@ -3,37 +3,39 @@
 // release on Kloxo 6.1.7
 // by mustafa.ramadhan@lxcenter.org
 
-include_once "htmllib/lib/include.php"; 
+include_once "htmllib/lib/include.php";
 
 // initProgram('admin');
 
 $list = parse_opt($argv);
 
 $select = (isset($list['select'])) ? $list['select'] : 'optimize';
+$spare  = (isset($list['spare']))  ? (int)$list['spare'] : null;
+$nolog  = (isset($list['nolog']))  ? $list['nolog'] : null;
 
-$spare = (isset($list['spare'])) ? (int)$list['spare'] : null;
-
-setApacheOptimize($select, $spare);
+setApacheOptimize($select, $spare, $nolog);
 
 /* ****** BEGIN - setApacheOptimize ***** */
 
-function setApacheOptimize($select, $spare = null)
+function setApacheOptimize($select, $spare = null, $nolog = null)
 {
+	log_cleanup("Apache optimize", $nolog);
 
-	global $gbl, $sgbl, $login, $ghtml;
+	$factor = (isWebProxy()) ? 0.5 : 1;
 
-	log_cleanup("Apache optimize");
+	exec("/etc/init.d/httpd status", $out, $ret);
 
-	$status = shell_exec("/etc/init.d/httpd status");
+	$status = implode("\n", $out);
 
 	if ($select === 'status') {
-		log_cleanup("- Status: $status");
-	}
-	elseif ($select === 'optimize') {
+		log_cleanup("- Status: $status", $nolog);
+	} else {
 		//--- stristr for Case-insensitive
 		if (stristr($status, 'running') !== FALSE) {
-			log_cleanup("- Service stop");
+			log_cleanup("- Service stop", $nolog);
+
 			$ret = lxshell_return("service", "httpd", "stop");
+
 			if ($ret) { throw new lxexception('httpd_stop_failed', 'parent'); }
 		}
 
@@ -41,114 +43,80 @@ function setApacheOptimize($select, $spare = null)
 
 		if (file_exists("/etc/httpd/conf.d/swtune.conf")) {
 			//--- some vps include /etc/httpd/conf.d/swtune.conf
-			log_cleanup("- Delete /etc/httpd/conf.d/swtune.conf if exist");
+			log_cleanup("- Delete /etc/httpd/conf.d/swtune.conf if exist", $nolog);
+
 			lunlink("/etc/httpd/conf.d/swtune.conf");
 		}
 
-		$m = array();
+		if ($select === 'optimize') {
+			$m = array();
 
-		// check memory -- $2=total, $3=used, $4=free, $5=shared, $6=buffers, $7=cached
+			// check memory -- $2=total, $3=used, $4=free, $5=shared, $6=buffers, $7=cached
 
-		$m['total']   = (int)shell_exec("free -m | grep Mem: | awk '{print $2}'");
-		$m['spare']   = ($spare) ? $spare : ($m['total'] * 0.25);
+			$m['total']   = (int)shell_exec("free -m | grep Mem: | awk '{print $2}'");
+			$m['spare']   = ($spare) ? $spare : ($m['total'] * 0.25);
 
-		$m['apps']    = (int)shell_exec("free -m | grep buffers/cache: | awk '{print $3}'");
+			$m['apps']    = (int)shell_exec("free -m | grep buffers/cache: | awk '{print $3}'");
 
-	/*
-		$m['used']    = (int)shell_exec("free -m | grep Mem: | awk '{print $3}'");
-		$m['free']    = (int)shell_exec("free -m | grep Mem: | awk '{print $4}'");
-		$m['shared']  = (int)shell_exec("free -m | grep Mem: | awk '{print $5}'");
-		$m['buffers'] = (int)shell_exec("free -m | grep Mem: | awk '{print $6}'");
-		$m['cached']  = (int)shell_exec("free -m | grep Mem: | awk '{print $7}'");
-	
-		$m['avail']   = $m['free'] + $m['shared'] + $m['buffers'] + $m['cached'] - $m['spare'];
-	*/
+		/*
+			$m['used']    = (int)shell_exec("free -m | grep Mem: | awk '{print $3}'");
+			$m['free']    = (int)shell_exec("free -m | grep Mem: | awk '{print $4}'");
+			$m['shared']  = (int)shell_exec("free -m | grep Mem: | awk '{print $5}'");
+			$m['buffers'] = (int)shell_exec("free -m | grep Mem: | awk '{print $6}'");
+			$m['cached']  = (int)shell_exec("free -m | grep Mem: | awk '{print $7}'");
 
-		$m['avail'] = $m['total'] - $m['spare'] - $m['apps'];
+			$m['avail']   = $m['free'] + $m['shared'] + $m['buffers'] + $m['cached'] - $m['spare'];
+		*/
 
-	//	$maxpar = (int)($m['avail'] / 25);
-	//	$minpar = (int)($maxpar / 2);
+			$m['avail'] = $m['total'] - $m['spare'] - $m['apps'];
 
-		$maxpar_p = (int)($m['avail'] / 30) + 1;
-		$minpar_p = (int)($maxpar_p / 2);
+			$maxpar_p = (int)($m['avail'] / 30 * $factor);
+			$minpar_p = (int)($maxpar_p / 2);
 
-		$maxpar_w = (int)($m['avail'] / 35) + 1;
-		$minpar_w = (int)($maxpar_w / 2);
+			$maxpar_w = (int)($m['avail'] / 35 * $factor);
+			$minpar_w = (int)($maxpar_w / 2);
+
+			if ($maxpar_p < 4) {
+				$maxpar_p = 4;
+				$minpar_p = 2;
+			}
 		
-		// because on apache 2.2.x no appear 'overflow' memory so
-		// no need ServerLimit = MaxClients = $maxpar_p for prefork/itk
-		// no need MaxClients = ThreadsPerChild = $maxpar_p for worker/event
+			if ($maxpar_w < 4) {
+				$maxpar_w = 4;
+				$minpar_w = 2;
+			}
 
-		$s = <<<EOF
-Timeout 150
-KeepAlive On
-MaxKeepAliveRequests 100
-KeepAliveTimeout 5
 
-<IfModule prefork.c>
-	StartServers 2
-	MinSpareServers {$minpar_p}
-	MaxSpareServers {$maxpar_p}
-	ServerLimit 256
-	MaxClients 256
-	MaxRequestsPerChild 4000
-	MaxMemFree 2
-</IfModule>
+		} elseif ($select === 'default') {
+			$maxpar_p = 4;
+			$minpar_p = 2;
+			$maxpar_w = 4;
+			$minpar_w = 2;
+		}
 
-<IfModule itk.c>
-	StartServers 2
-	MinSpareServers {$minpar_p}
-	MaxSpareServers {$maxpar_p}
-	ServerLimit 256
-	MaxClients 256
-	MaxRequestsPerChild 4000
-	MaxMemFree 2
-</IfModule>
+		log_cleanup("- Service start", $nolog);
 
-<IfModule worker.c>
-	StartServers 2
-	MaxClients 150
-	MinSpareThreads {$minpar_w}
-	MaxSpareThreads {$maxpar_w}
-	ThreadsPerChild 25
-	MaxRequestsPerChild 0
-	ThreadStackSize 8196
-	MaxMemFree 2
-</IfModule>
+		$input = array('maxspareservers' => $maxpar_p, 'minspareservers' => $minpar_p,
+				'maxsparethreads' => $maxpar_w, 'minsparethreads' => $minpar_w,
+				'keepalive' => 'Off', 'maxrequestsperchild' => '2000');
 
-<IfModule event.c>
-	StartServers 2
-	MaxClients 150
-	MinSpareThreads {$minpar_w}
-	MaxSpareThreads {$maxpar_w}
-	ThreadsPerChild 25
-	MaxRequestsPerChild 0
-	ThreadStackSize 8196
-	MaxMemFree 2
-</IfModule>
+		$tplsource = getLinkCustomfile("/home/apache/tpl", "~lxcenter.conf.tpl");
 
-Include /home/apache/conf/exclusive/*.conf
-Include /home/apache/conf/defaults/*.conf
-Include /home/apache/conf/domains/*.conf
-Include /home/apache/conf/redirects/*.conf
-Include /home/apache/conf/webmails/*.conf
-Include /home/apache/conf/wildcards/*.conf
+		$tpltarget = "/etc/httpd/conf.d/~lxcenter.conf";
 
-###version0-7###
-EOF;
+		$tpl = file_get_contents($tplsource);
 
-		log_cleanup("- Calculate Apache:");
-		log_cleanup("-- threads limit (min/max -> $minpar_w/$maxpar_w) and servers limit (min/max -> $minpar_p/$maxpar_p)");
+		$tplparse = getParseInlinePhp($tpl, $input);
 
-		log_cleanup("- Write to /etc/httpd/conf.d/~lxcenter.conf");
+		file_put_contents($tpltarget, $tplparse);
 
-		// $s=implode("", file("/etc/httpd/conf.d/~lxcenter.conf"));
-		$f = fopen("/etc/httpd/conf.d/~lxcenter.conf", "w");
-		fwrite($f,$s,strlen($s));
+		log_cleanup("- Calculate: threads (min/max -> {$minpar_w}/{$maxpar_w}) and servers (min/max -> {$minpar_p}/{$maxpar_p})", $nolog);
+		log_cleanup("- Write to '/etc/httpd/conf.d/~lxcenter.conf'", $nolog);
 
-		log_cleanup("- Service start");
 		$ret = lxshell_return("service", "httpd", "start");
+
 		if ($ret) { throw new lxexception('httpd_start_failed', 'parent'); }
+
 	}
 }
 

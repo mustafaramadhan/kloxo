@@ -1,0 +1,67 @@
+#
+# Kloxo LogRotate
+# Initial version
+# Needs cleanup
+# Using this one on LxCenter server
+# Created by Danny Terweij <d.terweij@lxcenter.org>
+#
+# Daily rotates (compressed) and keeps maximum of 30 days
+#
+# add and modified by Mustafa Ramadhan <mustafa.ramadhan@lxcenter.org>
+
+/var/log/kloxo/maillog /var/log/kloxo/courier /var/log/kloxo/smtp.log /var/log/kloxo/pureftpd.log {
+        daily
+        rotate 30
+        create
+        compress
+        notifempty
+        missingok
+        postrotate
+        pkill -HUP syslogd
+        endscript
+}
+
+/home/httpd/*/stats/*_log {
+        daily
+        rotate 30
+        create 0664 apache apache
+        compress
+        notifempty
+        missingok
+}
+
+/home/*/__processed_stats/*_log-* {
+        daily
+        rotate 30
+        create 0750 root root
+        compress
+        notifempty
+        missingok
+}
+
+/home/kloxo/httpd/lighttpd/*.log {
+        daily
+        rotate 30
+        create 0664 apache apache
+        compress
+        notifempty
+        missingok
+}
+
+/usr/local/lxlabs/kloxo/log/* {
+        daily
+        rotate 30
+        create 0664 lxlabs lxlabs
+        compress
+        notifempty
+        missingok
+}
+
+/home/*/logs/*.log {
+        daily
+        rotate 30
+        create 0664 apache apache
+        compress
+        notifempty
+        missingok
+}

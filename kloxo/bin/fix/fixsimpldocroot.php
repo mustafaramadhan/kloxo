@@ -42,5 +42,5 @@ foreach($list as $c) {
 	}
 }
 
-lxshell_return("__path_php_path", "../bin/misc/fixftpuserclient.phps");
+lxshell_return("__path_php_path", "../bin/misc/fixftpuserclient.phps", "--nolog");
 

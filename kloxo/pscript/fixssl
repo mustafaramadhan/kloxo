@@ -1,0 +1,6 @@
+#!/bin/sh
+
+. /script/fix.inc
+
+. /script/directory
+lphp.exe ../bin/fix/fixssl.php $*

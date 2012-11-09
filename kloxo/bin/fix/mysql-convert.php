@@ -97,8 +97,9 @@ function setMysqlConvert($engine, $database, $table, $config)
 
 	if ($config === 'yes') {
 		if ($database === '_all_') {
-			$string = implode("", file("/etc/my.cnf"));
-			$file = fopen("/etc/my.cnf", "w");
+			$file = "/etc/my.cnf";
+
+			$string = file_get_contents($file);
 
 			$string_array = explode("\n", $string);
 
@@ -129,7 +130,7 @@ function setMysqlConvert($engine, $database, $table, $config)
 
 			$string_collect = str_replace($string_source, $string_replace, $string_collect);
 
-			fwrite($file, $string_collect, strlen($string_collect));
+			file_put_contents($file, $string_collect);
 		}
 	}
 

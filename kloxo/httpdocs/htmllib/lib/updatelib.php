@@ -18,8 +18,10 @@ function update_main()
 	if (lxfile_exists("/var/cache/kloxo/kloxo-install-firsttime.flg")) {
 		log_cleanup("- Installing Kloxo packages at the first time");
 		$DoUpdate = true;
-	}
-	else {
+	} elseif (lxfile_exists("/var/cache/kloxo/kloxo-install-secondtime.flg")) {
+		log_cleanup("- Installing Kloxo packages at reinstall");
+		$DoUpdate = true;
+	} else {
 		log_cleanup("- Getting Version Info from the LxCenter download Server");
 		$upversion = false;
 		if ((isset($opt['till-version']) && $opt['till-version']) || lxfile_exists("__path_slave_db")) {
@@ -65,7 +67,8 @@ function update_main()
 			$DoUpdate = false;
 		}
 
-}
+	}
+
 	log_cleanup("*** Executing Update (upcp) - END ***");
 
 	if ( $DoUpdate == false ) {
@@ -109,9 +112,9 @@ function do_upgrade($upversion)
 	log_cleanup("Downloading $programfile");
 	download_source("/$program/$programfile");
 	log_cleanup("Download Done!... Start unzip");
-	system("cd ../../ ; unzip -o httpdocs/download/$programfile");
+	exec("cd ../../ ; unzip -o httpdocs/download/$programfile");
 	// issue #710 - Make sure the files are owned by lxlabs UID/GID
-	system("chown -R lxlabs:lxlabs /usr/local/lxlabs/");
+	exec("chown -R lxlabs:lxlabs /usr/local/lxlabs/");
 	chdir($saveddir);
 }
 

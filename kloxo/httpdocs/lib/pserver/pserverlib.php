@@ -30,26 +30,54 @@ Function display($var)
 function updateSwitchProgram($param)
 {
 	global $gbl, $sgbl, $login, $ghtml; 
+
 	if_demo_throw_exception('switchprog');
+
+	// MR -- change and add nofixconfig
+/*
 	$this->web_driver = $gbl->getSyncClass($this->__masterserver, $this->nname, 'web');
 	$this->dns_driver = $gbl->getSyncClass($this->__masterserver, $this->nname, 'dns');
 	$this->spam_driver = $gbl->getSyncClass($this->__masterserver, $this->nname, 'spam');
+
 	$a['web'] = $this->web_driver;
 	$a['dns'] = $this->dns_driver;
 	$a['spam'] = $this->spam_driver;
+*/
+	$a['web'] = $param['web_driver'];
+	$a['dns'] = $param['dns_driver'];
+	$a['spam'] = $param['spam_driver'];
+
+	$nofixconfig = $param['no_fix_config'];
+
+	if ($nofixconfig === 'on') { return null; }
+
+	// MR -- add 'pserver' on slavedb - read current server enough from slave_get_db
+	$a['pserver'] = $this->nname;
+	rl_exec_get(null, $this->nname, 'slave_save_db', array('driver', $a));
+
 	foreach($param as $k => $v) {
 		if ($this->$k === $v) {
 			dprint("No change for $k: $v\n");
 		} else {
+			dprint("Change for $k: $v\n");
+
 			$class = strtilfirst($k, "_");
 			$drstring = "{$class}_driver";
+
 			rl_exec_get(null, $this->nname, array($class, 'switchDriver'), array($class, $this->$drstring, $v));
+
 			changeDriver($this->nname, $class, $v);
+
 			$fixc = $class;
+
 			if ($class === 'spam') { $fixc = "mmail"; }
-			lxshell_return("__path_php_path", "../bin/fix/fix$fixc.php", "--server=$this->nname");
+
 			$a[$class] = $v;
 			rl_exec_get(null, $this->nname, 'slave_save_db', array('driver', $a));
+
+			// MR -- original code not work, so change to, also must be the last process!
+		//	lxshell_return("__path_php_path", "../bin/fix/fix$fixc.php", "--server=$this->nname");
+			lxshell_return("lxphp.exe", "../bin/fix/fix$fixc.php", "--server=$this->nname", "--nolog");
 		}
 	}
 }
@@ -63,7 +91,9 @@ function updatemailQueueFlush($param)
 function updatemailQueueDelete($param)
 {
 	$this->updateAccountSel($param, "mailqueuedelete");
-	rl_exec_get(null, $this->syncserver, array("mailqueue__qmail", 'QueueDelete'), array($this->mailqueuedelete_list));
+	rl_exec_get(null, $this->syncserver, array("mailqueue__qmail", 'QueueDelete'), 
+			array($this->mailqueuedelete_list));
+
 	return null;
 }
 
@@ -84,7 +114,9 @@ function createUsed()
 
 function getUsed()
 {
-	$vlist = array("mmail" => "mmail", "dns" => "dns",  "web" => "web", "mysqldb" => 'mysqldb', 'mssqldb' => 'mssqldb');
+	$vlist = array("mmail" => "mmail", "dns" => "dns",  "web" => "web", 
+			"mysqldb" => 'mysqldb', 'mssqldb' => 'mssqldb');
+
 	$ret = null;
 	foreach($vlist as $k => $v) {
 		if (!is_array($v)) {
@@ -117,7 +149,9 @@ function createUsedDomainList()
 		$var = "used_domainlist_{$k}_f";
 		$this->$var = $v;
 	}
-	$serlist = array("mmail" => "mmail", "dns" => "dns", "web" => "web", "mysqldb" => 'mysqldb', 'mssqldb' => 'mssqldb');
+	$serlist = array("mmail" => "mmail", "dns" => "dns", "web" => "web", 
+			"mysqldb" => 'mysqldb', 'mssqldb' => 'mssqldb');
+
 	return $serlist;
 
 }
@@ -150,10 +184,13 @@ function getMysqlDbAdmin(&$alist)
 		$dbad = $this->getFromList('dbadmin', "mysql___{$this->syncserver}");
 		$user = $dbad->dbadmin_name;
 		$pass = $dbad->dbpassword;
+
 		if (if_demo()) {
 			$pass = "demopass";
 		}
-		$alist[] = create_simpleObject(array('url' => "$dbadminUrl?pma_username=$user&pma_password=$pass", 'purl' => "c=mysqldb&a=updateform&sa=phpmyadmin", 'target' => "target='_blank'"));
+
+		$alist[] = create_simpleObject(array('url' => "$dbadminUrl?pma_username=$user&pma_password=$pass", 
+				'purl' => "c=mysqldb&a=updateform&sa=phpmyadmin", 'target' => "target='_blank'"));
 	} catch (Exception $e) {
 		
 	}

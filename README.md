@@ -1,3 +1,9 @@
+# Kloxo-MR
+
+This is special edition (fork) of Kloxo with many features not existing on Kloxo official release (6.1.12+).
+
+This fork named as Kloxo-MR (meaning 'Kloxo fork by Mustafa Ramadhan').
+
 # Kloxo
 From Kloxo HostInaBox, a light and efficient webhosting platform, to Kloxo Enterprise, a truly distributed hosting platform.
 Kloxo is a fully scriptable, distributed and a 100% object oriented hosting platform.

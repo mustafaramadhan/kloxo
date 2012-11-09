@@ -31,7 +31,7 @@ function lpanel_main()
 	}
 
 	$ghtml->print_include_jscript('left_panel');
-	print("<body topmargin=0 leftmargin=0 style='background-color:#fafafa'>");
+	print("<body topmargin=\"0\" leftmargin=\"0\" bottommargin=\"0\" rightmargin=\"0\" style=\"background-color:#fafafa\">");
 
 	//$ghtml->lpanel_beginning();
 	try {

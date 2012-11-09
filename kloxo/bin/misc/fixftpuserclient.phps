@@ -8,6 +8,7 @@ $list = parse_opt($argv);
 
 $server = (isset($list['server'])) ? $list['server'] : 'localhost';
 $client = (isset($list['client'])) ? $list['client'] : null;
+$nolog  = (isset($list['nolog']))  ? $list['nolog'] : null;
 
 //lxfile_mv("/etc/pure-ftpd/pureftpd.passwd", "/etc/pure-ftpd/pureftpd.passwd.oldsaved");
 //lunlink("/etc/pure-ftpd/pureftpd.pdb");
@@ -16,7 +17,7 @@ $client = (isset($list['client'])) ? $list['client'] : null;
 $login->loadAllObjects('client');
 $list = $login->getList('client');
 
-log_cleanup("Fixing FTP User");
+log_cleanup("Fixing FTP User", $nolog);
 
 foreach($list as $c) {
 	if ($client) {
@@ -34,11 +35,13 @@ foreach($list as $c) {
 
 	$flist = $c->getList('ftpuser');
 
+	if (!$flist) { continue; }
+
 	foreach($flist as $fl) {
 		$fl->dbaction = 'syncadd';
 		$fl->was();
 
-		log_cleanup("- '{$fl->nname}' ('{$c->nname}') at '{$fl->syncserver}'");
+		log_cleanup("- '{$fl->nname}' ('{$c->nname}') at '{$fl->syncserver}'", $nolog);
 	}
 }
 

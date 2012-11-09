@@ -37,7 +37,7 @@ function __construct()
 	$this->__var_lxlabs_marker = "__lxlabs_marker";
 
 	$this->__var_lpanelwidth = "220";
-
+/*
 	$this->__var_language['tr'] = 'Turkish';
 	$this->__var_language['en'] = 'English';
 	$this->__var_language['cen'] = 'Custom English';
@@ -59,6 +59,20 @@ function __construct()
 	$this->__var_language['ro'] = 'Romanian';
 	$this->__var_language['br'] = 'Brazilian Portuguese';
 	$this->__var_language['hu'] = 'Hungarian';
+*/
+		// MR -- change reading language list
+		$path = "/usr/local/lxlabs/kloxo/httpdocs/lang";
+
+		$dirs = scandir($path);
+
+		foreach ($dirs as &$dir) {
+			$file = "{$path}/{$dir}/language";
+
+			if (file_exists($file)) {
+				$this->__var_language[$dir] = trim(file_get_contents($file));
+			}
+		}
+
 }
 
 

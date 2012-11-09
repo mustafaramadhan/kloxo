@@ -1,0 +1,50 @@
+[kloxo-release-noarch]
+name=kloxo-release-noarch
+baseurl=https://github.com/mustafaramadhan/kloxo/raw/rpms-release/centos%distro_ver%/noarch/
+enabled=1
+gpgcheck=0
+
+[kloxo-release-arch]
+name=kloxo-release-$basearch
+baseurl=https://github.com/mustafaramadhan/kloxo/raw/rpms-release/centos%distro_ver%/$basearch/
+enabled=1
+gpgcheck=0
+
+[kloxo-testing-noarch]
+name=kloxo-testing-noarch
+baseurl=https://github.com/mustafaramadhan/kloxo/raw/rpms-testing/centos%distro_ver%/noarch/
+enabled=0
+gpgcheck=0
+
+[kloxo-testing-arch]
+name=kloxo-testing-$basearch
+baseurl=https://github.com/mustafaramadhan/kloxo/raw/rpms-testing/centos%distro_ver%/$basearch/
+enabled=0
+gpgcheck=0
+
+# ==================================
+
+[kloxo-centalt]
+name=kloxo-centalt - $basearch
+baseurl=http://centos.alt.ru/repository/centos/%distro_ver%/$basearch/
+enabled=1
+gpgcheck=0
+exclude=openssh*
+
+# ==================================
+
+[kloxo-ius]
+name=kloxo - IUS Community Packages for Enterprise Linux %distro_ver% - $basearch
+baseurl=http://dl.iuscommunity.org/pub/ius/stable/Redhat/%distro_ver%/$basearch
+mirrorlist=http://dmirr.iuscommunity.org/mirrorlist/?repo=ius-el%distro_ver%&arch=$basearch
+enabled=1
+gpgcheck=0
+
+# ==================================
+
+[kloxo-epel]
+name=kloxo - Extra Packages for Enterprise Linux %distro_ver% - $basearch
+baseurl=http://download.fedoraproject.org/pub/epel/%distro_ver%/$basearch
+mirrorlist=http://mirrors.fedoraproject.org/mirrorlist?repo=epel-%distro_ver%&arch=$basearch
+enabled=1
+gpgcheck=0

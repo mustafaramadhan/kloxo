@@ -1,0 +1,3 @@
+#!/bin/sh
+. /script/directory
+lphp.exe ../bin/fix/fixphpfpm.php $*

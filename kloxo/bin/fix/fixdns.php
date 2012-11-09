@@ -7,14 +7,15 @@ $list = parse_opt($argv);
 
 $server = (isset($list['server'])) ? $list['server'] : 'localhost';
 $client = (isset($list['client'])) ? $list['client'] : null;
+$nolog  = (isset($list['nolog'])) ? $list['nolog'] : null;
 
-log_cleanup("Fixing DNS server config");
+log_cleanup("Fixing DNS server config", $nolog);
 
 if (isset($list['new_dnstemplate'])) {
 	$dnst = new Dnstemplate(null, null, $list['new_dnstemplate']);
 	$dnst->get();
 	if ($dnst->dbaction === 'add') {
-		log_cleanup("- DNS template doesn't exist");
+		log_cleanup("- DNS template doesn't exist", $nolog);
 		exit;
 	}
 }
@@ -37,6 +38,8 @@ foreach($list as $c) {
 	}
 
 	$dlist = $c->getList('domaina');
+
+	if (!$dlist) { continue; }
 	
 	foreach($dlist as $l) {
 		$dns = $l->getObject('dns');
@@ -49,7 +52,7 @@ foreach($list as $c) {
 		$dns->setUpdateSubaction('full_update');
 		$dns->was();
 
-		log_cleanup("- '{$dns->nname}'('{$c->nname}') at '{$dns->syncserver}'");
+		log_cleanup("- '{$dns->nname}'('{$c->nname}') at '{$dns->syncserver}'", $nolog);
 	}
 }
 

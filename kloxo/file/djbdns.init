@@ -12,13 +12,59 @@
 
 
 # Path to the Qmailctl script, server binary, and short-form for messages.
-Qmailtcp=/usr/local/bin/tcpserver
+# Qmailtcp=/usr/local/bin/tcpserver
+Qmailtcp=/usr/bin/tcpserver
 Qmailproc=/var/qmail/boot/proc
 prog=Djbdns
 RETVAL=0
 
 PATH=$PATH:/usr/local/bin
-(cd /usr/local/lxlabs/kloxo/httpdocs/ ; lphp.exe ../bin/misc/djbdnsstart.php )
+
+# change for:
+## (cd /usr/local/lxlabs/kloxo/httpdocs/ ; lphp.exe ../bin/misc/djbdnsstart.php )
+
+# begin change
+
+if [ id -u tinydns >/dev/null 2>&1 ] ; then
+	useradd tinydns
+fi
+
+if [ id -u dnslog >/dev/null 2>&1 ] ; then
+	useradd dnslog
+fi
+
+if [ id -u dnscache >/dev/null 2>&1 ] ; then
+	useradd dnscache
+fi
+
+if [ id -u axfrdns >/dev/null 2>&1 ] ; then
+	useradd axfrdns
+fi
+
+if ! [ -d /var/tinydns ] ; then
+	tinydns-conf tinydns dnslog /var/tinydns 127.0.0.1
+fi
+
+if ! [ -d /var/axfrdns ] ; then
+	# original set for every ips except 127.0.0.1
+	# change 0.0.0.0 that mean all ips
+	axfrdns-conf axfrdns dnslog /var/axfrdns /var/tinydns 0.0.0.0
+fi
+
+echo '0.0.0.0' > /var/tinydns/env/IP
+
+if ! [ -d /var/dnscache ] ; then
+	dnscache-conf dnscache dnslog /var/dnscache 127.0.0.1
+fi
+
+echo ':allow' > /var/axfrdns/tcp
+
+cd /var/axfrdns
+
+/usr/local/bin/tcprules tcp.cdb tcp.tmp < tcp
+
+echo '127.0.0.1' > /var/dnscache/env/IP
+# end change
 
 # The semantics of these two functions differ from the way Qmailctl does
 # things -- attempting to start while running is a failure, and shutdown

@@ -360,8 +360,12 @@ function getCommandResource($resource)
 
 static function switchDriver($class, $old, $new)
 {
-	exec_class_method("{$class}__$new", "installMe");
+//	exec_class_method("{$class}__$new", "installMe");
+//	exec_class_method("{$class}__$old", "uninstallMe");
+
+	//MR -- must be change because problem with template-based web config
 	exec_class_method("{$class}__$old", "uninstallMe");
+	exec_class_method("{$class}__$new", "installMe");
 }
 
 

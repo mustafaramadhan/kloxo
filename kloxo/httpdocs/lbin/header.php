@@ -49,7 +49,7 @@ function print_header()
 	global $gbl, $sgbl, $login, $ghtml; 
 	$lightskincolor = $login->getLightSkinColor();
 	createHeaderData();
-print("<body topmargin=0 leftmargin=0> ");
+print("<body topmargin=\"0\" leftmargin=\"0\" bottommargin=\"0\" rightmargin=\"0\"> ");
 print("<div id=statusbar  style='background:#$lightskincolor;scroll:auto;height:26;width:100%;border-bottom:4px solid #b1cfed;margin:2 2 2 2:vertical-align:top;text-align:top'>");
 
 $alist[] = "a=show";

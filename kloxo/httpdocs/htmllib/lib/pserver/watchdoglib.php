@@ -81,6 +81,7 @@ static function addDefaultWatchdog($pserver)
 
 
 	self::addOneWatchdog($pserver, "web", "80", "__driver_web");
+
 	self::addOneWatchdog($pserver, "smtp", "25", "/etc/init.d/xinetd restart");
 	self::addOneWatchdog($pserver, "ftp", "21", "/etc/init.d/xinetd restart");
 	self::addOneWatchdog($pserver, "pop", "110", "/etc/init.d/courier-imap restart");

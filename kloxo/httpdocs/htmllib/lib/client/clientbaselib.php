@@ -989,16 +989,8 @@ static function continueForm($parent, $class, $param, $continueaction)
 	}
 
 	// also check if /home/<client> exists --> prevent use like 'httpd' as client
-/*
-	if (lxfile_exists("/home/{$param['nname']}")) {
-		throw new lxexception("{$param['nname']}_dir_exists_under_home_dir", 'nname');
 
-	}
-*/
-	$reserved = array(
-		'apache', 'lighttpd', 'nginx', 
-		'httpd', 'kloxo', 'lxadmin', 'lxlabs', 'lxcenter', 'nouser', 
-		'tinydns', 'axfrdns', 'dnscache', 'dnslog', 'bind', 'named');
+	$reserved = getBranchList('reserved');
 
 	foreach($reserved as $r) {
 		if ($param['nname'] === $r) {
@@ -1006,6 +998,10 @@ static function continueForm($parent, $class, $param, $continueaction)
 		}
 	}
 
+	if (lxfile_exists("/home/{$param['nname']}")) {
+		throw new lxexception("{$param['nname']}_dir_exists_under_home_dir", 'nname');
+
+	}
 
 	$param['nname'] = trim($param['nname']);
 
@@ -1110,8 +1106,12 @@ static function addform($parent, $class, $typetd = null)
 	$vlist['nname'] = "";
 
 	if ($sgbl->isKloxo()) {
-
+	/*
 		$dlist = domainbase::getDnsTemplateList($parent);
+
+		// MR -- don't know what a problem where including domain make unfinish looping
+		// so, for awhile option for customer as the same as reseller
+
 		if ($typetd['val'] === 'customer') {
 			$vlist['domain_name'] = "";
 			$vlist['dnstemplate_name'] = make_hidden_if_one($dlist);
@@ -1119,6 +1119,7 @@ static function addform($parent, $class, $typetd = null)
 			$list = lx_merge_good('--leave--', $list);
 			$vlist['installapp_app'] = array('s', $list);
 		}
+	*/
 	}
 	$vlist['password'] = "";
 

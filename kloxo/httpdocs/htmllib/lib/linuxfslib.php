@@ -48,20 +48,27 @@ function lxfile_dirsize($path, $byteflag = false)
 	$global_dontlogshell = true;
 
 	$path = expand_real_root($path);
+
 	if (!lxfile_exists($path)) {
 		return 0;
 	}
+/*
 	$rt = lxshell_output("du", "-sc", $path);
 	$os  = preg_replace("/\s+/", ":", $rt);
 	$ret = explode(":", $os);
 	$t = $ret[2];
+*/
+
+	exec("du -sc {$path} | grep -i 'total'", $out);
+	$os  = preg_replace("/\s+/", ":", $out[0]);
+	$t = str_replace(":total", "", $os);
 
 	$global_dontlogshell = $old;
 
 	if ($byteflag) {
 		return round($t * (1024), 1);
 	} else {
-		return round($t/(1024), 1);
+		return round($t / (1024), 1);
 	}
 }
 
@@ -523,6 +530,22 @@ function lxfile_cp_content($dirsource, $dirdest)
 	}
 }
 
+// MR -- taken from (with mod)
+// http://stackoverflow.com/questions/2050859/copy-entire-contents-of-a-directory-to-another-using-php
+function xcopy($src, $dest)
+{
+	foreach  (scandir($src) as $file) {
+		if (!is_readable($src.'/'.$file)) { continue; }
+
+		if (is_dir($file) && ($file!='.') && ($file!='..') ) {
+			mkdir($dest . '/' . $file);
+			xcopy($src.'/'.$file, $dest.'/'.$file);
+		} else {
+			copy($src.'/'.$file, $dest.'/'.$file);
+		}
+	}
+}
+
 function lxfile_cp_rec($dirsource, $dirdest)
 { 
 	
@@ -533,7 +556,6 @@ function lxfile_cp_rec($dirsource, $dirdest)
 	$cmd = getShellCommand("cp", $arglist);
 	return do_exec_system($username, null, $cmd, $out, $err, $ret, null);
 } 
-
 
 function lxfile_size($file)
 {
@@ -700,4 +722,29 @@ function do_exec_system($username, $dir, $cmd, &$out, &$err, &$ret, $input)
 		chdir($oldpath);
 	}
 
+}
+
+// MR -- new function for handle ftp connection
+function lxftp_connect($ftp_server) {
+
+    list($ftp_protocol, $ftp_rest) = explode("://", $ftp_server);
+
+    // Remark - if not use 'ftp://' or 'ftps://', ftp_protocol=ftp_server and ftp_rest=null
+    if (!$ftp_rest) {
+        $ftp_rest = $ftp_protocol;
+        $ftp_protocol = "ftp";
+    }
+
+    list($ftp_domain, $ftp_port) = explode(":", $ftp_rest);
+
+    if (!$ftp_port) {
+        $ftp_port = "21";
+    }
+
+    if ($ftp_url === 'ftps') {
+        return ftp_ssl_connect($ftp_domain, $ftp_port);
+    }
+    else {
+        return ftp_connect($ftp_domain, $ftp_port);
+    }
 }

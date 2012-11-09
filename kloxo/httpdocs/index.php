@@ -59,9 +59,10 @@ function domainshow()
 
 
 	if ($login->getSpecialObject('sp_specialplay')->isOn('simple_skin')) {
-		print("<FRAMESET frameborder=0 rows=\"96%,*\"  border=0>\n");
-		print("<FRAME name=mainframe src=\"$url\" >\n");
-		print("<FRAME name=bottomframe src='htmllib/lbin/bottom.php'>\n");
+	//	print("<FRAMESET frameborder=\"0\" rows=\"96%,*\"  border=\"0\">\n");
+		print("<FRAMESET frameborder=\"0\" rows=\"*,16\"  border=\"0\">\n");
+		print("<FRAME name=\"mainframe\" src=\"$url\" >\n");
+		print("<FRAME name=\"bottomframe\" src=\"htmllib/lbin/bottom.php\">\n");
 		return;
 	}
 
@@ -76,25 +77,26 @@ function domainshow()
 		}
 	}
 
-	print("<FRAMESET frameborder=0 rows=\"$headerheight,*\"  border=0>\n");
+	print("<FRAMESET frameborder=\"0\" rows=\"$headerheight,*\" border=\"0\">\n");
 
-	print("<FRAME name=topframe src=$file scrolling=no>\n");
+	print("<FRAME name=\"topframe\" src=\"$file\" scrolling=\"no\">\n");
 
 	if (!$sp->isOn('split_frame')) { 
-		print("<FRAMESET frameborder=0 cols=\"$width,*\" border=0>\n");
+		print("<FRAMESET frameborder=\"0\" cols=\"$width,*\" border=\"0\">\n");
 		print("<FRAME name=leftframe src='/htmllib/lbin/lpanel.php?lpanel_type=tree' $scrollstring border=0>\n");
 	}
 
 	if ($sp->isOn('split_frame')) {
-		print("<FRAMESET frameborder=0 cols=\"50%,*\" border=0>\n");
+		print("<FRAMESET frameborder=\"0\" cols=\"50%,*\" border=\"0\">\n");
 	}
-	print("<FRAMESET frameborder=0 rows=\"96%,*\"  border=0>\n");
+//	print("<FRAMESET frameborder=\"0\" rows=\"96%,*\" border=\"0\">\n");
+	print("<FRAMESET frameborder=\"0\" rows=\"*,16\" border=\"0\">\n");
 	// style='overflow-x:hidden;'
-	print("<FRAME name=mainframe  src=\"$url\">\n");
-	print("<FRAME name=bottomframe src='htmllib/lbin/bottom.php'>\n");
+	print("<FRAME name=\"mainframe\" src=\"$url\">\n");
+	print("<FRAME name=\"bottomframe\" src=\"htmllib/lbin/bottom.php\">\n");
 
 	if ($sp->isOn('split_frame')) {
-		print("<FRAME name=rightframe src=\"$url\">\n");
+		print("<FRAME name=\"rightframe\" src=\"$url\">\n");
 	}
 	print("</FRAMESET>\n");
 	print("</FRAMESET>\n");
@@ -102,7 +104,7 @@ function domainshow()
 	?> 
 	</head>
 	<?php
-	//<FRAME name=bottomframe src="/bin/bottom.php">
+	//<FRAME name="bottomframe" src="/bin/bottom.php">
 }
 
 

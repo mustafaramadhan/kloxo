@@ -147,7 +147,7 @@ function updateFtp_conf($param)
 
 
 	if (isOn($param['upload_to_ftp']) && !isOn($param['dont_verify_ftp_f'])) {
-		$fn = ftp_connect($param['ftp_server']);
+		$fn = lxftp_connect($param['ftp_server']);
 		$mylogin = ftp_login($fn, $param['rm_username'], $param['rm_password']);
 		if (!$mylogin) {
 			$p = error_get_last();
@@ -556,7 +556,7 @@ static function clear_extra_backups($class, $name, $object)
 	if (!$object->ftp_server) {
 		return;
 	}
-	$fn = ftp_connect($object->ftp_server);
+	$fn = lxftp_connect($object->ftp_server);
 	$mylogin = ftp_login($fn, $object->rm_username, $object->rm_password);
 
 	if (!$fn) { return; }
@@ -712,7 +712,7 @@ function doUpdateRestore($file, $param)
 
 function download_from_server($file, $localfile)
 {
-	$fn = ftp_connect($this->ftp_server);
+	$fn = lxftp_connect($this->ftp_server);
 	$mylogin = ftp_login($fn, $this->rm_username, $this->rm_password);
 	if (!$mylogin) {
 		$p = error_get_last();
@@ -731,7 +731,7 @@ function download_from_server($file, $localfile)
 
 static function upload_to_server($file, $uploadfilename, $object)
 {
-	$fn = ftp_connect($object->ftp_server);
+	$fn = lxftp_connect($object->ftp_server);
 	$mylogin = ftp_login($fn, $object->rm_username, $object->rm_password);
 	if (!$mylogin) {
 		$p = error_get_last();

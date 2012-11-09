@@ -37,6 +37,7 @@ static function getListVersion($syncserver, $list)
 	$list[]['componentname'] = 'bind';
 	$list[]['componentname'] = 'spamassassin';
 	$list[]['componentname'] = 'pure-ftpd';
+	$list[]['componentname'] = 'nginx';
 
 	foreach($list as $l) {
 		$nlist[] = $l['componentname'];

@@ -167,7 +167,9 @@ function dbactionAdd()
 	createRestartFile($this->main->__var_dnsdriver);
 	$result = self::getCurrentIps();
 //	web__apache::createWebmailConfig($result);
-	web__apache::createWebDefaultConfig($result);
+//	web__apache::createWebDefaultConfig($result);
+
+	exec("sh /script/fixweb --target=defaults --nolog");
 }
 
 function dbactionUpdate($subaction)
@@ -208,7 +210,7 @@ static function getCurrentIps()
 		}
 	}
 
-	$result = "";
+	$result = array(); // Initialize as array (expected return result)
 
 	foreach($result1 as $res) {
 
@@ -231,7 +233,9 @@ static function listSystemIps($machinename)
 	$result = self::getCurrentIps();
 	
 //	web__apache::createWebmailConfig($result);
-	web__apache::createWebDefaultConfig($result);
+//	web__apache::createWebDefaultConfig($result);
+
+	exec("sh /script/fixweb --target=defaults --nolog");
 	
 	$res =  ipaddress::fixstatus($result);
 	foreach($res as $r) {

@@ -1,0 +1,8 @@
+### MR -- new 'model' since 6.2.x
+
+Change language spec with ISO country (3166-1) and language (639-1) definitions.
+
+Format: language-country
+
+en-us is English in US country.
+id-id is Bahasa Indonesia in Indonesia country

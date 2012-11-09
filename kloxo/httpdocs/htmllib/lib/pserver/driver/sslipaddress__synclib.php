@@ -20,7 +20,10 @@ function dbactionUpdate($subaction)
 
 	lfile_put_contents("$path/$name.crt", $contentscer);
 	lfile_put_contents("$path/$name.key", $contentskey);
-	$contentpem = "$contentscer\n$contentskey";
+//	$contentpem = "$contentscer\n$contentskey";
+	// MR -- make the same as program.pem; like inside lighttpd.conf example inside
+	$contentpem = "$contentskey\n$contentscer";
+
 	lfile_put_contents("$path/$name.pem", $contentpem);
 
 	if ($contentsca) {

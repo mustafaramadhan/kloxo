@@ -82,7 +82,9 @@ function updatecleanup_main()
 	
 	// --- remove httpd-itk rpm (from webtatic.repo or others) because may conflict with
 	// httpd 2.2.21 that include mpm itk beside mpm worker and event
-	
+
+	// MR - better for httpd 2.4.x where httpd-itk separated from main httpd
+/*	
 	exec("rpm -q httpd-itk | grep -i 'not installed'", $out, $ret);
 
 	// --- not work with !$ret
@@ -96,7 +98,7 @@ function updatecleanup_main()
 			exec("yum reinstall httpd -y");
 		}
 	}
-
+*/
 	// MR -- mysql not start after kloxo slave install
 	log_cleanup("Preparing MySQL service");
 
@@ -105,15 +107,60 @@ function updatecleanup_main()
 	
 	log_cleanup("- MySQL restarted");
 	exec("service mysqld restart");
-
+/*
 	// MR -- importance for update from 6.1.6 or previous where change apache/lighttpd structure 
 	// or others for next version
 
+	// MR -- the same accurate with update one-by-one but faster
+	// no need mod_fastcgi for httpd 2.4.x because using mod_proxy_fcgi
 	$slist = array(
-		"httpd*", "lighttpd*", "bind*", "djbdns*", "pure-ftpd*", "php*",
-		"vpopmail", "courier-imap-toaster", "courier-authlib-toaster", 
-		"qmail", "safecat", "spamassassin", "bogofilter", "ezmlm-toaster", 
-		"autorespond-toaster", "clamav-toaster");
+		"httpd httpd-tools", "lighttpd lighttpd-fastcgi", "nginx",
+		"bind bind-chroot", "djbdns", "pure-ftpd",
+		"mod_php mod_suphp mod_ruid2",
+		"autorespond-toaster clamav-toaster",
+		"courier-authlib-toaster courier-imap-toaster",
+		"daemontools-toaster ezmlm-toaster",
+		"libsrs2-toaster maildrop-toaster",
+		"ripmime-toaster simscan-toaster",
+		"ucspi-tcp-toaster",
+		"qmail vpopmail",
+		"spamassassin bogofilter",
+		"lxphp lxlighttpd lxjailshell",
+		"mysql mysql-server"
+	);
+
+	setUpdateServices($slist);
+
+	// MR - specific for php variants
+	// php52/php53u/php54 taken from ius repo
+	// php (with 53 version) taken from atomic/centalt
+
+	$slist = array(
+		"php php52 php53u php54",
+		"php-devel php52-devel php53u-devel php54-devel",
+		"php-xcache php52-xcache php53u-xcache php54-xcache",
+		"php-gd php52-gd php53u-gd php54-gd",
+		"php-fpm php52-fpm php53u-fpm php54-fpm",
+		"php-zend php-ioncube",
+		"php-zend-optimizer php-ioncube-loader",
+		"php-zend-guard-loader",
+		"php52-zend-optimizer-loader php52-ioncube-loader",
+		"php53u-zend-guard-loader php53u-ioncube-loader",
+		"php54-zend-guard-loader php54-ioncube-loader",
+		"php-suhosin php52-suhosin php53u-suhosin php54-suhosin"
+	);
+
+	setUpdateServices($slist);
+*/
+	
+	$slist = array(
+		"httpd* lighttpd* nginx*",
+		"mod_* mysql* php* lx*",
+		"bind* djbdns* pure-ftpd*",
+		"*-toaster qmail* vpopmail*",
+		"spamassassin* bogofilter*",
+	);
+
 	setUpdateServices($slist);
 	
 	// MR -- use this trick for qmail non-daemontools based
@@ -127,11 +174,17 @@ function updatecleanup_main()
 	exec("chkconfig qmail on");
 	createRestartFile("qmail");
 
-	$fixapps = array("dns", "web", "php", "mail", "ftpuser", "vpop");
+	$fixapps = array("dns", "web", "php", "mail", "ftpuser");
 	setUpdateConfigWithVersionCheck($fixapps, $opt['type']);
+
+	log_cleanup("Fixing 'lxpopuser' MySQL password");
+	exec("sh /script/fixvpop");
+	log_cleanup("- Fixing process");
 
 	// --- for anticipate change xinetd listing
 	exec("service xinetd restart");
+
+	log_cleanup("*** Executing Update (cleanup) - END ***");
 }
 
 function cp_dbfile()

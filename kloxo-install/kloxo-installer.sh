@@ -21,6 +21,7 @@
 # LxCenter - Kloxo Installer
 #
 # Version: 1.0 (2011-08-02 - by mustafa.ramadhan@lxcenter.org)
+# Version: 2.0 (2012-07-24 - by mustafa.ramadhan@lxcenter.org)
 #
 
 if [ "$#" == 0 ] ; then
@@ -133,36 +134,16 @@ fi
 
 # Check if selinuxenabled exists
 if [ ! -f $SELINUX_CHECK ] ; then
-	echo -en "SELinux disabled            " $C_MISS
-	echo -e "\a\nThe installer could not determine SELinux status.\n" \
-		"If you are sure it is DISABLED, you may proceed."
-	get_yes_no "Continue?" 0
-	if [ "$?" -eq "0" ] ; then 
-		echo -e "Aborting ...\n"
-		exit $E_SELINUX
-	fi
+	echo -en "SELinux not installed       " $C_MISS
 else
 	# Check if SElinux is enabled from exit status. 0 = Enabled; 1 = Disabled;
 	eval $SELINUX_CHECK
 	OUT=$?
 	if [ $OUT -eq "0" ] ; then
 		echo -en "SELinux disabled            " $C_NO
-		echo -e "\a\n$APP_NAME cannot be installed or executed with SELinux enabled. " \
-			"The installer can disable it, but a reboot will be required.\n"
-		echo -e "You will have to restart the installer again after reboot.\n"
-		get_yes_no "Do you want to disable SELinux and reboot?" 1
-		if [ "$?" -eq "1" ] ; then 
-			echo -e "Disabling SELinux ...\n"
-			cp --backup=t $SELINUX_CFG $SELINUX_CFG.old
-			echo "SELINUX=disabled" > $SELINUX_CFG
-			echo -e "SELinux disabled successfully\n"
-			echo -e "Rebooting ...\n"
-			reboot
-			exit $E_REBOOT
-		else
-			echo -e "Please DISABLE SELinux manually and try again.\nAborting ...\n"
-			exit $E_SELINUX
-		fi
+        setenforce 0
+		echo "SELINUX=disabled" > $SELINUX_CFG
+		echo -e "SELinux disabled successfully\n"
 	elif [ $OUT -eq "1" ] ; then
 		echo -en "SELinux disabled            " $C_OK
 	fi
@@ -185,7 +166,10 @@ echo -e "	When it's finished, you will be presented with a welcome message and f
 read -n 1 -p "Press any key to continue ..."
 
 # Start install
-yum -y install php php-mysql wget zip unzip
+if [ ! -f /usr/local/lxlabs/ext/php/php ] ; then
+	yum -y install php php-mysql wget zip unzip
+fi
+
 export PATH=/usr/sbin:/sbin:$PATH
 
 if [ ! -f ./kloxo-install.zip ] ; then

@@ -756,7 +756,7 @@ function log_log($file, $mess, $id = null)
 	lfile_put_contents($rf, @ date("H:i M/d/Y") . ": $mess" . PHP_EOL, FILE_APPEND);
 }
 
-function log_cleanup($mess)
+function log_cleanup($mess, $nolog = null)
 {
 	// Function used in cleanup/upcp process
 	//
@@ -766,10 +766,13 @@ function log_cleanup($mess)
 		$mess = var_export($mess, true);
 	}
 	$mess = trim($mess);
-	$rf = "__path_program_root/log/update";
 
 	print( $mess . "\n" );
-	lfile_put_contents($rf, @ date("H:i M/d/Y") . ": $mess" . PHP_EOL, FILE_APPEND);
+
+	if (!$nolog) {
+		$rf = "__path_program_root/log/update";
+		lfile_put_contents($rf, @ date("H:i M/d/Y") . ": $mess" . PHP_EOL, FILE_APPEND);
+	}
 }
 
 function log_ajax($mess, $id = 1)
@@ -1866,6 +1869,10 @@ function get_language()
 	} else {
 		$lan = 'en';
 	}
+
+	// MR -- change en to en-us
+	if ($lan === 'en') { $lan = 'en-us'; }
+
 	return $lan;
 }
 
@@ -2039,6 +2046,20 @@ function check_raw_password($class, $client, $pass)
 	//return true;
 
 	if (!$class || !$client || !$pass) {
+		return false;
+	}
+
+	// MR -- sanitize input
+	if ((stripos($class, "'") !== false) || 
+			(stripos($client, "'") !== false) || 
+			(stripos($pass, "'") !== false)) {
+		return false;
+	}
+
+	// MR -- sanitize input
+	if ((stripos($class, "\"") !== false) || 
+			(stripos($client, "\"") !== false) || 
+			(stripos($pass, "\"") !== false)) {
 		return false;
 	}
 
@@ -3067,6 +3088,7 @@ function getDbvariable($listvar, $mainvar)
 		dprint("NO schema for $listvar $mainvar <br> \n");
 		return null;
 	}
+
 }
 
 function check_file_if_owned_by($file, $user)
@@ -3129,9 +3151,32 @@ function change_db_pass()
 function create_database()
 {
 	global $gbl, $sgbl, $login, $ghtml;
+
+/*
 	$flist = parse_sql_data();
 	foreach ($flist as $k => $v) {
 		create_table_with_drop($k, $v);
+	}
+*/
+	// MR -- create kloxo database like horde or roundcube model
+	// no override when database exist --> possible reinstall kloxo without lossing kloxo setting
+
+	$pass = slave_get_db_pass();
+
+	$pstring = null;
+
+	if ($pass) {
+		$pstring = "-p\"$pass\"";
+	}
+
+	$dbpath = '/usr/local/lxlabs/kloxo/httpdocs/sql';
+
+	system("mysql -f -u root $pstring < {$dbpath}/db-structure-base.sql >/dev/null 2>&1");
+
+	// MR -- running update sql file exist
+
+	if (file_exists('/usr/local/lxlabs/kloxo/httpdocs/sql/db-structure-update.sql')) {
+		system("mysql -f -u root $pstring < {$dbpath}/db-structure-update.sql >/dev/null 2>&1");
 	}
 }
 
@@ -3153,7 +3198,7 @@ function parse_sql_data()
 	$trel = $sgbl->__ver_release;
 
 	$rpath = "sql/full.lxsql";
-	$pathc = "htmllib/sql/common.lxsql";
+	$pathc = "sql/common.lxsql";
 	include $rpath;
 	include $pathc;
 
@@ -3266,7 +3311,8 @@ function parse_sql_data()
 	$var['quotavar'] = $_quota_var;
 	$var['fieldvar'] = $_field_var;
 
-	lfile_put_contents("__path_dbschema", serialize($var));
+	// MR -- no need for this!
+//	lfile_put_contents("__path_dbschema", serialize($var));
 	return $_return_value;
 }
 

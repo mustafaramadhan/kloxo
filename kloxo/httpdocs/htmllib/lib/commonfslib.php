@@ -42,7 +42,9 @@ function lxshell_unzip_numeric_with_throw($dir, $file, $list = null)
 {
 	$ret = lxshell_unzip_numeric($dir, $file, $list);
 	if ($ret) {
-		throw new lxException("could_not_unzip_file", '');
+//		throw new lxException("could_not_unzip_file", '');
+		// MR -- more informative error message
+		throw new lxException($msg, "Could not unzip file - dir: {$dir}; file: {$file}");
 	}
 }
 
@@ -132,7 +134,9 @@ function lxuser_unzip_with_throw($username, $dir, $file, $list = null)
 {
 	$ret = lxshell_unzip($username, $dir, $file, $list);
 	if ($ret) {
-		throw new lxException("could_not_unzip_file", '');
+//		throw new lxException("could_not_unzip_file", '');
+		// MR -- more informative error message
+		throw new lxException($msg, "Could not unzip file - dir: {$dir}; file: {$file}");
 	}
 }
 

@@ -6,7 +6,7 @@
 if [ "$1" == "--help" ] ; then
 	echo
 	echo " ---------------------------------------------------------------------------"
-	echo "  format: sh $0 --select=<status/optimize> --spare=[]"
+	echo "  format: sh $0 --select=<status/default/optimize> --spare=[]"
 	echo " ---------------------------------------------------------------------------"
 	echo "   --spare - spare/unused memory in MB; default: 25% total memory"
 	echo

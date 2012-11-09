@@ -3,8 +3,6 @@
 include_once "htmllib/lib/include.php"; 
 initProgram('admin');
 
-
-
 $login->loadAllObjects('client');
 $list = $login->getList('client');
 

@@ -105,6 +105,10 @@ function createExtraVariables()
 static function addform($parent, $class, $typetd = null)
 {
 	$vlist = null;
+
+	$vlist['__m_message_pre'] = 'reverse_dns';
+
+
 	if ($parent->isClass('client')) {
 		$vlist['nname'] = null;
 		$vlist['reversename'] = null;
@@ -114,8 +118,10 @@ static function addform($parent, $class, $typetd = null)
 			$vlist['reversename'] = null;
 		}
 	}
+
 	$ret['variable'] = $vlist;
 	$ret['action'] = 'add';
+
 	return $ret;
 }
 

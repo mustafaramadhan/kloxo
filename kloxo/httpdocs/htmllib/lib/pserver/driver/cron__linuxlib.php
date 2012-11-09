@@ -51,6 +51,8 @@ function syncCreateConf()
 
 	if ($this->main->__var_mailto) {
 		$cmd .= "MAILTO={$this->main->__var_mailto}\n";
+	} else {
+		$cmd .= "MAILTO=\"\"\n";
 	}
 
 	$result = $this->main->__var_cron_list;

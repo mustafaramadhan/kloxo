@@ -150,13 +150,18 @@ function createShowRlist($subaction)
 
 function getDbAdminUrl()
 {
+	global $gbl, $sgbl, $login, $ghtml; 
+
+	$sslport = $sgbl->__var_prog_ssl_port;
+	$nonsslport = $sgbl->__var_prog_port;
 
 	if (!$this->isLocalhost()) {
 		$fqdn = getFQDNforServer($this->syncserver);
+
 		if (http_is_self_ssl()) {
-			return "https://$fqdn:7777/thirdparty/phpMyAdmin/";
+			return "https://{$fqdn}:{$sslport}/thirdparty/phpMyAdmin/";
 		} else {
-			return "http://$fqdn:7778/thirdparty/phpMyAdmin/";
+			return "http://{$fqdn}:{$nonsslport}/thirdparty/phpMyAdmin/";
 		}
 	} else {
 		return "/thirdparty/phpMyAdmin/";

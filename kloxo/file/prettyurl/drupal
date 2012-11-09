@@ -1,9 +1,0 @@
-type rewrite 404
-<%lxpath%>/index.php
-url.rewrite-final = (
-		"^<%lxpath%>/system/test/(.*)$" => "<%lxpath%>/index.php?q=system/test/$1",
-		"^<%lxpath%>/([^.?]*)\?(.*)$" => "<%lxpath%>/index.php?q=$1&$2",
-		"^<%lxpath%>/([^.?]*)$" => "<%lxpath%>/index.php?q=$1",
-		"^<%lxpath%>/search/node/(.*)$" => "<%lxpath%>/index.php?q=search/node/$1"
-		)
-

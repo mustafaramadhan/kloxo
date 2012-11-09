@@ -1,0 +1,26 @@
+#
+# mod_rpaf changes the remote address of the client visible to
+# other Apache modules when two conditions are satisfied.
+#
+
+LoadModule rpaf_module modules/mod_rpaf-2.0.so
+
+#
+# enable mod_rpaf
+#
+RPAFenable On
+
+#
+# take the incoming X-Host header and update the virtualhost settings
+# accordingly
+#
+RPAFsethostname On
+
+#
+# define which IP's are frontend proxies that sends the correct
+# X-Forwarded-For headers
+#
+RPAFproxy_ips 127.0.0.1
+
+# RPAFheader      X-Forwarded-For
+RPAFheader      X-Real-IP

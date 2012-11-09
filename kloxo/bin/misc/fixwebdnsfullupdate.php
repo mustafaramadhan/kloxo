@@ -59,7 +59,7 @@ $driverapp = $gbl->getSyncClass(null, 'localhost', 'web');
 if ($driverapp === 'apache') {
 	// --- issue #589
 //	addLineIfNotExistInside("/etc/httpd/conf/httpd.conf", "Include /etc/httpd/conf/kloxo/kloxo.conf", "");
-	lxshell_return("__path_php_path", "../bin/misc/installsuphp.php");
+	lxshell_return("__path_php_path", "../bin/misc/installsuphp.php", "--nolog");
 } else {
 	lxfile_cp("../file/lighttpd/lighttpd.conf", "/etc/lighttpd/lighttpd.conf");
 	// --- issue #598

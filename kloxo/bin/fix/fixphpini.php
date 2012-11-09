@@ -7,13 +7,14 @@ $list = parse_opt($argv);
 
 $server = (isset($list['server'])) ? $list['server'] : 'localhost';
 $client = (isset($list['client'])) ? $list['client'] : null;
+$nolog  = (isset($list['nolog'])) ? $list['nolog'] : null;
 
 $login->loadAllObjects('client');
 $list = $login->getList('client');
 
 $plist = $login->getList('pserver');
 
-log_cleanup("Fixing php.ini");
+log_cleanup("Fixing php.ini", $nolog);
 
 foreach($plist as $s) {
 	if ($client) {
@@ -30,7 +31,7 @@ foreach($plist as $s) {
 	$pi->setUpdateSubaction('full_update');
 	$pi->was();
 
-	log_cleanup("- in '/etc' at '{$s->nname}'");
+	log_cleanup("- in '/etc' at '{$s->nname}'", $nolog);
 }
 
 foreach($list as $c) {
@@ -57,7 +58,7 @@ foreach($list as $c) {
 		$php->setUpdateSubaction('full_update');
 		$php->was();
 
-		log_cleanup("- in '/home/httpd/{$web->nname}' ('{$c->nname}') at '{$web->syncserver}'");
+		log_cleanup("- in '/home/httpd/{$web->nname}' ('{$c->nname}') at '{$web->syncserver}'", $nolog);
 	}
 }
 
