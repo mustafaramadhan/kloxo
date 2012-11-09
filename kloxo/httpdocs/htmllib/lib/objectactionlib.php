@@ -10,8 +10,7 @@ function webcommandline_main()
 
 	$opt = $_REQUEST;
 
-	// MR -- why && instead || ?
-//	if ($opt['login-class'] !== 'client' && $opt['login-class'] !== 'auxiliary') {
+	// MR -- why && instead || ?  ( MR Fix - && Because its an inverted check both need to be true)
 	if ($opt['login-class'] !== 'client' || $opt['login-class'] !== 'auxiliary') {
 		json_print("error", $opt, "__error_only_clients_and_auxiliary_allowed_to_login");
 		log_log("web_command", "__error_only_clients_and_auxiliary_allowed_to_login");
