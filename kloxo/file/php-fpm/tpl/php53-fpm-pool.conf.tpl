@@ -95,7 +95,7 @@ php_admin_value[display_errors] = <?php echo $display_error_flag; ?>
 
 php_admin_value[file_uploads] = <?php echo $file_uploads_flag; ?>
 
-php_admin_value[fiupload_max_filesize] = <?php echo $upload_max_filesize; ?>
+php_admin_value[upload_max_filesize] = <?php echo $upload_max_filesize; ?>
 
 php_admin_value[log_errors] = <?php echo $log_errors_flag; ?>
 
