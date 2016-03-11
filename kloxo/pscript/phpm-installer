@@ -56,10 +56,10 @@ echo $x >>/opt/${base_name}/install.log
 
 if yum list ${src_name}u >/dev/null 2>&1 ; then
 	pack_name="${src_name}u"
-elif yum list ${src_name}w >/dev/null 2>&1 ; then
-	pack_name="${src_name}w"
 elif yum list ${src_name} >/dev/null 2>&1 ; then
 	pack_name="${src_name}"
+elif yum list ${src_name}w >/dev/null 2>&1 ; then
+	pack_name="${src_name}w"
 else
 	echo "- No PHP packages exists. Only detecting '${src_name}u' and '${src_name}'. Exit"
 	echo

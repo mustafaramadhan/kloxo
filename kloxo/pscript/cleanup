@@ -24,6 +24,7 @@ for i in $(ls -ld /opt/php* | awk '{print $9}' | sed 's:/opt/::g' | tr '\n' ' ')
 done
 
 sh /script/fixlxphpexe
+sh /script/set-kloxo-php
 
 . /script/directory
 lxphp.exe ../bin/common/cleanup.php

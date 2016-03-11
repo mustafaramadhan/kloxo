@@ -95,20 +95,20 @@ ALTER TABLE `client` ADD COLUMN IF NOT EXISTS `used_q_totalinode_usage` VARCHAR(
 
 ALTER TABLE `serverftp` ADD COLUMN IF NOT EXISTS `defaultport` VARCHAR(255) NULL DEFAULT NULL AFTER `enable_anon_ftp`;
 
-ALTER TABLE `mmail` ADD `enable_spf_autoip` VARCHAR(255) NULL DEFAULT NULL AFTER `text_spf_domain`;
-ALTER TABLE `mmail` ADD `text_spf_include` VARCHAR(255) NULL DEFAULT NULL AFTER `enable_spf_flag`;
-ALTER TABLE `mmail` ADD `text_spf_redirect` VARCHAR(255) NULL DEFAULT NULL AFTER `text_spf_include`; 
+ALTER TABLE `mmail` ADD COLUMN IF NOT EXISTS `enable_spf_autoip` VARCHAR(255) NULL DEFAULT NULL AFTER `text_spf_domain`;
+ALTER TABLE `mmail` ADD COLUMN IF NOT EXISTS `text_spf_include` VARCHAR(255) NULL DEFAULT NULL AFTER `enable_spf_flag`;
+ALTER TABLE `mmail` ADD COLUMN IF NOT EXISTS `text_spf_redirect` VARCHAR(255) NULL DEFAULT NULL AFTER `text_spf_include`; 
 
-ALTER TABLE `sslcert` ADD `parent_domain` VARCHAR(255) NULL DEFAULT NULL AFTER `upload_status`;
-ALTER TABLE `sslcert` ADD `add_type` VARCHAR(255) NULL DEFAULT NULL AFTER `parent_domain`;
+ALTER TABLE `sslcert` ADD COLUMN IF NOT EXISTS `parent_domain` VARCHAR(255) NULL DEFAULT NULL AFTER `upload_status`;
+ALTER TABLE `sslcert` ADD COLUMN IF NOT EXISTS `add_type` VARCHAR(255) NULL DEFAULT NULL AFTER `parent_domain`;
 
-ALTER TABLE `web` ADD `force_https_redirect` VARCHAR(255) NULL DEFAULT NULL AFTER `force_www_redirect`;
+ALTER TABLE `web` ADD COLUMN IF NOT EXISTS `force_https_redirect` VARCHAR(255) NULL DEFAULT NULL AFTER `force_www_redirect`;
 
 ALTER TABLE `sslcert` CHANGE `parent_domain` `parent_domain` VARCHAR(255) NULL DEFAULT NULL;
 
-ALTER TABLE `web` ADD `web_selected` VARCHAR(255) NULL DEFAULT NULL AFTER `force_https_redirect`;
-ALTER TABLE `web` ADD `php_selected` VARCHAR(255) NULL DEFAULT NULL AFTER `web_selected`;
+ALTER TABLE `web` ADD COLUMN IF NOT EXISTS `web_selected` VARCHAR(255) NULL DEFAULT NULL AFTER `force_https_redirect`;
+ALTER TABLE `web` ADD COLUMN IF NOT EXISTS `php_selected` VARCHAR(255) NULL DEFAULT NULL AFTER `web_selected`;
 
 DELETE FROM phpini WHERE nname LIKE 'domain-%' OR nname LIKE 'web-%';
 
-ALTER TABLE `serverftp` ADD `enable_tls` VARCHAR(255) NULL DEFAULT NULL AFTER `defaultport`;
+ALTER TABLE `serverftp` ADD COLUMN IF NOT EXISTS `enable_tls` VARCHAR(255) NULL DEFAULT NULL AFTER `defaultport`;

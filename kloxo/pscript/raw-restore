@@ -13,7 +13,7 @@ echo ""
 echo "- For help, type '$0 [--help|-h]'"
 
 if [ "$#" == 0 ] ; then
-	echo "- No argument supplied. Defaulting to localhost (master) servers"
+	echo "- Run 'sh $0 --help' to know how to use this script"
 	exit
 fi
 

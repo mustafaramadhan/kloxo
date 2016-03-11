@@ -1,0 +1,10 @@
+#!/bin/sh
+
+CALLER=$(pwd | grep '^/usr/local/lxlabs/kloxo\|^/script')
+
+if [ "$CALLER" == "" ] ; then
+	echo "- No permit calling from outside '/usr/local/lxlabs/kloxo' or '/script'"
+	exit
+fi
+
+$@ || exit 1

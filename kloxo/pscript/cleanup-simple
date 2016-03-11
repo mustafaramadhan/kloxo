@@ -18,6 +18,7 @@ fi
 chkconfig kloxo on
 
 sh /script/fixlxphpexe
+sh /script/set-kloxo-php
 
 . /script/directory
 lxphp.exe ../bin/common/cleanup.php --without-services

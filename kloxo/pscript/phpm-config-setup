@@ -43,7 +43,7 @@ echo ${x}
 echo ${x} >>/opt/${base_name}/install.log
 
 for i in dba dbase eaccelerator ioncube pdo_dblib pdo_odbc pdo_pgsql pgsql suhosin odbc mongo \
-	apc apcu imagick interbase ioncube-loader memcache memcached mssql debug \
+	apc apcu imagick interbase ioncube-loader memcache memcached z-memcached mssql debug \
 	pdo_dblib pdo_firebird mysqlnd_ms mysqlnd_mysql mysqlnd_mysqli mysqlnd pdo_mysqlnd \
 	xdebug xcache opcache lzf redis enchant ; do
 

@@ -1,7 +1,11 @@
+if echo $0|grep 'fixweb' >/dev/null 2>&1 ; then
+	extra="[--domain]"
+fi
+
 if [ "$1" == "--help" ] || [ "$1" == "-h" ] ; then
 	echo ""
 	echo " ------------------------------------------------------------------------------"
-	echo "  format: sh $0 [--server=] [--client=] [--target=]"
+	echo "  format: sh $0 [--server=] [--client=] [--target=] $extra"
 	echo " ------------------------------------------------------------------------------"
 	echo "  --server="
 	echo "      localhost: master (default)"
@@ -16,6 +20,9 @@ if [ "$1" == "--help" ] || [ "$1" == "-h" ] ; then
 		echo "  --target="
 		echo "      - defaults: for 'defaults' config"
 		echo "      - domains: for 'domains' config"
+		echo "  --domain="
+		echo "      - optional and 'all' for default value"
+		echo "      - multiple domain separated by ',' (comma)"
 	elif echo $0|grep 'fixdns' >/dev/null 2>&1 ; then
 		echo "  --target="
 		echo "      - master: for 'master' config"

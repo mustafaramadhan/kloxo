@@ -34,7 +34,7 @@ foreach (glob("{$trgtcdpath}/mod_*.conf") as $file)
 	rename($file, $newfile);
 }
 
-$mpmlist = array('event', 'worker', 'itk');
+$mpmlist = array('prefork', 'itk', 'event', 'worker');
 
 // @exec("httpd -v|grep 'version:'|grep '/2.4.'", $out);
 // @exec("rpm -qa|grep -E '^httpd24-2.4', $out);
@@ -46,6 +46,7 @@ if (file_exists("/usr/local/lxlabs/kloxo/etc/flag/use_apache24.flg")) {
 	// exec("sed -i 's/^#LoadModule/LoadModule/' {$trgtcmdpath}/00-optional.conf");
 	// MR -- disable deflate module; auto-enable by mod-pagespeed
 	exec("sed -i 's/^LoadModule deflate_module/#LoadModule deflate_module/' {$trgtcmdpath}/00-base.conf");
+/*
 	// MR -- disabled all first; prefork not work because need 'special' php
 	exec("sed -i 's/^LoadModule mpm_/#LoadModule mpm_/' {$trgtcmdpath}/00-mpm.conf");
 
@@ -55,14 +56,22 @@ if (file_exists("/usr/local/lxlabs/kloxo/etc/flag/use_apache24.flg")) {
 			break;
 		}
 	}
-
+*/
+	foreach ($mpmlist as $k => $v) {
+		if (strpos($phptype, $v) !== false) {
+			exec("echo 'LoadModule mpm_{$v}_module modules/mod_mpm_{$v}.so' > {$trgtcmdpath}/00-mpm.conf");
+			break;
+		}
+	}
+	
 	// MR -- make blank content
 	exec("echo '' > /etc/sysconfig/httpd");
-
+/*
 //	exec("sed -i 's/^LoadModule lbmethod_heartbeat_module/#LoadModule lbmethod_heartbeat_module/' {$trgtcmdpath}/00-proxy.conf");
 	if (file_exists("{$trgtcmdpath}/00-proxy.conf")) {
 		exec("'mv' -f {$trgtcmdpath}/00-proxy.conf {$trgtcmdpath}/00-proxy.nonconf");
 	}
+*/
 } else {
 	$httptype="httpd";
 
@@ -118,10 +127,21 @@ foreach ($typelist as $k => $v) {
 			copy("{$srccdpath}/{$v}.conf", "{$trgtcdpath}/{$v}.conf");
 		}
 	} else {
-		if (file_exists("{$srccdpath}/custom._inactive_.conf")) {
-			copy("{$srccdpath}/custom._inactive_.conf", "{$trgtcdpath}/{$v}.conf");
+		if ($v === 'proxy_fcgi') {
+			if (file_exists("{$srccmdpath}/custom._inactive_.conf")) {
+				copy("{$srccmdpath}/custom._inactive_.conf", "{$trgtcmdpath}/00-proxy.conf");
+			} else {
+				copy("{$srccmdpath}/_inactive_.conf", "{$trgtcmdpath}/00-proxy.conf");
+			}
+
+			unlink("{$trgtcdpath}/{$v}.conf");
+			unlink("{$trgtcdpath}/{$v}.nonconf");
 		} else {
-			copy("{$srccdpath}/_inactive_.conf", "{$trgtcdpath}/{$v}.conf");
+			if (file_exists("{$srccdpath}/custom._inactive_.conf")) {
+				copy("{$srccdpath}/custom._inactive_.conf", "{$trgtcdpath}/{$v}.conf");
+			} else {
+				copy("{$srccdpath}/_inactive_.conf", "{$trgtcdpath}/{$v}.conf");
+			}
 		}
 	}
 }

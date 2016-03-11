@@ -1261,11 +1261,15 @@ STRIN;
 				// MR -- always off because one-time process
 				$this->no_fix_config = 'off';
 
-
+			/*
 				$vlist['web_driver'] = array('s', array('none', 'apache', 'lighttpd', 'nginx', 
 					'hiawatha', 'openlitespeed', 'monkey',
 					'lighttpdproxy', 'nginxproxy', 'hiawathaproxy', 'openlitespeedproxy',
 					'monkeyproxy'));
+			*/
+				$vlist['web_driver'] = array('s', array('none',
+					'apache', 'lighttpd', 'nginx', 'hiawatha',
+					'lighttpdproxy', 'nginxproxy', 'hiawathaproxy'));
 
 				// MR -- get httpd24u info
 				exec("cat '../etc/list/httpd.lst'|grep httpd24", $out);

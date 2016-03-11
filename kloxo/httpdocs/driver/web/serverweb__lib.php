@@ -12,8 +12,6 @@ class serverweb__ extends lxDriverClass
 
 	function dbactionUpdate($subaction)
 	{
-		global $gbl, $sgbl, $login, $ghtml;
-
 		// We need to write because reads everything from the database.
 		$this->main->write();
 
@@ -79,7 +77,7 @@ class serverweb__ extends lxDriverClass
 
 				break;
 		}
-		
+
 		exec("sed -i 's:__optimize__:{$this->main->apache_optimize}:' /etc/httpd/conf.d/~lxcenter.conf");
 	}
 
@@ -167,13 +165,7 @@ class serverweb__ extends lxDriverClass
 
 		$ehcpath = '/etc/httpd/conf';
 		$ehcdpath = '/etc/httpd/conf.d';
-		$ehckpath = '/etc/httpd/conf/kloxo';
 
-		$hhcpath = '/home/httpd/conf';
-
-		$hapath = '/opt/configs/apache';
-		$hacpath = '/opt/configs/apache/conf';
-		$haepath = '/opt/configs/apache/etc';
 		$haecpath = '/opt/configs/apache/etc/conf';
 		$haecdpath = '/opt/configs/apache/etc/conf.d';
 
@@ -201,15 +193,17 @@ class serverweb__ extends lxDriverClass
 				$this->set_phpfpm();
 			} elseif (stripos($t, 'fcgid') !== false) {
 				$this->set_fcgid();
+			} elseif (stripos($t, 'proxy_fcgi') !== false) {
+				$this->set_proxyfcgi();
 			}
-
-			$this->set_mpm($t);
 
 			if (stripos($t, 'php-fpm') !== false) {
 				exec("chkconfig php-fpm on");
 			} else {
 				exec("chkconfig php-fpm off");
 			}
+
+		//	$this->set_mpm($t);
 		}
 
 		$this->set_secondary_php();
@@ -245,12 +239,9 @@ class serverweb__ extends lxDriverClass
 	function set_suphp()
 	{
 		$ehcdpath = '/etc/httpd/conf.d';
-		$haecdpath = '/opt/configs/apache/etc/conf.d';
 
 		$epath = '/etc';
 		$haepath = '/opt/configs/apache/etc';
-
-		$phpbranch = getRpmBranchInstalled('php');
 
 		$this->rename_to_nonconf();
 
@@ -266,21 +257,9 @@ class serverweb__ extends lxDriverClass
 	function set_phpfpm()
 	{
 		$ehcdpath = '/etc/httpd/conf.d';
-		$haepath = '/opt/configs/apache/etc';
 		$haecdpath = '/opt/configs/apache/etc/conf.d';
 
 		$this->rename_to_nonconf();
-
-		$ver = getRpmVersion('httpd');
-	/*
-		if (version_compare($ver, "2.4.0", ">=") !== false) {
-			lxfile_cp(getLinkCustomfile($haecdpath, "proxy_fcgi.conf"), $ehcdpath . "/proxy_fcgi.conf");
-			lxfile_rm("{$ehcdpath}/proxy_fcgi.nonconf");
-		} else {
-			lxfile_cp(getLinkCustomfile($haecdpath, "fastcgi.conf"), $ehcdpath . "/fastcgi.conf");
-			lxfile_rm("{$ehcdpath}/fastcgi.nonconf");
-		}
-	*/
 
 		lxfile_rm("{$ehcdpath}/proxy_fcgi.nonconf");
 		lxfile_rm("{$ehcdpath}/proxy_fcgi.conf");
@@ -295,7 +274,6 @@ class serverweb__ extends lxDriverClass
 	function set_fcgid()
 	{
 		$ehcdpath = '/etc/httpd/conf.d';
-		$haepath = '/opt/configs/apache/etc';
 		$haecdpath = '/opt/configs/apache/etc/conf.d';
 
 		$this->remove_phpfpm();
@@ -306,6 +284,19 @@ class serverweb__ extends lxDriverClass
 		lxfile_rm("{$ehcdpath}/fcgid.nonconf");
 	}
 
+	function set_proxyfcgi()
+	{
+		$ehcmdpath = '/etc/httpd/conf.modules.d';
+		$haecmdpath = '/opt/configs/apache/etc/conf.modules.d';
+
+		$this->remove_phpfpm();
+
+		$this->rename_to_nonconf();
+
+		lxfile_cp(getLinkCustomfile($haecmdpath, "00-proxy.conf"), $ehcmdpath . "/00-proxy.conf");
+		lxfile_rm("{$ehcmdpath}/00-proxy.nonconf");
+	}
+
 	function remove_phpfpm()
 	{
 		// MR -- no remove and just off/disable
@@ -314,36 +305,58 @@ class serverweb__ extends lxDriverClass
 
 	function rename_to_nonconf()
 	{
-		$ehcdpath = '/etc/httpd/conf.d';
-		$haecdpath = '/opt/configs/apache/etc/conf.d';
-
 		// MR -- use overwrite with 'inactive' content instead rename
 		// minimize 'effect' when running 'yum update'
 		$list = array('php', 'fastcgi', 'fcgid', 'ruid2', 'suphp', 'proxy_fcgi', 'itk');
 
-		$source = getLinkCustomfile($haecdpath, "_inactive_.conf");
-
 		foreach ($list as &$l) {
-			lxfile_cp($source, "{$ehcdpath}/{$l}.conf");
-			lxfile_rm("{$ehcdpath}/{$l}.nonconf");
+			if ($l === 'proxy_fcgi') {
+				$tpath = '/etc/httpd/conf.modules.d';
+				$spath = '/opt/configs/apache/etc/conf.modules.d';
+			} else {
+				$tpath = '/etc/httpd/conf.d';
+				$spath = '/opt/configs/apache/etc/conf.d';
+			}
+
+			$source = getLinkCustomfile($spath, "_inactive_.conf");
+			if ($l === 'proxy_fcgi') {
+				lxfile_cp($source, "{$tpath}/00-proxy.conf");
+				lxfile_rm("{$tpath}/00-proxy.nonconf");
+			} else {
+				lxfile_cp($source, "{$tpath}/{$l}.conf");
+				lxfile_rm("{$tpath}/{$l}.nonconf");
+			}
 		}
 	}
 
 	function set_mpm($type)
 	{
 		if (stripos($type, '_worker') !== false) {
-			exec("echo 'HTTPD=/usr/sbin/httpd.worker' >/etc/sysconfig/httpd");
+			$a = '.worker';
 		} elseif (stripos($type, '_event') !== false) {
-			exec("echo 'HTTPD=/usr/sbin/httpd.event' >/etc/sysconfig/httpd");
+			$a = '.event';
 		} elseif (stripos($type, '_itk') !== false) {
-			exec("echo 'HTTPD=/usr/sbin/httpd.itk' >/etc/sysconfig/httpd");
+			$a = '.itk';
 		} else {
-			exec("echo 'HTTPD=/usr/sbin/httpd' >/etc/sysconfig/httpd");
+			$a = '';
+		}
+
+		if (file_exists("../etc/use_apache24.flg")) {
+			$a = str_replace('.', '', $a);
+
+			if ($a === '') { $a = 'prefork'; }
+
+		//	exec("echo 'LoadModule mpm_{$a}_module modules/mod_mpm_{$a}.so' >/etc/httpd/conf.modules.d/00-mpm.conf");
+			file_put_contents("/etc/httpd/conf.modules.d/00-mpm.conf",
+				"LoadModule mpm_{$a}_module modules/mod_mpm_{$a}.so");
+		} else {
+		//	exec("echo 'HTTPD=/usr/sbin/httpd{$a}' >/etc/sysconfig/httpd");
+			file_put_contents("/etc/sysconfig/httpd.conf", "HTTPD=/usr/sbin/httpd{$a}");
 		}
 
 		$scripting = '/script/fixweb';
 
-		lxshell_return("sh", $scripting, "--select=all", "--nolog");
+		lxshell_return("sh", $scripting, "--target=defaults", "--nolog");
 
 		setRpmInstalled("httpd");
 	}
@@ -381,7 +394,7 @@ class serverweb__ extends lxDriverClass
 		} else {
 			lxfile_rm("{$ehcdpath}/suphp2.conf");
 			lxfile_rm("{$ehcdpath}/fcgid2.conf");
-			
+
 			if (stripos($this->main->php_type, 'suphp') !== false) {
 				lxfile_cp(getLinkCustomfile($haepath, "suphp.conf"), $epath . "/suphp.conf");
 				lxfile_cp(getLinkCustomfile($haecdpath, "suphp.conf"), $ehcdpath . "/suphp.conf");
@@ -403,7 +416,7 @@ class serverweb__ extends lxDriverClass
 	{
 		$ehcdpath = '/etc/httpd/conf.d';
 		$haecdpath = '/opt/configs/apache/etc/conf.d';
-		
+
 		$installed = isRpmInstalled('yum-plugin-replace');
 
 		if (!$installed) {
@@ -424,7 +437,7 @@ class serverweb__ extends lxDriverClass
 
 		$scripting = '/script/fixweb';
 
-		lxshell_return("sh", $scripting, "--select=all", '--nolog');
+		lxshell_return("sh", $scripting, '--nolog');
 
 		$installed = isRpmInstalled("{$branchselect}-fpm");
 
@@ -500,7 +513,7 @@ class serverweb__ extends lxDriverClass
 
 			lxshell_background("sh", $c);
 		}
-		
+
 		if (file_exists($c)) {
 			throw new lxException($login->getThrow('install_process_running_in_background'), '', $this->main->syncserver);
 		}
