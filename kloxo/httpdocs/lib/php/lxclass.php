@@ -3191,6 +3191,7 @@ abstract class Lxclass
 		if (!isset($this->$var)) {
 			return false;
 		}
+
 		return (strtolower($this->$var) === 'on');
 	}
 

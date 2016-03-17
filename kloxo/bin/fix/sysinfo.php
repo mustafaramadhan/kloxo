@@ -96,12 +96,82 @@ if ($hiawathabranch) {
 
 $out = null;
 
-$cachebranch = getRpmBranchInstalled('webcache');
-if ($cachebranch) {
-	exec("rpm -q {$cachebranch}", $out);
-	$appcache = trim($out[0]);
+$atsbranch = getRpmBranchInstalled('trafficserver');
+if ($atsbranch) {
+	exec("rpm -q {$atsbranch}", $out);
+	$appats = trim($out[0]);
 } else {
-	$appcache = '--uninstalled--';
+	$appats = '--uninstalled--';
+}
+
+$out = null;
+
+$squidbranch = getRpmBranchInstalled('squid');
+if ($squidbranch) {
+	exec("rpm -q {$squidbranch}", $out);
+	$appsquid = trim($out[0]);
+} else {
+	$appsquid = '--uninstalled--';
+}
+
+$out = null;
+
+$varnishbranch = getRpmBranchInstalled('varnish');
+if ($varnishbranch) {
+	exec("rpm -q {$varnishbranch}", $out);
+	$appvarnish = trim($out[0]);
+} else {
+	$appvarnish = '--uninstalled--';
+}
+
+$out = null;
+
+$bindbranch = getRpmBranchInstalled('bind');
+if ($bindbranch) {
+	exec("rpm -q {$bindbranch}", $out);
+	$appbind = trim($out[0]);
+} else {
+	$appbind = '--uninstalled--';
+}
+
+$out = null;
+
+$djbdnsbranch = getRpmBranchInstalled('djbdns');
+if ($djbdnsbranch) {
+	exec("rpm -q {$djbdnsbranch}", $out);
+	$appdjbdns = trim($out[0]);
+} else {
+	$appdjbdns = '--uninstalled--';
+}
+
+$out = null;
+
+$nsdbranch = getRpmBranchInstalled('nsd');
+if ($nsdbranch) {
+	exec("rpm -q {$nsdbranch}", $out);
+	$appnsd = trim($out[0]);
+} else {
+	$appnsd = '--uninstalled--';
+}
+
+$out = null;
+
+$pdnsbranch = getRpmBranchInstalled('pdns');
+if ($pdnsbranch) {
+	exec("rpm -q {$pdnsbranch}", $out);
+	$apppdns = trim($out[0]);
+} else {
+	$apppdns = '--uninstalled--';
+}
+
+$out = null;
+
+$yadifabranch = getRpmBranchInstalled('yadifa');
+if ($yadifabranch) {
+	exec("rpm -q {$yadifabranch}", $out);
+	$appyadifa = trim($out[0]);
+} else {
+	$appyadifa = '--uninstalled--';
 }
 
 $out = null;
@@ -133,16 +203,6 @@ if ($isinstalled) {
 	$appcourierimap = trim($out[0]);
 } else {
 	$appcourierimap = '--uninstalled--';
-}
-
-$out = null;
-
-$dnsbranch = getRpmBranchInstalled('dns');
-if ($dnsbranch) {
-	exec("rpm -q {$dnsbranch}", $out);
-	$appdns = trim($out[0]);
-} else {
-	$appdns = '--uninstalled--';
 }
 
 $out = null;
@@ -195,21 +255,32 @@ if ($phpmdirs) {
 	}
 }
 echo "      - Used: " . $phpused . "\n";
-echo "   3. Httpd: " .  $apphttpd . "\n";
-echo "      - PHP Type: " . $phptype . "\n";
-echo "   4. Lighttpd: " .  $applighttpd . "\n";
-echo "   5. Hiawatha: " .  $apphiawatha . "\n";
-echo "   6. Nginx: " .  $appnginx . "\n";
-echo "   7. Cache: " .  $appcache . "\n";
-echo "   8. Dns: " .  $appdns . "\n";
-echo "   9. Qmail: " .  $appqmail . "\n";
+echo "   3. Web Used: " . slave_get_driver('web') . "\n";
+echo "     - Hiawatha: " .  $apphiawatha . "\n";
+echo "     - Lighttpd: " .  $applighttpd . "\n";
+echo "     - Nginx: " .  $appnginx . "\n";
+echo "     - Httpd: " .  $apphttpd . "\n";
+echo "       - PHP Type: " . $phptype . "\n";
+echo "   4. WebCache: " .  slave_get_driver('webcache') . "\n";
+echo "     - ATS: " .  $appats . "\n";
+echo "     - Squid: " .  $appsquid . "\n";
+echo "     - Varnish: " .  $appvarnish . "\n";
+echo "   5. Dns: " .  slave_get_driver('dns') . "\n";
+echo "     - Bind: " .  $appbind . "\n";
+echo "     - DJBDns: " .  $appdjbdns . "\n";
+echo "     - NSD: " .  $appnsd . "\n";
+echo "     - PowerDNS: " .  $apppdns . "\n";
+echo "     - Yadifa: " .  $appyadifa . "\n";
+echo "   6. Mail: " .  $appqmail . "\n";
 
 if ($appdovecot !== '--uninstalled--') {
 	echo "      - with: " . $appdovecot  . "\n";
 }
 if ($appcourierimap !== '--uninstalled--') {
-	echo "      - with: " . $appcourierimap  . "\n";
+	echo "      - pop3/imap4: " . $appcourierimap  . "\n";
 }
+
+echo "      - spam: " . slave_get_driver('spam')  . "\n";
 
 //echo "\n";
 echo "D. Memory:\n";

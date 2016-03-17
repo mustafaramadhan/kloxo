@@ -1259,7 +1259,7 @@ STRIN;
 				$this->was();
 
 				// MR -- always off because one-time process
-				$this->no_fix_config = 'off';
+			//	$this->no_fix_config = 'off';
 
 			/*
 				$vlist['web_driver'] = array('s', array('none', 'apache', 'lighttpd', 'nginx', 

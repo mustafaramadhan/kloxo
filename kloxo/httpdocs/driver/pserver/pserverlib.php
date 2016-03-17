@@ -83,7 +83,7 @@ class pserver extends pservercore {
 
 		foreach($param as $k => $v) {
 		//	if (($k === 'no_fix_config') || ($k === 'use_apache24')) { continue; }
-			if ($k === 'no_fix_config') { continue; }
+			if ($k === 'use_apache24') { continue; }
 
 			if ($this->$k === $v) {
 				dprint("No change for $k: $v\n");

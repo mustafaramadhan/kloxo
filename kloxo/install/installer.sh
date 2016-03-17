@@ -190,13 +190,13 @@ if [ "$1" == "--with-php52s" ] || [ "$2" == "--with-php52s" ] || [ "$3" == "--wi
 	with_php52s="yes"
 
 	mkdir -p /opt/php52s/custom
-	sh /script/phpm-installer php52s
+	sh /script/phpm-installer php52s -y
 	sh /script/fixlxphpexe php52s
 else
 	with_php52s="no"
 
 	mkdir -p /opt/php54s/custom
-	sh /script/phpm-installer php54s
+	sh /script/phpm-installer php54s -y
 	sh /script/fixlxphpexe php54s
 fi
 

@@ -567,6 +567,16 @@ function get_file_type($file, &$stat)
 		return;
 	}
 
+	if ($ext === "7z") {
+		$stat['ttype'] = "p7z";
+		return;
+	}
+
+	if ($ext === "rar") {
+		$stat['ttype'] = "rar";
+		return;
+	}
+
 	if ($ext === "tar") {
 		$stat['ttype'] = "tar";
 		return;

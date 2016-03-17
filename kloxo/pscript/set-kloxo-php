@@ -17,7 +17,7 @@ echo "- For help, type '$0 --help'"
 if [ "$#" == 0 ] ; then
 	echo "- No argument supplied. Defaulting to 'fpm'"
 	echo
-	exit
+	#exit
 fi
 
 base_name="${1}"

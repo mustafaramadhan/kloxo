@@ -78,37 +78,37 @@ CREATE TABLE IF NOT EXISTS `dnsslave` (
   KEY `parent_clname_dnsslave` (`parent_clname`)
 ) DEFAULT CHARSET=latin1;
 
-ALTER TABLE `client` CHANGE COLUMN IF EXISTS `priv_q_frontpage_flag` `priv_q_totalinode_flag` VARCHAR(255) DEFAULT NULL;
-ALTER TABLE `client` CHANGE COLUMN IF EXISTS `used_q_frontpage_flag` `used_q_totalinode_flag` VARCHAR(255) DEFAULT NULL;
+ALTER TABLE `client` CHANGE IF EXISTS `priv_q_frontpage_flag` `priv_q_totalinode_flag` VARCHAR(255) DEFAULT NULL;
+ALTER TABLE `client` CHANGE IF EXISTS `used_q_frontpage_flag` `used_q_totalinode_flag` VARCHAR(255) DEFAULT NULL;
 
-ALTER TABLE `dns` ADD COLUMN IF NOT EXISTS `hostmaster` VARCHAR(255) AFTER `soanameserver`;
+ALTER TABLE `dns` ADD IF NOT EXISTS `hostmaster` VARCHAR(255) NULL DEFAULT NULL AFTER `soanameserver`;
 
-ALTER TABLE `mmail` ADD COLUMN IF NOT EXISTS `spf_protocol` VARCHAR(255) NULL DEFAULT NULL AFTER `text_spf_ip`;
-ALTER TABLE `mmail` ADD COLUMN IF NOT EXISTS `enable_dmarc_flag` VARCHAR(255) NULL DEFAULT NULL AFTER `spf_protocol`;
-ALTER TABLE `mmail` ADD COLUMN IF NOT EXISTS `percentage_filtering` VARCHAR(255) NULL DEFAULT NULL AFTER `enable_dmarc_flag`;
-ALTER TABLE `mmail` ADD COLUMN IF NOT EXISTS `receiver_policy` VARCHAR(255) NULL DEFAULT NULL AFTER `percentage_filtering`;
-ALTER TABLE `mmail` ADD COLUMN IF NOT EXISTS `mail_feedback` VARCHAR(255) NULL DEFAULT NULL AFTER `receiver_policy`;
-ALTER TABLE `mmail` ADD COLUMN IF NOT EXISTS `dmarc_protocol` VARCHAR(255) NULL DEFAULT NULL AFTER `mail_feedback`;
+ALTER TABLE `mmail` ADD IF NOT EXISTS `spf_protocol` VARCHAR(255) NULL DEFAULT NULL AFTER `text_spf_ip`;
+ALTER TABLE `mmail` ADD IF NOT EXISTS `enable_dmarc_flag` VARCHAR(255) NULL DEFAULT NULL AFTER `spf_protocol`;
+ALTER TABLE `mmail` ADD IF NOT EXISTS `percentage_filtering` VARCHAR(255) NULL DEFAULT NULL AFTER `enable_dmarc_flag`;
+ALTER TABLE `mmail` ADD IF NOT EXISTS `receiver_policy` VARCHAR(255) NULL DEFAULT NULL AFTER `percentage_filtering`;
+ALTER TABLE `mmail` ADD IF NOT EXISTS `mail_feedback` VARCHAR(255) NULL DEFAULT NULL AFTER `receiver_policy`;
+ALTER TABLE `mmail` ADD IF NOT EXISTS `dmarc_protocol` VARCHAR(255) NULL DEFAULT NULL AFTER `mail_feedback`;
 
-ALTER TABLE `client` ADD COLUMN IF NOT EXISTS `priv_q_totalinode_usage` VARCHAR(255) NULL DEFAULT NULL AFTER `used_q_totaldisk_usage`;
-ALTER TABLE `client` ADD COLUMN IF NOT EXISTS `used_q_totalinode_usage` VARCHAR(255) NULL DEFAULT NULL AFTER `priv_q_totalinode_usage`;
+ALTER TABLE `client` ADD IF NOT EXISTS `priv_q_totalinode_usage` VARCHAR(255) NULL DEFAULT NULL AFTER `used_q_totaldisk_usage`;
+ALTER TABLE `client` ADD IF NOT EXISTS `used_q_totalinode_usage` VARCHAR(255) NULL DEFAULT NULL AFTER `priv_q_totalinode_usage`;
 
-ALTER TABLE `serverftp` ADD COLUMN IF NOT EXISTS `defaultport` VARCHAR(255) NULL DEFAULT NULL AFTER `enable_anon_ftp`;
+ALTER TABLE `serverftp` ADD IF NOT EXISTS `defaultport` VARCHAR(255) NULL DEFAULT NULL AFTER `enable_anon_ftp`;
 
-ALTER TABLE `mmail` ADD COLUMN IF NOT EXISTS `enable_spf_autoip` VARCHAR(255) NULL DEFAULT NULL AFTER `text_spf_domain`;
-ALTER TABLE `mmail` ADD COLUMN IF NOT EXISTS `text_spf_include` VARCHAR(255) NULL DEFAULT NULL AFTER `enable_spf_flag`;
-ALTER TABLE `mmail` ADD COLUMN IF NOT EXISTS `text_spf_redirect` VARCHAR(255) NULL DEFAULT NULL AFTER `text_spf_include`; 
+ALTER TABLE `mmail` ADD IF NOT EXISTS `enable_spf_autoip` VARCHAR(255) NULL DEFAULT NULL AFTER `text_spf_domain`;
+ALTER TABLE `mmail` ADD IF NOT EXISTS `text_spf_include` VARCHAR(255) NULL DEFAULT NULL AFTER `enable_spf_flag`;
+ALTER TABLE `mmail` ADD IF NOT EXISTS `text_spf_redirect` VARCHAR(255) NULL DEFAULT NULL AFTER `text_spf_include`; 
 
-ALTER TABLE `sslcert` ADD COLUMN IF NOT EXISTS `parent_domain` VARCHAR(255) NULL DEFAULT NULL AFTER `upload_status`;
-ALTER TABLE `sslcert` ADD COLUMN IF NOT EXISTS `add_type` VARCHAR(255) NULL DEFAULT NULL AFTER `parent_domain`;
+ALTER TABLE `sslcert` ADD IF NOT EXISTS `parent_domain` VARCHAR(255) NULL DEFAULT NULL AFTER `upload_status`;
+ALTER TABLE `sslcert` ADD IF NOT EXISTS `add_type` VARCHAR(255) NULL DEFAULT NULL AFTER `parent_domain`;
 
-ALTER TABLE `web` ADD COLUMN IF NOT EXISTS `force_https_redirect` VARCHAR(255) NULL DEFAULT NULL AFTER `force_www_redirect`;
+ALTER TABLE `web` ADD IF NOT EXISTS `force_https_redirect` VARCHAR(255) NULL DEFAULT NULL AFTER `force_www_redirect`;
 
 ALTER TABLE `sslcert` CHANGE `parent_domain` `parent_domain` VARCHAR(255) NULL DEFAULT NULL;
 
-ALTER TABLE `web` ADD COLUMN IF NOT EXISTS `web_selected` VARCHAR(255) NULL DEFAULT NULL AFTER `force_https_redirect`;
-ALTER TABLE `web` ADD COLUMN IF NOT EXISTS `php_selected` VARCHAR(255) NULL DEFAULT NULL AFTER `web_selected`;
+ALTER TABLE `web` ADD IF NOT EXISTS `web_selected` VARCHAR(255) NULL DEFAULT NULL AFTER `force_https_redirect`;
+ALTER TABLE `web` ADD IF NOT EXISTS `php_selected` VARCHAR(255) NULL DEFAULT NULL AFTER `web_selected`;
 
 DELETE FROM phpini WHERE nname LIKE 'domain-%' OR nname LIKE 'web-%';
 
-ALTER TABLE `serverftp` ADD COLUMN IF NOT EXISTS `enable_tls` VARCHAR(255) NULL DEFAULT NULL AFTER `defaultport`;
+ALTER TABLE `serverftp` ADD IF NOT EXISTS `enable_tls` VARCHAR(255) NULL DEFAULT NULL AFTER `defaultport`;

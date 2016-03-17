@@ -6,15 +6,13 @@ if [ ! -f /var/run/httpd.pid ] ; then
 	if [ -f /var/lock/subsys/httpd ] ; then
 		'rm' -f /var/lock/subsys/httpd
 	fi
-
-	/etc/rc.d/init.d/httpd start
-else
-	echo "  - No need started"
 fi
 
-#echo "  - Process with 'apachectl': graceful"
+#echo "  - Process: graceful"
 #apachectl graceful
 #echo "No message for graceful"
 
-echo "  - Process with 'httpd': restart"
-/etc/rc.d/init.d/httpd restart
+echo "  - Process: restart"
+/etc/rc.d/init.d/httpd stop
+pkill -9 httpd
+/etc/rc.d/init.d/httpd start

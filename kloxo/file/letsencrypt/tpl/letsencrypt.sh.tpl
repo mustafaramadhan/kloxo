@@ -2,7 +2,7 @@
 	$req = '';
 
 	if ($action === 'test') || ($action === 'staging')) {
-		$req .= "----staging ";
+		$req .= "--staging ";
 	}
 
 	$req .= "--rsa-key-size {$key_bits} ";
@@ -21,4 +21,4 @@
 
 letsencrypt-auto certonly --agree-tos --text --renew-by-default \
 	--duplicate --webroot --webroot-path /var/run/letsencrypt \
-	<?php echo $req; ?>
+	<?php echo $req; ?> || exit 1

@@ -6,11 +6,12 @@ if [ ! -f /var/run/xinetd.pid ] ; then
 	if [ -f /var/lock/subsys/xinetd ] ; then
 		'rm' -f /var/lock/subsys/xinetd
 	fi
-
-	/etc/rc.d/init.d/xinetd start
-else
-	echo "  - No need started"
 fi
 
-echo "  - Process: reload"
-/etc/rc.d/init.d/xinetd reload
+#echo "  - Process: reload"
+#/etc/rc.d/init.d/xinetd reload
+
+echo "  - Process: restart"
+/etc/rc.d/init.d/xinetd stop
+pkill -9 xinetd
+/etc/rc.d/init.d/xinetd start

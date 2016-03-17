@@ -8,12 +8,12 @@ if [ ! -f /var/run/lighttpd.pid ] ; then
 	if [ -f /var/lock/subsys/lighttpd ] ; then
 		'rm' -f /var/lock/subsys/lighttpd
 	fi
-
-	/etc/rc.d/init.d/lighttpd start
-else
-	echo "  - No need started"
 fi
 
-echo "  - Process: reload"
-/etc/rc.d/init.d/lighttpd reload
+#echo "  - Process: reload"
+#/etc/rc.d/init.d/lighttpd reload
 
+echo "  - Process: restart"
+/etc/rc.d/init.d/lighttpd stop
+pkill -9 lighttpd
+/etc/rc.d/init.d/lighttpd start

@@ -1570,6 +1570,20 @@ function txz_to_fileserv($dir, $fillist, $logto = null)
 	return cp_fileserv($file);
 }
 
+function p7z_to_fileserv($dir, $fillist, $logto = null)
+{
+	$file = do_zip_to_fileserv('p7z', array($dir, $fillist), $logto);
+
+	return cp_fileserv($file);
+}
+
+function rar_to_fileserv($dir, $fillist, $logto = null)
+{
+	$file = do_zip_to_fileserv('rar', array($dir, $fillist), $logto);
+
+	return cp_fileserv($file);
+}
+
 function get_admin_license_var()
 {
 	$list = get_license_resource();
@@ -1674,6 +1688,14 @@ function do_zip_to_fileserv($type, $arg, $logto = null)
 	} elseif ($type === 'txz') {
 		dprint("tarring $vd: " . $vd . " \n");
 		$ret = lxshell_txz($vd, "$sgbl->__path_serverfile/tmp/$base.tmp", $list);
+		lrename("$sgbl->__path_serverfile/tmp/$base.tmp", "$sgbl->__path_serverfile/tmp/$base");
+	} elseif ($type === 'p7z') {
+		dprint("p7zzing $vd: " . $vd . " \n");
+		$ret = lxshell_p7z($vd, "$sgbl->__path_serverfile/tmp/$base.tmp", $list);
+		lrename("$sgbl->__path_serverfile/tmp/$base.tmp", "$sgbl->__path_serverfile/tmp/$base");
+	} elseif ($type === 'rar') {
+		dprint("rarring $vd: " . $vd . " \n");
+		$ret = lxshell_rar($vd, "$sgbl->__path_serverfile/tmp/$base.tmp", $list);
 		lrename("$sgbl->__path_serverfile/tmp/$base.tmp", "$sgbl->__path_serverfile/tmp/$base");
 	} elseif ($type === 'tar') {
 		dprint("tarring $vd: " . $vd . " \n");

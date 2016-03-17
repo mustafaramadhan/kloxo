@@ -242,7 +242,7 @@ class ffile__common
 		}
 
 		if (lxfile_exists($fulzippath) && $this->main->__username_o === 'root') {
-			throw new lxexception($login->getThrow("root_can_not_extract_to_existing_dir"), '', $fulzippath);
+		//	throw new lxexception($login->getThrow("root_can_not_extract_to_existing_dir"), '', $fulzippath);
 		}
 
 		lxfile_mkdir($fulzippath);
@@ -267,13 +267,17 @@ class ffile__common
 			$cmd = "/bin/tar -xjf '$fullpath'";
 		} else if ($this->main->ttype === "txz") {
 			$cmd = "/bin/tar -xJf '$fullpath'";
+		} else if ($this->main->ttype === "p7z") {
+			$cmd = "/usr/bin/7za e -y '$fullpath'";
+		} else if ($this->main->ttype === "rar") {
+			$cmd = "/usr/bin/unrar e -y '$fullpath'";
 		} else {
 			// MR -- as .tar
 			$cmd = "/bin/tar -xf '$fullpath'";
 		}
 
-	//	new_process_cmd($this->main->__username_o, $dir, $cmd);
-		new_process_cmd('__system__', $dir, $cmd);
+		new_process_cmd($this->main->__username_o, $dir, $cmd);
+	//	new_process_cmd('__system__', $dir, $cmd);
 
 		return $dir;
 	}

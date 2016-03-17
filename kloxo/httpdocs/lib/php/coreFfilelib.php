@@ -137,7 +137,8 @@ class coreFfile
 	{
 		if ($stat['ttype'] === "zip" || $stat['ttype'] === 'tar'
 				|| $stat['ttype'] === 'tgz' || $stat['ttype'] === 'tbz2'
-				|| $stat['ttype'] === 'txz') {
+				|| $stat['ttype'] === 'txz' || $stat['ttype'] === 'p7z'
+				|| $stat['ttype'] === 'rar') {
 			$res = lxshell_getzipcontent($path);
 		//	$res = str_replace(" ", "&nbsp;  ", $res);
 			$list = explode("\n", $res);

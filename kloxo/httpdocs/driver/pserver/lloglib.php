@@ -37,13 +37,14 @@ class Llog extends Lxclass {
 
 	function getFfileFromVirtualList($name)
 	{
+		global $sgbl;
+
 		if (substr($name, 0, 1) !== '/') {
-			$name = coreFfile::getRealpath($name);
-			$name = '/' . $name;
-			$ffile= new Ffile($this->__masterserver, $this->__readserver, "__path_log", $name, $this->getParentO()->username);
-		} else {
-			$ffile= new Ffile($this->__masterserver, $this->__readserver, "/", $name, $this->getParentO()->username);
+		//	$name = coreFfile::getRealpath($name);
+			$name = '/var/log/' . $name;
 		}
+
+		$ffile= new Ffile($this->__masterserver, $this->__readserver, "/", $name, $this->getParentO()->username);
 
 		$ffile->__parent_o = $this;
 		$ffile->get();

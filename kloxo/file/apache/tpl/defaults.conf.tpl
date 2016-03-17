@@ -42,36 +42,22 @@ $mpmlist = array('prefork', 'itk', 'event', 'worker');
 
 if (file_exists("/usr/local/lxlabs/kloxo/etc/flag/use_apache24.flg")) {
 	$httptype="httpd24";
-	// MR -- enable all optional module
-	// exec("sed -i 's/^#LoadModule/LoadModule/' {$trgtcmdpath}/00-optional.conf");
-	// MR -- disable deflate module; auto-enable by mod-pagespeed
-	exec("sed -i 's/^LoadModule deflate_module/#LoadModule deflate_module/' {$trgtcmdpath}/00-base.conf");
-/*
-	// MR -- disabled all first; prefork not work because need 'special' php
-	exec("sed -i 's/^LoadModule mpm_/#LoadModule mpm_/' {$trgtcmdpath}/00-mpm.conf");
+
+	if (file_exists("{$trgtcmdpath}/00-base.conf")) {
+		exec("sed -i 's/^LoadModule deflate_module/#LoadModule deflate_module/' {$trgtcmdpath}/00-base.conf");
+	}
 
 	foreach ($mpmlist as $k => $v) {
 		if (strpos($phptype, $v) !== false) {
-			exec("sed -i 's/^#LoadModule mpm_{$v}_module/LoadModule mpm_{$v}_module/' {$trgtcmdpath}/00-mpm.conf");
-			break;
-		}
-	}
-*/
-	foreach ($mpmlist as $k => $v) {
-		if (strpos($phptype, $v) !== false) {
-			exec("echo 'LoadModule mpm_{$v}_module modules/mod_mpm_{$v}.so' > {$trgtcmdpath}/00-mpm.conf");
-			break;
+			if (file_exists("{$trgtcmdpath}/00-mpm.conf")) {
+				exec("echo 'LoadModule mpm_{$v}_module modules/mod_mpm_{$v}.so' > {$trgtcmdpath}/00-mpm.conf");
+				break;
+			}
 		}
 	}
 	
 	// MR -- make blank content
 	exec("echo '' > /etc/sysconfig/httpd");
-/*
-//	exec("sed -i 's/^LoadModule lbmethod_heartbeat_module/#LoadModule lbmethod_heartbeat_module/' {$trgtcmdpath}/00-proxy.conf");
-	if (file_exists("{$trgtcmdpath}/00-proxy.conf")) {
-		exec("'mv' -f {$trgtcmdpath}/00-proxy.conf {$trgtcmdpath}/00-proxy.nonconf");
-	}
-*/
 } else {
 	$httptype="httpd";
 

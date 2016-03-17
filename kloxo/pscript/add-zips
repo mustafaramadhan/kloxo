@@ -1,0 +1,4 @@
+#!/bin/sh
+
+yum install -y zip unzip xz xz-libs p7zip p7zip-plugins
+yum install -y rar unrar --enablerepo=*rpmforge*

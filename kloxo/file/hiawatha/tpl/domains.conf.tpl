@@ -185,15 +185,15 @@ if ($redirectionremote) {
 	}
 }
 ?>
-	Match ^/kloxo(/|$) Redirect https://<?php echo $domainname; ?>:<?php echo $kloxoportssl; ?>/$1
-	Match ^/kloxononssl(/|$) Redirect http://<?php echo $domainname; ?>:<?php echo $kloxoportnonssl; ?>/$1
-	Match ^/webmail(/|$) Redirect http://webmail.<?php echo $domainname; ?>/$1
-	Match ^/cp(/|$) Redirect http://cp.<?php echo $domainname; ?>/$1
+	Match ^/kloxo/(.*) Redirect https://<?php echo $domainname; ?>:<?php echo $kloxoportssl; ?>/$1
+	Match ^/kloxononssl/(.*) Redirect http://<?php echo $domainname; ?>:<?php echo $kloxoportnonssl; ?>/$1
+	Match ^/webmail/(.*) Redirect http://webmail.<?php echo $domainname; ?>/$1
+	Match ^/cp/(.*) Redirect http://cp.<?php echo $domainname; ?>/$1
 <?php
 if ($enablestats) {
 	if ($statsapp === 'awstats') {
 ?>
-	Match ^/stats(/|$) Redirect http://<?php echo $domainname; ?>/awstats/awstats.pl
+	Match ^/stats/(.*) Redirect http://<?php echo $domainname; ?>/awstats/awstats.pl
 <?php
 	}
 }

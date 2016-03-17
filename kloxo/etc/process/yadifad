@@ -6,11 +6,12 @@ if [ ! -f /var/run/yadifad.pid ] ; then
 	if [ -f /var/lock/subsys/yadifad ] ; then
 		'rm' -f /var/lock/subsys/yadifad
 	fi
-
-	/etc/rc.d/init.d/yadifad start
-else
-	echo "  - No need started"
 fi
 
-echo "  - Process : reload"
-/etc/rc.d/init.d/yadifad reload
+#echo "  - Process: reload"
+#/etc/rc.d/init.d/yadifad reload
+
+echo "  - Process: restart"
+/etc/rc.d/init.d/yadifad stop
+pkill -9 yadifad
+/etc/rc.d/init.d/yadifad start

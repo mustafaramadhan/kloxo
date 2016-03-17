@@ -16,14 +16,12 @@ if [ ! -f /var/run/hiawatha.pid ] ; then
 	if [ -f /var/lock/subsys/hiawatha ] ; then
 		'rm' -f /var/lock/subsys/hiawatha
 	fi
-
-	/etc/rc.d/init.d/hiawatha start
-else
-	echo "  - No need started"
 fi
 
 #echo "  - Process: reload"
 #/etc/rc.d/init.d/hiawatha reload
 
 echo "  - Process: restart"
-/etc/rc.d/init.d/hiawatha restart
+/etc/rc.d/init.d/hiawatha stop
+pkill -9 hiawatha
+/etc/rc.d/init.d/hiawatha start

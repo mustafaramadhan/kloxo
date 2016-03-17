@@ -180,7 +180,7 @@ function checkRestart()
 					//	exec($c);
 					} else {
 						if (strpos($cmd, 'restart-') !== false) {
-							exec_with_all_closed("sh /script/{$cmd}");
+							exec_with_all_closed("sh /script/{$cmd} -y");
 						} else {
 							exec_with_all_closed("/etc/init.d/{$cmd} restart");
 						//	exec("/etc/init.d/{$cmd} restart");

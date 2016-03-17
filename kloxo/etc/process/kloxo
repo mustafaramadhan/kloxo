@@ -20,8 +20,6 @@ fi
 
 if [ "${ret}" == "yes" ] ; then
 	/etc/rc.d/init.d/kloxo start
-else
-	echo "  - No need started"
 fi
 
 echo "  - Process: reload"

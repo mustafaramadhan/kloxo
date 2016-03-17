@@ -205,16 +205,19 @@ class serverweb extends lxdb
 				$this->php_used = null;
 
 				$d = getMultiplePhpList();
-
-				foreach ($d as $k => $v) {
-					if ($v === 'php52m') {
-						unset($d[$k]);
-					}
-				}
-
 				$s = '--Use PHP Branch--';
+            
+				if (isset($d)) {
+					foreach ($d as $k => $v) {
+						if ($v === 'php52m') {
+							unset($d[$k]);
+						}
+					}
 
-				$d = array_merge(array($s), $d);
+					$d = array_merge(array($s), $d);
+				} else { 
+					$d = array('--Use PHP Branch--');
+				}
 
 				$vlist['php_used'] = array('s', $d);
 

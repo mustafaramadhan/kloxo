@@ -6,12 +6,12 @@ if [ ! -f /var/run/nginx.pid ] ; then
 	if [ -f /var/lock/subsys/nginx ] ; then
 		'rm' -f /var/lock/subsys/nginx
 	fi
-
-	/etc/rc.d/init.d/nginx start
-else
-	echo "  - No need started"
 fi
 
-echo "  - Process: reload"
-/etc/rc.d/init.d/nginx reload
+#echo "  - Process: reload"
+#/etc/rc.d/init.d/nginx reload
 
+echo "  - Process: restart"
+/etc/rc.d/init.d/nginx stop
+pkill -9 nginx
+/etc/rc.d/init.d/nginx start

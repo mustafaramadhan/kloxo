@@ -1,5 +1,15 @@
 #!/bin/sh
 
+if [ "$(hostname)" == "$(hostname -s)" ] ; then
+	echo "------------------------------------------------------"
+	echo " WARNING:"
+	echo " - Need change hostname with qualify to FQDN"
+	echo "   (use 'server1.domain.com' instead 'server1')"
+	echo " - May trouble for web and mail without FQDN hostname"
+	echo "------------------------------------------------------"
+	exit
+fi
+
 if rpm -qa|grep 'yum-plugin-replace' >/dev/null 2>&1 ; then
 	echo ""
 else

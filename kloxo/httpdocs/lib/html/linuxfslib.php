@@ -25,6 +25,10 @@ function lxshell_getzipcontent($path)
 		return lxshell_output("tar", "-tjf", $path);
 	} else if ($type === 'txz') {
 		return lxshell_output("tar", "-tJf", $path);
+	} else if ($type === 'p7z') {
+		return lxshell_output("7za", "l", $path);
+	} else if ($type === 'rar') {
+		return lxshell_output("unrar", "l", $path);
 	} else if ($type === 'tar') {
 		return lxshell_output("tar", "-tf", $path);
 	}
@@ -240,6 +244,20 @@ function lxshell_txz($dir, $zipname, $filelist)
 	return $ret;
 }
 
+function lxshell_p7z($dir, $zipname, $filelist)
+{
+	$ret = lxshell_zip_core("p7z", $dir, $zipname, $filelist);
+
+	return $ret;
+}
+
+function lxshell_rar($dir, $zipname, $filelist)
+{
+	$ret = lxshell_zip_core("rar", $dir, $zipname, $filelist);
+
+	return $ret;
+}
+
 function lxshell_tar($dir, $zipname, $filelist)
 {
 	$ret = lxshell_zip_core("tar", $dir, $zipname, $filelist);
@@ -278,6 +296,12 @@ function lxshell_zip_core($updateflag, $dir, $zipname, $filelist)
 	} else if ($updateflag === 'tar') {
 		$command = "tar -cf";
 		$command2 = '--ignore-failed-read';
+	} else if ($updateflag === 'p7z') {
+		$command = "7za a -y";
+		$command2 = '';
+	} else if ($updateflag === 'rar') {
+		$command = "rar a -y";
+		$command2 = '';
 	} else {
 		$command = "tar -czf";
 		$command2 = '--ignore-failed-read';
@@ -335,6 +359,10 @@ function lxshell_unzip($username, $dir, $file, $filelist = null)
 		$command = "tar -xJf";
 	} else if ($ztype === 'tar') {
 		$command = "tar -xf";
+	} else if ($ztype === 'p7z') {
+		$command = "7za e -y";
+	} else if ($ztype === 'rar') {
+		$command = "unrar e -y";
 	} else {
 		$command = "unzip -oq";
 	}
@@ -377,6 +405,10 @@ function lxshell_unzip_numeric($dir, $file, $filelist = null)
 		$command = "tar --numeric-owner -xJf";
 	} else if ($ztype === 'tar') {
 		$command = "tar --numeric-owner -xf";
+	} else if ($ztype === 'p7z') {
+		$command = "7za e -y";
+	} else if ($ztype === 'rar') {
+		$command = "unrar e -y";
 	} else {
 		$command = "unzip -oq";
 	}
@@ -399,6 +431,10 @@ function os_getZipType($file)
 		return "txz";
 	} else if (csa($out, "tar")) {
 		return "tar";
+	} else if (csa($out, "7z")) {
+		return "p7z";
+	} else if (csa($out, "rar")) {
+		return "rar";
 	} else {
 		return "zip";
 	}
