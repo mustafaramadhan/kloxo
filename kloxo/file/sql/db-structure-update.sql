@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS `dnsslave` (
 ) DEFAULT CHARSET=latin1;
 
 ALTER TABLE `client` CHANGE IF EXISTS `priv_q_frontpage_flag` `priv_q_totalinode_flag` VARCHAR(255) DEFAULT NULL;
-ALTER TABLE `client` CHANGE IF EXISTS `used_q_frontpage_flag` `used_q_totalinode_flag` VARCHAR(255) DEFAULT NULL;
+ALTER TABLE `client` CHANGE  `used_q_frontpage_flag` `used_q_totalinode_flag` VARCHAR(255) DEFAULT NULL;
 
 ALTER TABLE `dns` ADD IF NOT EXISTS `hostmaster` VARCHAR(255) NULL DEFAULT NULL AFTER `soanameserver`;
 

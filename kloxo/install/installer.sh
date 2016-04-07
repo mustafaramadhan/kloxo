@@ -167,8 +167,8 @@ else
 	mariarepo="mratwork-mariadb-32"
 fi
 
-#yum -y install mysql55 mysql55-server mysql55-libs
-yum -y install MariaDB-server MariaDB-shared mysqlclient15 mysqlclient16 --enablerepo=$mariarepo
+yum -y install mysql55 mysql55-server mysql55-libs mysqlclient15 mysqlclient16
+#yum -y install MariaDB-server MariaDB-shared mysqlclient15 mysqlclient16 --enablerepo=$mariarepo
 if ! [ -d /var/lib/mysqltmp ] ; then
 	mkdir -p /var/lib/mysqltmp
 fi
