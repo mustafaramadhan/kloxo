@@ -425,10 +425,7 @@ $__information['clientmail_list__pre'] = "<p>This will list the number of mails 
 	"<p>If it is a full mailaccount like <b>user@domain.com</b>, then it represents mail sent via relay.</p>".
 	"<p>If it is a simple username, then it represents mail sent via a form in the web server.</p>";
 
-$__information['servermail_updateform_update_pre'] = "<p>It is very essential that you set the my name to " .
-	"a properly resolvable hostname, since otherwise, many public mailservers like hotmail will reject mails from your server.</p>".
-	"<p>You can have the mail server running on additional port by " .
-	"specifying it here. Leave it blank to to disable additional smtp.</p>".
+$__information['servermail_updateform_update_pre'] = "<p>Set 'My Name' with domain name. Better use domain which taken from server's hostname.</p>".
 	"<p>The max smtp instances specifies the maximum number of smtp processes that are allowed. You should set it to some number, " .
 	"say 10, if you are getting spammed heavily.</p>".
 	"<p>If you leave it blank, it will be set to UNLIMITED, which is the default.</p>" .

@@ -109,6 +109,18 @@ if ($blockips) {
 	$blockips = implode(' ', $blockips);
 }
 
+if (file_exists("{$globalspath}/custom.acme-challenge.conf")) {
+	$acmechallenge = "custom.acme-challenge";
+} else {
+	$acmechallenge = "acme-challenge";
+}
+
+if (file_exists("{$globalspath}/custom.header_base.conf")) {
+	$header_base = "custom.header_base";
+} else {
+	$header_base = "header_base";
+}
+
 $userinfo = posix_getpwnam($user);
 
 if ($userinfo) {
@@ -175,7 +187,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $domainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $disablepath; ?>"
 
@@ -184,6 +196,8 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 			if ($count !== 0) {
 ?>
+
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -303,7 +317,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName cp.<?php echo $domainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $cpdocroot; ?>"
 
@@ -312,6 +326,8 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 		if ($count !== 0) {
 ?>
+
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 
 	<IfModule mod_ssl.c>
 		SSLEngine on
@@ -431,7 +447,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $domainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $webmaildocroot; ?>"
 
@@ -439,6 +455,8 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 			if ($count !== 0) {
 ?>
+
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -474,7 +492,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $domainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $webmaildocroot; ?>"
 
@@ -483,6 +501,8 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 			if ($count !== 0) {
 ?>
+
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -618,11 +638,13 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerAlias <?php echo $serveralias; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 <?php
 		if ($count !== 0) {
 			if ($enablessl) {
 ?>
+
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -966,7 +988,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerAlias www.<?php echo $redirdomainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $redirfullpath; ?>"
 
@@ -976,6 +998,8 @@ foreach ($certnamelist as $ip => $certname) {
 					if ($count !== 0) {
 						if ($enablessl) {
 ?>
+
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -1117,7 +1141,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerAlias www.<?php echo $redirdomainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $rootpath; ?>"
 
@@ -1126,6 +1150,8 @@ foreach ($certnamelist as $ip => $certname) {
 					if ($count !== 0) {
 						if ($enablessl) {
 ?>
+
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -1171,7 +1197,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $parkdomainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $disablepath; ?>"
 
@@ -1180,6 +1206,8 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 					if ($count !== 0) {
 ?>
+
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -1299,7 +1327,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $parkdomainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $webmaildocroot; ?>"
 
@@ -1307,6 +1335,8 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 						if ($count !== 0) {
 ?>
+
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -1342,7 +1372,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $parkdomainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $webmaildocroot; ?>"
 
@@ -1351,6 +1381,8 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 						if ($count !== 0) {
 ?>
+
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -1485,7 +1517,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $redirdomainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $disablepath; ?>"
 
@@ -1494,6 +1526,8 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 					if ($count !== 0) {
 ?>
+
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -1613,7 +1647,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $redirdomainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $webmaildocroot; ?>"
 
@@ -1621,6 +1655,8 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 						if ($count !== 0) {
 ?>
+
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -1656,7 +1692,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $redirdomainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $webmaildocroot; ?>"
 
@@ -1665,6 +1701,8 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 						if ($count !== 0) {
 ?>
+
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 
 	<IfModule mod_ssl.c>
 		SSLEngine On

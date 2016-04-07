@@ -401,7 +401,7 @@ function changeDriver($server, $class, $pgm)
 
 	// Temporary hack. Somehow mysql doesnt' work in the backend.
 
-	lxshell_return("__path_php_path", "../bin/common/setdriver.php",
+	lxshell_return("$sgbl->__path_php_path", "../bin/common/setdriver.php",
 		"--server={$server}", "--class={$class}", "--driver={$pgm}");
 
 	return;
@@ -3172,6 +3172,8 @@ function createDatabaseInterfaceTemplate($nolog = null)
 
 function callInChild($func, $arglist)
 {
+	global $sgbl;
+
 	$res = new Remote();
 	$res->__type = 'function';
 	$res->func = $func;
@@ -3179,7 +3181,7 @@ function callInChild($func, $arglist)
 	$name = tempnam("/tmp", "lxchild");
 	lxfile_generic_chmod($name, "700");
 	lfile_put_contents($name, serialize($res));
-	$var = lxshell_output("__path_php_path", "../bin/common/child.php", $name);
+	$var = lxshell_output("$sgbl->__path_php_path", "../bin/common/child.php", $name);
 	$rmt = unserialize(base64_decode($var));
 
 	return $rmt;
@@ -3187,6 +3189,8 @@ function callInChild($func, $arglist)
 
 function callInBackground($func, $arglist)
 {
+	global $sgbl;
+
 	$res = new Remote();
 	$res->__type = 'function';
 	$res->func = $func;
@@ -3195,7 +3199,7 @@ function callInBackground($func, $arglist)
 	lxfile_generic_chmod($name, "700");
 	lfile_put_contents($name, serialize($res));
 
-	lxshell_background("__path_php_path", "../bin/common/background.php", $name);
+	lxshell_background("$sgbl->__path_php_path", "../bin/common/background.php", $name);
 }
 
 function callObjectInBackground($object, $func)
@@ -3213,11 +3217,11 @@ function callObjectInBackground($object, $func)
 
 function get_with_cache($file, $cmdarglist)
 {
-	global $global_shell_out, $global_shell_error, $global_shell_ret;
+	global $global_shell_out, $global_shell_error, $global_shell_ret, $sgbl;
 
 	$stat = @ llstat($file);
 
-	lxfile_mkdir("__path_program_root/cache");
+	lxfile_mkdir("$sgbl->__path_program_root/cache");
 
 	$tim = 120;
 
@@ -4265,6 +4269,8 @@ function slave_save_db($file, $list)
 
 function securityBlanketExec($table, $nname, $variable, $func, $arglist)
 {
+	global $sgbl;
+
 	$rem = new Remote();
 	$rem->table = $table;
 	$rem->nname = $nname;
@@ -4276,7 +4282,7 @@ function securityBlanketExec($table, $nname, $variable, $func, $arglist)
 	lxfile_generic_chmod($name, "700");
 	lfile_put_contents($name, serialize($rem));
 
-	lxshell_background("__path_php_path", "../bin/common/securityblanket.php", $name);
+	lxshell_background("$sgbl->__path_php_path", "../bin/common/securityblanket.php", $name);
 }
 
 function checkClusterDiskQuota()
@@ -4592,13 +4598,15 @@ function findServerTraffic()
 
 function createMultipLeVps($param)
 {
+	global $$sgbl;
+
 	$adminpass = $param['vps_admin_password_f'];
 	$template = $param['vps_template_name_f'];
 	$one_ip = $param['vps_one_ipaddress_f'];
 	$base = $param['vps_basename_f'];
 	$count = $param['vps_count_f'];
 
-	lxshell_background("__path_php_path", "../bin/multicreate.php", "--admin-password=$adminpass", "--v-template_name=$template", "--count=$count", "--basename=$base", "--v-one_ipaddress=$one_ip");
+	lxshell_background("$sgbl->__path_php_path", "../bin/multicreate.php", "--admin-password=$adminpass", "--v-template_name=$template", "--count=$count", "--basename=$base", "--v-one_ipaddress=$one_ip");
 }
 
 function collect_quota_later()
@@ -4815,10 +4823,12 @@ function lxguard_main($clearflag = false, $since = false)
 
 function lxguard_save_hitlist($hl)
 {
+	global $sgbl;
+
 	include_once "lib/html/lxguardincludelib.php";
 
 	lxfile_mkdir("__path_home_root/lxguard");
-	$lxgpath = "__path_home_root/lxguard";
+	$lxgpath = "$sgbl->__path_home_root/lxguard";
 	$rmt = new Remote();
 	$rmt->hl = $hl;
 	$rmt->ddate = time();
@@ -4849,15 +4859,19 @@ function fix_move_to_client()
 
 function addcustomername()
 {
-	lxshell_return("__path_php_path", "../bin/misc/addcustomername.php");
+	global $sgbl;
+
+	lxshell_return("$sgbl->__path_php_path", "../bin/misc/addcustomername.php");
 }
 
 function fix_phpini($nolog = null)
 {
+	global $sgbl;
+
 	log_cleanup("Fix php.ini", $nolog);
 	log_cleanup("- Fix process", $nolog);
 
-	lxshell_return("__path_php_path", "../bin/fix/fixphpini.php");
+	lxshell_return("$sgbl->__path_php_path", "../bin/fix/fixphpini.php");
 }
 
 function switchtoaliasnext()
@@ -6504,7 +6518,7 @@ function setInitialServer($nolog = null)
 
 	exec("yum -y install $list >/dev/null 2>&1");
 
-	lxfile_cp(getLinkCustomfile("..init", "kloxo.init"),
+	lxfile_cp(getLinkCustomfile("../init", "kloxo.init"),
 		"/etc/init.d/kloxo");
 
 	exec("chown root:root /etc/init.d/kloxo; chmod 755 /etc/init.d/kloxo");

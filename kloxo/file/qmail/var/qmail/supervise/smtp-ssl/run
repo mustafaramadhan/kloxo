@@ -26,7 +26,7 @@ fi
 if [ -f /var/qmail/control/spamdyke ] ; then
 	### MR -- content of SPAMDYKE is '/usr/bin/spamdyke -f /etc/spamdyke.conf'
 	VAR1=$(cat /var/qmail/control/spamdyke)
-	VAR2=" --tls-level=smtps --tls-certificate-file=/var/qmail/control/servercert.pem" 
+	VAR2=" --tls-level=smtps" 
 	### MR -- special for smtp-ssl
 	SPAMDYKE=$VAR1$VAR2
 else
@@ -58,7 +58,6 @@ PORT=465
 ### remove SMTPS=1 and change to REQUIRE_AUTH=1
 export SMTPAUTH="!" \
 	SSL=1 \
-	REQUIRE_AUTH=0 \
 	FORCE_TLS=0 \
 	DENY_TLS=0 \
 	AUTH=1 \
