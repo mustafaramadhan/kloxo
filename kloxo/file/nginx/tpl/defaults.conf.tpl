@@ -119,6 +119,18 @@ if (file_exists("{$globalspath}/custom.ssl_base.conf")) {
 	$ssl_base = "ssl_base";
 }
 
+if (file_exists("{$globalspath}/custom.acme-challenge.conf")) {
+	$acme_challenge = "custom.acme-challenge";
+} else {
+	$acme_challenge = "acme-challenge";
+}
+
+if (file_exists("{$globalspath}/custom.header_base.conf")) {
+	$header_base = "custom.header_base";
+} else {
+	$header_base = "header_base";
+}
+
 $listens = array('listen_nonssl_default', 'listen_ssl_default');
 
 foreach ($certnamelist as $ip => $certname) {
@@ -138,6 +150,8 @@ server {
 		if ($count !== 0) {
 ?>
 
+	include '<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf';
+
 	ssl on;
 	ssl_certificate <?php echo $certname; ?>.pem;
 	ssl_certificate_key <?php echo $certname; ?>.key;
@@ -156,7 +170,7 @@ server {
 
 	server_name _;
 
-	include '<?php echo $globalspath; ?>/acme-challenge.conf';
+	include '<?php echo $globalspath; ?>/<?php echo $acme_challenge; ?>.conf';
 
 	index <?php echo $indexorder; ?>;
 

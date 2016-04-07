@@ -28,6 +28,7 @@ function setSetupApp()
 		foreach ($appfiles as $k => $v) {
 			$appcontent = lfile_get_contents($v);
 			$appcontent = str_replace("'application.ini'", "'application.ini.php'", $appcontent);
+			$appcontent = str_replace("; RainLoop Webmail configuration file", ";<' . '?php exit;?' . '> RainLoop Webmail configuration file", $appcontent);
 			lfile_put_contents($v, $appcontent);
 		}
 	}

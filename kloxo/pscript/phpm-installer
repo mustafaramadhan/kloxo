@@ -61,7 +61,7 @@ elif yum list ${src_name} >/dev/null 2>&1 ; then
 elif yum list ${src_name}w >/dev/null 2>&1 ; then
 	pack_name="${src_name}w"
 else
-	echo "- No PHP packages exists. Only detecting '${src_name}u' and '${src_name}'. Exit"
+	echo "- No PHP packages exists. Only detecting '${src_name}u', '${src_name}' or '${src_name}w'. Exit"
 	echo
 	exit
 fi

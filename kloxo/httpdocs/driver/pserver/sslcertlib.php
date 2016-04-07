@@ -63,39 +63,76 @@ class SslCert extends Lxdb
 
 		$vlist['nname'] = $this->certname;
 
+		$this->convertToUnmodifiable($vlist);
+
 	//	if ($this->isOn('upload_status')) {
 		if (($this->add_type === 'text') || ($this->add_type === 'file')
 				|| ($this->add_type === 'on')) {
-			$string = null;
-			$res = openssl_x509_read($this->text_crt_content);
-			$ar = openssl_x509_parse($res);
-			$string .= "{$ar['name']} {$ar['subject']['CN']}";
+
+			$string = $this->getCRTParse();
 			$vlist['upload'] = array('M', $string);
-			$vlist['text_crt_content'] = null;
 			$vlist['text_key_content'] = null;
+			$vlist['text_crt_content'] = null;
 			$vlist['text_ca_content'] = null;
 		} elseif ($this->add_type === 'letsencrypt') {
-			// in progress
+			$string = $this->getCRTParse($validonly = true);
+			$vlist['upload'] = array('M', $string);
+			$vlist["ssl_data_b_s_subjectAltName_r"] = null;
+			$vlist['text_key_content'] = null;
+			$vlist['text_crt_content'] = null;
+			$vlist['text_ca_content'] = null;
 		} elseif ($this->add_type === 'link') {
-			// in progress
+			$ssllist = self::getSSLParentList();
+			$vlist['ssl_parent'] = array("s", $ssllist);
 		} else {
-			$vlist["ssl_data_b_s_commonName_r"] = null;
-			$vlist["ssl_data_b_s_countryName_r"] = null;
+			$string = $this->getCRTParse($validonly = true);
+			$vlist['upload'] = array('M', $string);
+
+			$vlist["ssl_data_b_s_commonName_r"] = array('t', null);
+
+			$temp = self::getCountryList();
+			$vlist["ssl_data_b_s_countryName_r"] = array("s", $temp);
+
 			$vlist["ssl_data_b_s_stateOrProvinceName_r"] = null;
 			$vlist["ssl_data_b_s_localityName_r"] = null;
 			$vlist["ssl_data_b_s_organizationName_r"] = null;
 			$vlist["ssl_data_b_s_organizationalUnitName_r"] = null;
 			$vlist["ssl_data_b_s_emailAddress_r"] = null;
 		//	$vlist["ssl_data_b_s_subjectAltName_r"] = null;
-			$this->convertToUnmodifiable($vlist);
-			$vlist['text_crt_content'] = null;
-			$vlist['text_key_content'] = null;
-			$vlist['text_csr_content'] = null;
+
+			$x['text_key_content'] = null;
+			$x['text_crt_content'] = null;
+			$x['text_csr_content'] = null;
+
+			$this->convertToUnmodifiable($x);
+
+			$vlist['text_key_content'] = $x['text_key_content'];
+			$vlist['text_crt_content'] = $x['text_crt_content'];
+			$vlist['text_csr_content'] = $x['text_csr_content'];
 		}
 
 		$vlist['__v_button'] = array();
 
 		return $vlist;
+	}
+
+	function getCRTParse($validonly = null)
+	{
+		$res = openssl_x509_read($this->text_crt_content);
+		$ar = openssl_x509_parse($res);
+
+		$validfrom = date('Y-m-d', $ar['validFrom_time_t']);
+		$validto = date('Y-m-d', $ar['validTo_time_t']);
+
+		if ($validonly) {
+			$string = "- Valid: {$validfrom} - {$validto}";
+		} else {
+			$string = "- Common Name: {$ar['subject']['CN']}\n" .
+				"- Subject Alt Name: {$ar['extensions']['subjectAltName']}\n" .
+				"- Valid: {$validfrom} - {$validto}";
+		}
+
+		return $string;
 	}
 
 	static function checkAndThrow($publickey, $privatekey, $throwname = null)
@@ -400,41 +437,21 @@ class SslCert extends Lxdb
 		} else if ($typetd['val'] === 'link') {
 			$vlist['nname'] = $nname;
 
-			if ($login->nname === 'admin') {
-				$filesearch = "/home/kloxo/client/*/ssl/*.key";
-			} else {
-				$filesearch = "/home/kloxo/client/{$login->nname}/ssl/*.key";
-			}
-
-			foreach (glob($filesearch, GLOB_MARK) as $filename) {
-			//	if (!is_link($filename)) {
-					$dom = str_replace(".key", "", basename($filename));
-					$subdom = str_replace($dom, "", $parent->nname);
-
-				//	if (strpos($subdom, ".", 1) !== false) {
-						$ssllist[] = $dom;
-				//	}
-			//	}
-			}
+			$ssllist = self::getSSLParentList();
 
 			$vlist['ssl_parent'] = array("s", $ssllist);
 		} else {
-			include "lib/html/countrycode.inc";
-
 			$vlist['nname'] = $nname;
 
 			// MR -- add key_bits options
 			$vlist['key_bits'] = array("s", array("2048", "1024", "512", "4096"));
 
-			$temp[] = "N/A";
-
-			foreach ($gl_country_code as $key => $name) {
-				$temp[] = "$key:$name";
-			}
 
 			$vlist["ssl_data_b_s_commonName_r"] = $cname;
 
 		//	$vlist["ssl_data_b_s_subjectAltName_r"] = $saname;
+
+			$temp = self::getCountryList();
 
 			$vlist["ssl_data_b_s_countryName_r"] = array("s", $temp);
 			$vlist["ssl_data_b_s_stateOrProvinceName_r"] = array("m", "N/A");
@@ -448,9 +465,46 @@ class SslCert extends Lxdb
 		if (($typetd['val'] !== 'link') && ($typetd['val'] !== 'letsencrypt')) {
 			$ret['action'] = 'add';
 		}
+
 		$ret['variable'] = $vlist;
 
 		return $ret;
+	}
+
+	static function getSSLParentList()
+	{
+		global $login;
+
+		if ($login->nname === 'admin') {
+			$filesearch = "/home/kloxo/client/*/ssl/*.key";
+		} else {
+			$filesearch = "/home/kloxo/client/{$login->nname}/ssl/*.key";
+		}
+
+		foreach (glob($filesearch, GLOB_MARK) as $filename) {
+		//	if (!is_link($filename)) {
+				$dom = str_replace(".key", "", basename($filename));
+				$subdom = str_replace($dom, "", $parent->nname);
+
+			//	if (strpos($subdom, ".", 1) !== false) {
+					$ssllist[] = $dom;
+			//	}
+		//	}
+		}
+
+		return $ssllist;
+	}
+
+	static function getCountryList()
+	{
+		include "lib/html/countrycode.inc";
+		$a[] = "N/A";
+
+		foreach ($gl_country_code as $key => $name) {
+			$a[] = "$key:$name";
+		}
+
+		return $a;
 	}
 
 	function createNewcertificate()

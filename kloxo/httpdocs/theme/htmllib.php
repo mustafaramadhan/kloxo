@@ -7868,7 +7868,8 @@ class HtmlLib
 				// Don't ever make this hidden. It is absolutely not necessary. The value is available directly itself.
 ?>
 
-					<?= $variable_description ?>: &nbsp; <?= $value ?>
+					<?= $variable_description ?>
+					<div style='border: 1px solid #aaa; background-color: #dfe; padding: 2px'><?= $value ?></div>
 
 <?php
 				break;

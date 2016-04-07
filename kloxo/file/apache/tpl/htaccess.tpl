@@ -25,12 +25,12 @@
 #<FilesMatch \.php$>
 #	SetHandler fcgid-script
 #</FilesMatch>
-#FCGIWrapper /home/kloxo/client/php.fcgi .php
-#FCGIWrapper /home/kloxo/client/php52.fcgi .php
-#FCGIWrapper /home/kloxo/client/php53.fcgi .php
-#FCGIWrapper /home/kloxo/client/php54.fcgi .php
-#FCGIWrapper /home/kloxo/client/php55.fcgi .php
-#FCGIWrapper /home/kloxo/client/php56.fcgi .php
-#FCGIWrapper /home/kloxo/client/php70.fcgi .php
+#FCGIWrapper /usr/bin/php-cgi .php
+#FCGIWrapper /usr/bin/php52m-cgi .php
+#FCGIWrapper /usr/bin/php53m-cgi .php
+#FCGIWrapper /usr/bin/php54m-cgi .php
+#FCGIWrapper /usr/bin/php55m-cgi .php
+#FCGIWrapper /usr/bin/php56m-cgi .php
+#FCGIWrapper /usr/bin/php70m-cgi .php
 
 ### end content - please not remove this line
