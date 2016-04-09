@@ -1515,7 +1515,7 @@ class Web extends Lxdb
 		}
 
 		lxfile_generic_chown("$dir/$file", $this->username);
-		lxshell_unzip($this->username, $dir, "$dir/$file");
+		lxshell_unzip($this->username, $dir, "$dir/$file",null,false);
 		lunlink("$dir/$file");
 
 		$this->replaceVariables("$dir/index.html");

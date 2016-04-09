@@ -375,7 +375,7 @@ function lxshell_unzip($username, $dir, $file, $filelist = null)
 	return $ret;
 }
 
-function lxshell_unzip_numeric($dir, $file, $filelist = null)
+function lxshell_unzip_numeric($dir, $file, $filelist = null,$zipoverwrite = true)
 {
 	$dir = expand_real_root($dir);
 	$file = expand_real_root($file);
@@ -409,8 +409,12 @@ function lxshell_unzip_numeric($dir, $file, $filelist = null)
 		$command = "7za e -y";
 	} else if ($ztype === 'rar') {
 		$command = "unrar e -y";
-	} else {
-		$command = "unzip -oq";
+	} 
+        else if ($zipoverwrite) {
+        	$command = "unzip -oq";
+	}
+        else {
+		$command = "unzip -nq";
 	}
 
 //	do_exec_system("__system__", $dir, "ionice -c 2 -n 7 $command $fullpath $files", $out, $err, $ret, null);
