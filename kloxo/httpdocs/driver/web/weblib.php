@@ -1515,6 +1515,7 @@ class Web extends Lxdb
 		}
 
 		lxfile_generic_chown("$dir/$file", $this->username);
+		// JP - Add flag to disable overwriting of existing files
 		lxshell_unzip($this->username, $dir, "$dir/$file",null,false);
 		lunlink("$dir/$file");
 

@@ -375,6 +375,18 @@ function lxshell_unzip($username, $dir, $file, $filelist = null)
 	return $ret;
 }
 
+/**
+ *  Launch Shell and Unzip archive to directory
+ *
+ * @param string $dir - target directory
+ * @param string $file - archive
+ * @param string $filelist - list of files to extract
+ * @param string $zipoverwrite - disable overwrite for zip files
+ 
+ *
+ * @return $ret
+ */
+
 function lxshell_unzip_numeric($dir, $file, $filelist = null,$zipoverwrite = true)
 {
 	$dir = expand_real_root($dir);
