@@ -21,6 +21,8 @@
 		$phpcli = "{$phpcli}-cli";
 	}
 
+	$openbasedir = str_replace("/var/lib/php/session/", "{$session_save_path_flag}/", $openbasedir);
+
 	// because not work for parse for inline php
 	echo "<" . "?xml version=\"1.0\" ?" . ">" . "\n";
 ?>

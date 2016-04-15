@@ -78,16 +78,11 @@ CREATE TABLE IF NOT EXISTS `dnsslave` (
   KEY `parent_clname_dnsslave` (`parent_clname`)
 ) DEFAULT CHARSET=latin1;
 
-<<<<<<< .merge_file_a14260
-ALTER TABLE `client` CHANGE IF EXISTS `priv_q_frontpage_flag` `priv_q_totalinode_flag` VARCHAR(255) DEFAULT NULL;
-ALTER TABLE `client` CHANGE  `used_q_frontpage_flag` `used_q_totalinode_flag` VARCHAR(255) DEFAULT NULL;
-=======
 ALTER TABLE `client` ADD IF NOT EXISTS `priv_q_totalinode_flag` VARCHAR(255) DEFAULT NULL AFTER `priv_q_ftpuser_num`;
 ALTER TABLE `client` ADD IF NOT EXISTS `used_q_totalinode_flag` VARCHAR(255) DEFAULT NULL AFTER `used_q_ftpuser_num`;
 
 ALTER TABLE `client` ADD IF NOT EXISTS `priv_q_frontpage_flag` VARCHAR(255) DEFAULT NULL AFTER `priv_q_totalinode_flag`;
 ALTER TABLE `client` ADD IF NOT EXISTS `used_q_frontpage_flag` VARCHAR(255) DEFAULT NULL AFTER `used_q_totalinode_flag`;
->>>>>>> .merge_file_a06936
 
 ALTER TABLE `dns` ADD IF NOT EXISTS `hostmaster` VARCHAR(255) NULL DEFAULT NULL AFTER `soanameserver`;
 
@@ -118,6 +113,8 @@ ALTER TABLE `web` ADD IF NOT EXISTS `web_selected` VARCHAR(255) NULL DEFAULT NUL
 ALTER TABLE `web` ADD IF NOT EXISTS `php_selected` VARCHAR(255) NULL DEFAULT NULL AFTER `web_selected`;
 
 DELETE FROM phpini WHERE nname LIKE 'domain-%' OR nname LIKE 'web-%';
+
+ALTER TABLE `serverweb` ADD IF NOT EXISTS `php_used` VARCHAR(255) NULL DEFAULT NULL AFTER `php_type`;
 
 ALTER TABLE `serverftp` ADD IF NOT EXISTS `enable_tls` VARCHAR(255) NULL DEFAULT NULL AFTER `defaultport`;
 

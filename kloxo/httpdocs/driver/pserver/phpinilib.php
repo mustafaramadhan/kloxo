@@ -383,15 +383,16 @@ class phpini extends lxdb
 
 			array_unique($list);
 
-			$user = $this->getParentO()->nname;
-
 			foreach ($list as $k => $v) {
 				if ($v === 'session_save_path_flag') {
+					if ($this->getParentO()->getClass() === 'client') {
+						$user = $this->getParentO()->nname;
 					$path = "/home/kloxo/client/{$user}/session";
 					exec("mkdir -p $path");
 					$this->initialValue($v, $path);
 					// MR -- fix for permissions fail
 					exec("chmod 777 $path");
+					}
 				} else {
 					$this->initialValue($v, $b->$v);
 				}

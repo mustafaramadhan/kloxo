@@ -151,7 +151,8 @@ Binding {
 #CustomHeader = X-Content-Type-Options:nosniff
 #CustomHeader = X-XSS-Protection:1;mode=block
 #CustomHeader = X-Frame-Options:SAMEORIGIN
-#CustomHeader = Strict-Transport-Security:max-age=31536000;includeSubdomains
+#CustomHeader = Strict-Transport-Security:max-age=31536000
+#CustomHeader = Access-Control-Allow-Origin:*
 
 ### 'default' config
 set var_user = apache

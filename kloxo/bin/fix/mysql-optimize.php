@@ -59,10 +59,11 @@ function setMysqlOptimize($select, $database = null)
 	}
 
 	log_cleanup("- MySQL Service restart");
-	$ret = lxshell_return("service", "mysqld", "restart");
+	$ret = lxshell_return("sh", "/script/restart-mysql", "-y");
 
 	if ($ret) {
-		throw new lxException($login->getThrow('mysqld_restart_failed'));
+	//	throw new lxException($login->getThrow('mysqld_restart_failed'));
+		print("- MySQL/MariaDB restart failed");
 	}
 }
 

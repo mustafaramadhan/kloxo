@@ -7754,7 +7754,7 @@ function setPhpBranch($select, $nolog = null)
 		exec("cd /; yum list installed php* |grep -P 'php[a-zA-z0-9\-]+'", $phpmodules);
 
 		log_cleanup("-- Replace using 'yum replace {$phpbranch} --replace-with={$select}'", $nolog);
-		setRpmReplaced($phpbranch, $select);
+		setRpmReplaced("{$phpbranch}-cli","{$select}-cli");
 		/*
 			if ($phpmodules[0] === $phpbranch) {
 				unset($phpmodules[0]);
