@@ -351,18 +351,26 @@ class Mailaccount__Qmail extends lxDriverClass
 	function clearSpamDb()
 	{
 		global $gbl, $sgbl, $login;
+                
+                // only run for bogofilter
+                if ($this->main->__var_spam_driver === 'bogofilter') {
+                    list($user, $domain) = explode("@", $this->main->nname);
 
-		list($user, $domain) = explode("@", $this->main->nname);
+                    $mailpath = mmail__qmail::getDir($domain);
+                    $mailpath = str_replace($sgbl->__path_mail_root, $sgbl->__path_mail_data, $mailpath);
 
-		$mailpath = mmail__qmail::getDir($domain);
-		$mailpath = str_replace($sgbl->__path_mail_root, $sgbl->__path_mail_data, $mailpath);
-
-		$prefpath = "$mailpath/$user/.bogopref.cf";
-		$fname = fix_nname_to_be_variable($this->main->nname);
-		lunlink("/var/bogofilter/$fname.wordlist.db");
-		system("bogofilter -d /var/bogofilter/ --wordlist=R,user,$fname.wordlist.db,1 -n < /etc/my.cnf");
+                    $prefpath = "$mailpath/$user/.bogopref.cf";
+                    $fname = fix_nname_to_be_variable($this->main->nname);
+                    lunlink("/var/bogofilter/$fname.wordlist.db");
+                    system("bogofilter -d /var/bogofilter/ --wordlist=R,user,$fname.wordlist.db,1 -n < /etc/my.cnf");
+                }
 	}
 
+        
+ /**
+ *  Trains Spamassassin or bogofilter 
+ *  (detects if spamassassin isinstalled and uses sa-learn if it is)
+ */
 	function trainAsSpam()
 	{
 		global $global_dontlogshell;
@@ -372,25 +380,53 @@ class Mailaccount__Qmail extends lxDriverClass
 		$listname = "{$this->main->subaction}_list";
 
 		$name = fix_nname_to_be_variable($this->main->nname);
+                
+                                
+		if ($this->main->__var_spam_driver === 'spamassassin') {
 
-		if (csb($this->main->subaction, "train_as_system_")) {
-			$optstring = null;
-		} else {
+		
+		// For Kloxo-wp we are using site wide bayes
+                //TODO remove train_as_system_ option from menu if Spamassassin is used    
+                    /*if (csb($this->main->subaction, "train_as_system_")) {
+                       	$optstring = null;
+                    } else {
 			$optstring = "--wordlist=R,user,$name.wordlist.db,1";
-		}
+                    }
+                    */
+                    $flag = "--ham";
 
-		$flag = "-n";
+                    if (cse($this->main->subaction, '_spam')) {
+                        $flag = "--spam";
+                    }
+                    
+                    foreach ($this->main->$listname as $f) {
+			$name = str_replace("_s_coma_s_", ",", $f);
+			$name = str_replace("_s_colon_s_", ":", $name);
+			$cmd = "/usr/bin/sa-learn $flag $name";
+			do_exec_system("vpopmail", null, $cmd, $out, $err, $ret, null);
+                    }
+                    
+		} else {
+		
+                    if (csb($this->main->subaction, "train_as_system_")) {
+                       	$optstring = null;
+                    } else {
+			$optstring = "--wordlist=R,user,$name.wordlist.db,1";
+                    }
 
-		if (cse($this->main->subaction, '_spam')) {
-			$flag = "-s";
-		}
+                    $flag = "-n";
 
-		foreach ($this->main->$listname as $f) {
+                    if (cse($this->main->subaction, '_spam')) {
+                        $flag = "-s";
+                    }
+
+                    foreach ($this->main->$listname as $f) {
 			$name = str_replace("_s_coma_s_", ",", $f);
 			$name = str_replace("_s_colon_s_", ":", $name);
 			$cmd = "bogofilter -d /var/bogofilter/ $optstring $flag < $name";
 			do_exec_system("__system__", null, $cmd, $out, $err, $ret, null);
-		}
+                    }
+                }
 	}
 
 	function dbactionUpdate($subaction)
