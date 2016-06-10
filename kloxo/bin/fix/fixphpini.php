@@ -13,11 +13,65 @@ $nolog  = (isset($list['nolog'])) ? $list['nolog'] : null;
 $login->loadAllObjects('client');
 $list = $login->getList('client');
 
-$plist = $login->getList('pserver');
-
 log_cleanup("Fixing php.ini/php-fpm.conf/php.fcgi/.htaccess", $nolog);
 
+$clist = array();
+
+$plist = $login->getList('pserver');
+
 foreach($plist as $s) {
+
+	foreach($list as $c) {
+		if ($client) {
+			$ca = explode(",", $client);
+
+			if (!in_array($c->nname, $ca)) { continue; }
+		}
+
+		if ($server !== 'all') {
+			$sa = explode(",", $server);
+
+			if (!in_array($s->syncserver, $sa)) { continue; }
+		}
+
+		$dlist = $c->getList('domaina');
+
+		foreach((array) $dlist as $l) {
+			$web = $l->getObject('web');
+
+			if ($domain) {
+				$da = explode(",", $domain);
+				if (!in_array($web->nname, $da)) { continue; }
+			}
+
+			$php = $web->getObject('phpini');
+			$php->initPhpIni();
+			$php->setUpdateSubaction('htaccess_update');
+
+			log_cleanup("- '/home/{$c->nname}/{$web->docroot}/.htaccess' ('{$c->nname}') at '{$php->syncserver}'", $nolog);
+
+			if (!in_array($c->nname, $clist)) {
+				$php = $c->getObject('phpini');
+				$php->initPhpIni();
+				$php->setUpdateSubaction('ini_update');
+
+				log_cleanup("- '/home/kloxo/client/{$c->nname}/php.ini' at '{$php->syncserver}'", $nolog);
+				log_cleanup("- '/home/kloxo/client/{$c->nname}/php.fcgi' at '{$php->syncserver}'", $nolog);
+				log_cleanup("- '/home/kloxo/client/{$c->nname}/prefork.inc' at '{$php->syncserver}'", $nolog);
+				log_cleanup("- '/etc/php-fpm.d/{$c->nname}.conf' (also for 'multiple php') at '{$php->syncserver}'", $nolog);
+
+				$php->was();
+
+				$clist[] = $c->nname;
+				array_unique($clist);
+			}
+
+			$php->was();
+
+			$web->was();
+		}
+	}
+
 	if ($client !== null) { continue; }
 	if ($domain !== null) { continue; }
 
@@ -35,81 +89,24 @@ foreach($plist as $s) {
 	log_cleanup("- '/etc/php.ini' at '{$php->syncserver}'", $nolog);
 
 	log_cleanup("- Fix 'extension_dir' path in php.ini at '{$php->syncserver}'", $nolog);
-/*
-	if (php_uname('m') === 'x86_64') {
-		exec("sed -i 's:/usr/lib/php/modules:/usr/lib64/php/modules:' /etc/php.ini");
-	} else {
-		exec("sed -i 's:/usr/lib64/php/modules:/usr/lib/php/modules:' /etc/php.ini");
-	}
-*/
+
 	log_cleanup("- '/etc/php-fpm.d/default.conf' at '{$php->syncserver}'", $nolog);
 	log_cleanup("- '/home/kloxo/client/php.fcgi' at '{$php->syncserver}'", $nolog);
 
 	$php->was();
-}
 
-$clist = array();
-
-foreach($list as $c) {
-	if ($client) {
-		$ca = explode(",", $client);
-
-		if (!in_array($c->nname, $ca)) { continue; }
+	// MR - fix for php-fpm and fastcgi session issue
+	if (!file_exists("/var/log/php-fpm")) {
+		mkdir("/var/log/php-fpm",0755);
 	}
 
-	if ($server !== 'all') {
-		$sa = explode(",", $server);
-
-		if (!in_array($s->syncserver, $sa)) { continue; }
+	if (!file_exists("/var/lib/php/session")) {
+		mkdir("/var/lib/php/session");
 	}
 
-	$dlist = $c->getList('domaina');
-
-	foreach((array) $dlist as $l) {
-		$web = $l->getObject('web');
-
-		if ($domain) {
-			$da = explode(",", $domain);
-			if (!in_array($web->nname, $da)) { continue; }
-		}
-
-		$php = $web->getObject('phpini');
-		$php->initPhpIni();
-		$php->setUpdateSubaction('htaccess_update');
-
-		log_cleanup("- '/home/{$c->nname}/{$web->docroot}/.htaccess' ('{$c->nname}') at '{$php->syncserver}'", $nolog);
-
-		if (!in_array($c->nname, $clist)) {
-			$php = $c->getObject('phpini');
-			$php->initPhpIni();
-			$php->setUpdateSubaction('ini_update');
-
-			log_cleanup("- '/home/kloxo/client/{$c->nname}/php.ini' at '{$php->syncserver}'", $nolog);
-			log_cleanup("- '/home/kloxo/client/{$c->nname}/php.fcgi' at '{$php->syncserver}'", $nolog);
-			log_cleanup("- '/home/kloxo/client/{$c->nname}/prefork.inc' at '{$php->syncserver}'", $nolog);
-			log_cleanup("- '/etc/php-fpm.d/{$c->nname}.conf' at '{$php->syncserver}'", $nolog);
-
-			$php->was();
-
-			$clist[] = $c->nname;
-			array_unique($clist);
-		}
-
-		$php->was();
-
-		$web->was();
-	}
+	chmod("/var/lib/php/session", 0777);
+	chown("/var/lib/php/session", "apache");
 }
 
-// MR - fix for php-fpm and fastcgi session issue
-if (!file_exists("/var/log/php-fpm")) {
-	mkdir("/var/log/php-fpm",0755);
-}
 
-if (!file_exists("/var/lib/php/session")) {
-	mkdir("/var/lib/php/session");
-}
-
-chmod("/var/lib/php/session", 0777);
-chown("/var/lib/php/session", "apache");
 

@@ -103,6 +103,7 @@ class Sgbl
 		$this->__path_mail_data = "/home/lxadmin/mail";
 
 		$this->__path_kloxo_httpd_root = "/home/kloxo/httpd";
+		$this->__path_kloxo_root = "/home/kloxo";
 		$this->__path_lxlabs_base = "/usr/local/lxlabs";
 		$this->__path_program_etc = "/usr/local/lxlabs/kloxo/etc/";
 		$this->__path_program_root = "/usr/local/lxlabs/kloxo";
@@ -132,8 +133,9 @@ class Sgbl
 
 		$this->__var_no_sync = false;
 
-		$this->__path_ssl_root = $this->__path_kloxo_httpd_root . "/ssl";
-//		$this->__path_named_realpath = "$this->__path_named_chroot/$this->__path_named_path";
+	//	$this->__path_ssl_root = $this->__path_kloxo_httpd_root . "/ssl";
+		$this->__path_ssl_root = $this->__path_kloxo_root . "/ssl";
+	//	$this->__path_named_realpath = "$this->__path_named_chroot/$this->__path_named_path";
 
 		$this->__var_local_port = '7776';
 		$this->__var_remote_port = '7779';

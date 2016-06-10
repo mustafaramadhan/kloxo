@@ -17,6 +17,8 @@ CGIhandler = /usr/sbin/ssi-cgi
 ?>
 #CGIextension = cgi
 
+Wrap = awstats_wrapper ; /home/kloxo/httpd/awstats/wwwroot/cgi-bin ; apache:apache
+
 <?php
 	foreach($userlist as &$user) {
 ?>

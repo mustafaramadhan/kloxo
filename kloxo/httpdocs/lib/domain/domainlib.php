@@ -1399,7 +1399,8 @@ class Domaind extends DomainBase
 	//	if ($php->phpini_flag_b->multiple_php_flag === 'on') {
 	//	if (file_exists('../etc/flag/enablemultiplephp.flg')) {
 		//	$alist['__v_dialog_phpini'] = "n=web&o=phpini&a=show";
-			$alist['__v_dialog_webselector'] = "n=web&a=updateform&sa=webselector";
+		//	$alist['__v_dialog_webselector'] = "n=web&a=updateform&sa=webselector";
+			$alist['__v_dialog_webfeatures'] = "n=web&a=updateform&sa=webfeatures";
 	//	}
 
 		$alist['__v_dialog_sslcert'] = "n=web&a=list&c=sslcert";
@@ -1851,10 +1852,11 @@ class all_domain extends domaind
 			$alist[] = "a=list&c=all_addondomain";
 			$alist[] = "a=list&c=all_mailaccount";
 			$alist[] = "a=list&c=all_mailforward";
+			$alist[] = "a=list&c=all_mailinglist";
 			$alist[] = "a=list&c=all_mysqldb";
 			$alist[] = "a=list&c=all_cron";
 			$alist[] = "a=list&c=all_ftpuser";
-			$alist[] = "a=list&c=all_mailinglist";
+			$alist[] = "a=list&c=all_sslcert";
 		} else {
 			if ($parent->isLte('reseller')) {
 				$alist[] = "a=list&c=all_domain";

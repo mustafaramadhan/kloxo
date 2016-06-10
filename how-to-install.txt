@@ -24,8 +24,8 @@ B.1. Fresh Install
         # remove old rpm
         rm -f mratwork*
 
-        # get repo file -- no need for 6.5.0.c and after
-		rpm -Uvh https://github.com/mustafaramadhan/kloxo/raw/rpms/release/neutral/noarch/mratwork-release-0.0.1-1.noarch.rpm
+        # install rpm (read Warning)
+        rpm -Uvh https://github.com/mustafaramadhan/kloxo/raw/rpms/release/neutral/noarch/mratwork-release-0.0.1-1.noarch.rpm
 
         # move to /
         cd /
@@ -47,8 +47,8 @@ B.1. Fresh Install
         # remove old rpm
         rm -f mratwork*
 
-        # get repo file -- no need for 6.5.0.c and after
-		rpm -Uvh https://github.com/mustafaramadhan/kloxo/raw/rpms/release/neutral/noarch/mratwork-release-0.0.1-1.noarch.rpm
+        # install rpm (read Warning)
+        rpm -Uvh https://github.com/mustafaramadhan/kloxo/raw/rpms/release/neutral/noarch/mratwork-release-0.0.1-1.noarch.rpm
 
         # move to /
         cd /
@@ -68,13 +68,15 @@ B.2. update from 6.5.0 to 7.0.0
 	
     # '-y' mean force
     sh /script/upcp -y
-	
+    sh /script/mysql-optimize --select=upgrade
+
 B.3. update from Kloxo Official 6.1.19
 
     ## follow step B.1.1 or B.1.2 and read 'WARNING' below before next step
 
     # '-y' mean force
     sh /script/upcp -y
+    sh /script/mysql-optimize --select=upgrade
 
 WARNING:
 
@@ -83,23 +85,42 @@ WARNING:
     - In Kloxo offical run:
 
         cd /script
-        wget https://github.com/mustafaramadhan/kloxo/raw/dev/kloxo/pscript/backup-patch
+        wget https://github.com/mustafaramadhan/kloxo/raw/dev/kloxo/pscript/backup-patch  --no-check-certificate
         sh ./backup-patch
 
 2. Need remove certain rpms in Kloxo Official after 6.1.12 (testing in 6.1.19)
 
-	# remove packages from Kloxo Official
+    # remove packages from Kloxo Official
     yum remove kloxo* -y
     
 3. Since 6.5.0.f-20130701, Kloxo-MR using MySQLi API instead MySQL API. Need update mysql 5.0.x to 5.1.x or above for Centos 5.
 
-    - Check mysql version with:
+    Check mysql version with:
 
         mysql -V|awk '{print $5}'
 
-    - Update with 'yum replace mysql --replace-with=mysql55' (ask to forum for update to MariaDB)
+    Update with:
+
+        yum replace mysql --replace-with=mysql55' (ask to forum for update to MariaDB)
 
 4. Make sure all MySQL databases in MyISAM storage-engine (especially upgrade to version 6.5.0) with execute:
 
-   ## convert to MyISAM storage-engine
-   sh /script/mysql-convert --engine=myisam
+    ## convert to MyISAM storage-engine
+    sh /script/mysql-convert --engine=myisam
+
+5. Trouble with 'rpm -Uvh':
+
+    In CentOS 32bit may trouble with:
+
+        # install rpm (read Warning)
+        rpm -Uvh https://github.com/mustafaramadhan/kloxo/raw/rpms/release/neutral/noarch/mratwork-release-0.0.1-1.noarch.rpm
+
+    and then use:
+
+        cd /tmp
+        # remove old rpm
+        rm -f mratwork*
+
+        # get rpm file
+        wget https://github.com/mustafaramadhan/kloxo/raw/rpms/release/neutral/noarch/mratwork-release-0.0.1-1.noarch.rpm --no-check-certificate
+        rpm -ivh mratwork-release-0.0.1-1.noarch.rpm

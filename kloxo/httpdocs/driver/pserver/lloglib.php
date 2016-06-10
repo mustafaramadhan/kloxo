@@ -69,10 +69,13 @@ class Llog extends Lxclass {
 			'clamav/clamd.log' => 'Clamd',
 			'clamav/freshclam.log' => 'Freshclam',
 
+			'letsencrypt/letsencrypt.log' => 'Letsencrypt (certbot)',
+			'acme.sh/acme.sh.log' => 'Letsencrypt (acme.sh)',
+
 			'maillog' => 'Mail log',
 
-			'httpd/access_log' => 'HTTP Access',
-			'httpd/error_log' => 'HTTP Error',
+			'httpd/access_log' => 'Apache Access',
+			'httpd/error_log' => 'Apache Error',
 
 			'lighttpd/access.log' => 'Lighttpd Access',
 			'lighttpd/error.log' => 'Lighttpd Error',

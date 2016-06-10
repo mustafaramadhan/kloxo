@@ -45,7 +45,7 @@ class pserver extends pservercore {
 		$a['dns'] = $param['dns_driver'];
 		$a['spam'] = $param['spam_driver'];
 
-		$nofixconfig = $param['no_fix_config'];
+	//	$nofixconfig = $param['no_fix_config'];
 
 		$apachelist = getCleanRpmBranchListOnList('httpd');
 

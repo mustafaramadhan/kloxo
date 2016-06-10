@@ -8,10 +8,6 @@ if [ ! -f /var/run/httpd.pid ] ; then
 	fi
 fi
 
-#echo "  - Process: graceful"
-#apachectl graceful
-#echo "No message for graceful"
-
 echo "  - Process: restart"
 /etc/rc.d/init.d/httpd stop
 pkill -9 httpd

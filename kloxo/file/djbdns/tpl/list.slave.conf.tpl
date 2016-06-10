@@ -41,7 +41,7 @@
 		}
 	}
 
-	$datadir = "/opt/configs/djbdns/tinydns/root";
+	$datadir = "/home/djbdns/tinydns/root";
 	$datafile = "{$datadir}/slave";
 
 	if (!file_exists($datadir)) { return; }

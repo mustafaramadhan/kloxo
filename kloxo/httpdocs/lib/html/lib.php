@@ -165,7 +165,15 @@ function db_set_value($table, $set, $where, $extra = null)
 		$extra = "AND $extra";
 	}
 
-	$sq->rawQuery("update $table set $set where $where $extra");
+	$count = db_get_count($table, $where);
+
+	if ($count < 1) {
+		$data = str_replace("AND", ",", $set . " " . $extra);
+
+		$sq->rawQuery("INSERT INTO $table SET $data");
+	} else {
+		$sq->rawQuery("UPDATE $table SET $set WHERE $where $extra");
+	}
 }
 
 function db_get_value($table, $nname, $var)
@@ -401,7 +409,7 @@ function changeDriver($server, $class, $pgm)
 
 	// Temporary hack. Somehow mysql doesnt' work in the backend.
 
-	lxshell_return("__path_php_path", "../bin/common/setdriver.php",
+	lxshell_return("$sgbl->__path_php_path", "../bin/common/setdriver.php",
 		"--server={$server}", "--class={$class}", "--driver={$pgm}");
 
 	return;
@@ -2531,16 +2539,16 @@ function lightyApacheLimit($server, $var)
 	}
 
 	if ($var === 'phpfcgi_flag' || $var === 'phpfcgiprocess_num') {
-		/*
-			//	$driverapp = $gbl->getSyncClass(null, $server, 'web');
-				$driverapp = slave_get_driver('web');
+	/*
+	//	$driverapp = $gbl->getSyncClass(null, $server, 'web');
+		$driverapp = slave_get_driver('web');
 
-				if ($driverapp === 'apache') {
-					return false;
-				} else {
-					return true;
-				}
-		*/
+		if ($driverapp === 'apache') {
+			return false;
+		} else {
+			return true;
+		}
+	*/
 		// always true because change to php-fpm purpose!
 		return true;
 	}
@@ -2794,16 +2802,21 @@ function curl_get_file_contents($file)
 	return $retrievedhtml;
 }
 
-function install_if_package_not_exist($name)
+function install_if_package_not_exist($name, $nolog = null)
 {
 	if ($name === '') {
 		return;
 	}
 
-	$ret = lxshell_return("rpm", "-q", $name);
+//	$ret = lxshell_return("rpm", "-q", $name);
+	$ret = lxshell_return("yum", "list", "installed", $name);
+
 
 	if ($ret) {
+		log_cleanup("- Installing for {$name} package", $nolog);
 		lxshell_return("yum", "-y", "install", $name);
+	} else {
+		log_cleanup("- {$name} package already installed", $nolog);
 	}
 }
 
@@ -3172,6 +3185,8 @@ function createDatabaseInterfaceTemplate($nolog = null)
 
 function callInChild($func, $arglist)
 {
+	global $sgbl;
+
 	$res = new Remote();
 	$res->__type = 'function';
 	$res->func = $func;
@@ -3179,7 +3194,7 @@ function callInChild($func, $arglist)
 	$name = tempnam("/tmp", "lxchild");
 	lxfile_generic_chmod($name, "700");
 	lfile_put_contents($name, serialize($res));
-	$var = lxshell_output("__path_php_path", "../bin/common/child.php", $name);
+	$var = lxshell_output("$sgbl->__path_php_path", "../bin/common/child.php", $name);
 	$rmt = unserialize(base64_decode($var));
 
 	return $rmt;
@@ -3187,6 +3202,8 @@ function callInChild($func, $arglist)
 
 function callInBackground($func, $arglist)
 {
+	global $sgbl;
+
 	$res = new Remote();
 	$res->__type = 'function';
 	$res->func = $func;
@@ -3195,7 +3212,7 @@ function callInBackground($func, $arglist)
 	lxfile_generic_chmod($name, "700");
 	lfile_put_contents($name, serialize($res));
 
-	lxshell_background("__path_php_path", "../bin/common/background.php", $name);
+	lxshell_background("$sgbl->__path_php_path", "../bin/common/background.php", $name);
 }
 
 function callObjectInBackground($object, $func)
@@ -3213,11 +3230,11 @@ function callObjectInBackground($object, $func)
 
 function get_with_cache($file, $cmdarglist)
 {
-	global $global_shell_out, $global_shell_error, $global_shell_ret;
+	global $global_shell_out, $global_shell_error, $global_shell_ret, $sgbl;
 
 	$stat = @ llstat($file);
 
-	lxfile_mkdir("__path_program_root/cache");
+	lxfile_mkdir("$sgbl->__path_program_root/cache");
 
 	$tim = 120;
 
@@ -4265,6 +4282,8 @@ function slave_save_db($file, $list)
 
 function securityBlanketExec($table, $nname, $variable, $func, $arglist)
 {
+	global $sgbl;
+
 	$rem = new Remote();
 	$rem->table = $table;
 	$rem->nname = $nname;
@@ -4276,7 +4295,7 @@ function securityBlanketExec($table, $nname, $variable, $func, $arglist)
 	lxfile_generic_chmod($name, "700");
 	lfile_put_contents($name, serialize($rem));
 
-	lxshell_background("__path_php_path", "../bin/common/securityblanket.php", $name);
+	lxshell_background("$sgbl->__path_php_path", "../bin/common/securityblanket.php", $name);
 }
 
 function checkClusterDiskQuota()
@@ -4592,13 +4611,15 @@ function findServerTraffic()
 
 function createMultipLeVps($param)
 {
+	global $$sgbl;
+
 	$adminpass = $param['vps_admin_password_f'];
 	$template = $param['vps_template_name_f'];
 	$one_ip = $param['vps_one_ipaddress_f'];
 	$base = $param['vps_basename_f'];
 	$count = $param['vps_count_f'];
 
-	lxshell_background("__path_php_path", "../bin/multicreate.php", "--admin-password=$adminpass", "--v-template_name=$template", "--count=$count", "--basename=$base", "--v-one_ipaddress=$one_ip");
+	lxshell_background("$sgbl->__path_php_path", "../bin/multicreate.php", "--admin-password=$adminpass", "--v-template_name=$template", "--count=$count", "--basename=$base", "--v-one_ipaddress=$one_ip");
 }
 
 function collect_quota_later()
@@ -4815,10 +4836,12 @@ function lxguard_main($clearflag = false, $since = false)
 
 function lxguard_save_hitlist($hl)
 {
+	global $sgbl;
+
 	include_once "lib/html/lxguardincludelib.php";
 
 	lxfile_mkdir("__path_home_root/lxguard");
-	$lxgpath = "__path_home_root/lxguard";
+	$lxgpath = "$sgbl->__path_home_root/lxguard";
 	$rmt = new Remote();
 	$rmt->hl = $hl;
 	$rmt->ddate = time();
@@ -4849,15 +4872,19 @@ function fix_move_to_client()
 
 function addcustomername()
 {
-	lxshell_return("__path_php_path", "../bin/misc/addcustomername.php");
+	global $sgbl;
+
+	lxshell_return("$sgbl->__path_php_path", "../bin/misc/addcustomername.php");
 }
 
 function fix_phpini($nolog = null)
 {
+	global $sgbl;
+
 	log_cleanup("Fix php.ini", $nolog);
 	log_cleanup("- Fix process", $nolog);
 
-	lxshell_return("__path_php_path", "../bin/fix/fixphpini.php");
+	lxshell_return("$sgbl->__path_php_path", "../bin/fix/fixphpini.php");
 }
 
 function switchtoaliasnext()
@@ -5364,7 +5391,7 @@ function getRpmBranchInstalled($rpm)
 
 function getRpmBranchInstalledOnList($rpm)
 {
-	$a = getRpmBranchListOnList($rpm);
+	$a = getListOnList($rpm);
 
 	foreach ($a as $k => $e) {
 		$s = preg_replace('/(.*)\_\(as\_(.*)\)/', '$1', $e);
@@ -5412,21 +5439,6 @@ function getRpmBranchList($pname)
 	}
 
 	return $n;
-}
-
-function getRpmBranchListOnList($pname)
-{
-	$p = "../etc/list";
-	$f = getLinkCustomfile($p, "{$pname}.lst");
-	$c = trimSpaces(file_get_contents($f));
-
-	$a = explode(",", $c);
-
-	if (!$a) {
-		$a = array($c);
-	}
-
-	return $a;
 }
 
 function getRpmVersion($rpmname)
@@ -5653,9 +5665,10 @@ function setInitialDnsConfig($type, $nolog = null)
 	}
 
 	// MR -- remove old dirs
-	$htpath_old = "/home/{$type}";
-
-	lxfile_rm_rec($htpath_old);
+	if ($type !== 'djbdns') {
+		$htpath_old = "/home/{$type}";
+		lxfile_rm_rec($htpath_old);
+	}
 }
 
 function setInitialAllWebConfigs($nolog = null)
@@ -5761,68 +5774,61 @@ function setInitialPhpIniConfig($nolog = null)
 	exec("'cp' -rf {$fpath} /opt/configs");
 }
 
-function setInitialPhpFpmConfig($nolog = null)
+function getInitialPhpFpmConfig($nolog = null)
 {
-	// MR -- this portion for detect multiple php for using standard php-fpm
-	$d = glob("/opt/php*m/usr/bin/php");
+	$d = getMultiplePhpList();
 
-	foreach ($d as $k => $v) {
-		$e = str_replace('/opt/', '', $v);
-		$e = str_replace('/usr/bin/php', '', $e);
-		$d[$k] = $e;
+	if (isset($d)) {
+		foreach ($d as $k => $v) {
+			if ($v === 'php52m') {
+				unset($d[$k]);
+			}
+		}
 
-		if ($e === 'php52m') {
-			unset($d[$k]);
+		$d = array_merge(array('php'), $d);
+	} else { 
+		$d = array('php');
+	}
+
+	$a = glob("../etc/flag/use_php*.flg");
+
+	if (count($a) > 0) {
+		$b1 = basename($a[0]);
+		$b2 = str_replace('.flg', '', $b1);
+		$b3 = str_replace('use_', '', $b2);
+
+		exec("sh /script/set-php-fpm {$b3}");
+
+		return $b3;
+	} else {
+		// basic php-fpm.init
+		foreach ($d as $k => $v) {
+			$t = "prog=\"{$v}-fpm\"";
+		
+			exec("cat /etc/rc.d/init.d/php-fpm|grep '{$t}'", $out, $ret);
+
+			if (count($out) > 0) {
+				touch("../etc/flag/use_{$v}.flg");
+				exec("sh /script/set-php-fpm {$v}");
+				return $v;
+			}
+		}
+
+		// customize php-fpm.init back to basic
+		foreach ($d as $k => $v) {
+			$t = "custom_name=\"{$v}\"";
+		
+			exec("cat /etc/rc.d/init.d/php-fpm|grep '{$t}'", $out, $ret);
+
+			if (count($out) > 0) {
+				touch("../etc/flag/use_{$v}.flg");
+				exec("sh /script/set-php-fpm {$v}");
+				return $v;
+			}
 		}
 	}
 
-	foreach ($d as $k => $v) {
-		$t = "'custom_name=\"{$v}\"'";
-
-		exec("cat /etc/rc.d/init.d/php-fpm|grep {$t}", $out, $ret);
-
-		if ($ret === 0) {
-			exec("sh /script/set-php-fpm {$v}");
-
-			return;
-		}
-	}
-
-	// MR -- this portion using standard php-fpm
-
-	$fpath = "../file";
-	$fpmpath = "/opt/configs/php-fpm/etc";
-	$sockpath = "/opt/configs/php-fpm/sock";
-
-	if (!file_exists($sockpath)) {
-		exec("mkdir -p {$sockpath}");
-	}
-
-	exec("'cp' -rf {$fpath}/php-fpm /opt/configs");
-
-
-	log_cleanup("- Install /etc/php-fpm.conf", $nolog);
-
-	$phpchoose = version_compare(getPhpVersion(), "5.3.2", ">") ? "php53" : "php";
-
-	$t = getLinkCustomfile("{$fpmpath}", "{$phpchoose}-fpm.conf");
-	if (file_exists($t)) {
-		lxfile_cp($t, "/etc/php-fpm.conf");
-	}
-
-	// MR -- no needed for 6.2.x+
-	if (file_exists("{$fpmpath}/logs")) {
-		lxfile_rm("{$fpmpath}/logs");
-	}
-
-	log_cleanup("- Copy php-fpm init to /etc/init.d dir", $nolog);
-	$t = getLinkCustomfile("{$fpmpath}/init.d", "php-fpm.init");
-
-	if (file_exists($t)) {
-		if (file_exists("/etc/init.d/php-fpm")) {
-			lxfile_cp($t, "/etc/init.d/php-fpm");
-		}
-	}
+	return 'php';
 }
 
 function setKloxoCexeChownChmod($nolog = null)
@@ -6426,6 +6432,7 @@ function setCheckPackages($nolog = null)
 		$phpbranchmysql = "{$phpbranch}-mysqlnd";
 	}
 
+/*
 	$list = array("autorespond-toaster", $authlib_rpm, $imap_rpm,
 		"daemontools-toaster", "ezmlm-toaster", "libdomainkeys-toaster",
 		"libsrs2-toaster", "maildrop-toaster", "qmail-pop3d-toaster", "qmail-toaster",
@@ -6435,13 +6442,19 @@ function setCheckPackages($nolog = null)
 		"{$phpbranch}-pecl-geoip", "{$phpbranch}-gd",
 		"{$phpbranch}-mcrypt", "{$phpbranch}-xml", "{$phpbranch}-bcmath", "{$phpbranch}-pgsql",
 		"webalizer", "dos2unix", "rrdtool", "xinetd", "lxjailshell");
+*/
+	$list = array("autorespond-toaster", $authlib_rpm, $imap_rpm,
+		"daemontools-toaster", "ezmlm-toaster", "libdomainkeys-toaster",
+		"libsrs2-toaster", "maildrop-toaster", "qmail-pop3d-toaster", "qmail-toaster",
+		"ripmime", "ucspi-tcp-toaster", "vpopmail-toaster", "fetchmail", "bogofilter",
+		"spamdyke", "spamdyke-utils", "pure-ftpd", "webalizer", "dos2unix", "rrdtool",
+		"xinetd", "lxjailshell");
 
 	foreach ($list as $l) {
 		if ($l === '') {
 			continue;
 		}
 
-		log_cleanup("- For {$l} package", $nolog);
 		install_if_package_not_exist($l);
 	}
 }
@@ -6504,7 +6517,7 @@ function setInitialServer($nolog = null)
 
 	exec("yum -y install $list >/dev/null 2>&1");
 
-	lxfile_cp(getLinkCustomfile("..init", "kloxo.init"),
+	lxfile_cp(getLinkCustomfile("../init", "kloxo.init"),
 		"/etc/init.d/kloxo");
 
 	exec("chown root:root /etc/init.d/kloxo; chmod 755 /etc/init.d/kloxo");
@@ -7112,8 +7125,7 @@ function updatecleanup($nolog = null)
 
 	setRealServiceBranchList($nolog);
 
-	// MR -- no need because 'yum update' in tmpupdatecleanup
-//	setCheckPackages($nolog);
+	setCheckPackages($nolog);
 
 	copy_script($nolog);
 
@@ -7199,10 +7211,7 @@ function setInitialServices($nolog = null)
 	setInitialAllWebCacheConfigs($nolog);
 
 	setInitialPhpIniConfig($nolog);
-	setInitialPhpFpmConfig($nolog);
-
-	setCopyOpenSSLConfFiles();
-	setCopyLetsEncryptConfFiles();
+	getInitialPhpFpmConfig($nolog);
 
 	setInitialPureftpConfig($nolog);
 
@@ -7219,6 +7228,8 @@ function setInitialServices($nolog = null)
 	installChooser($nolog);
 
 	setInstallMailserver($nolog);
+
+	setAllSSLPortions($nolog);
 }
 
 function setRemoveAlias($nolog = null)
@@ -7370,7 +7381,7 @@ function setCopyDnsConfFiles($dnsdriver, $nolog = null)
 
 	if ($aliasdriver === 'djbdns') {
 		if (file_exists("/home/djbdns/tinydns")) {
-			lxfile_mv("/home/djbdns", "/opt/configs/djbdns");
+		//	lxfile_mv("/home/djbdns", "/opt/configs/djbdns");
 		}
 /*
 	} elseif ($aliasdriver === 'maradns') {
@@ -7521,11 +7532,11 @@ function setCopyWebConfFiles($webdriver, $nolog = null)
 	log_cleanup("- Copy etc/conf/{$s} to {$pathconf}/{$aliasdriver}.conf", $nolog);
 	lxfile_cp($t, "{$pathconf}/{$aliasdriver}.conf");
 
-	$confs = array("~lxcenter", "ssl", "__version", "perl", "rpaf", "local.lighttpd", "default", "define");
-
 	// MR - remove unwanted files
 	if ($webdriver === 'apache') {
 		lxfile_rm("{$pathdrv}/etc/conf.d/_mpm.nonconf");
+		lxfile_rm("{$pathdrv}/etc/conf.d/perl.conf");
+		lxfile_rm("{$pathdrv}/etc/conf.d/perl.conf.original");
 	}
 }
 
@@ -7560,6 +7571,23 @@ function setCopyLetsEncryptConfFiles()
 
 	if (file_exists("/home/letsencrypt")) {
 		lxfile_rm_rec("/home/letsencrypt");
+	}
+}
+
+function setCopyAcmeshConfFiles()
+{
+	$nolog = null;
+
+	$pathsrc = "../file/acme.sh";
+	$pathdrv = "/opt/configs/acme.sh";
+
+	log_cleanup("Copy all contents from {$pathsrc}", $nolog);
+
+	log_cleanup("- Copy to {$pathdrv}", $nolog);
+	exec("'cp' -rf {$pathsrc} /opt/configs");
+
+	if (file_exists("/home/acme.sh")) {
+		lxfile_rm_rec("/home/acme.sh");
 	}
 }
 
@@ -7740,7 +7768,7 @@ function setPhpBranch($select, $nolog = null)
 		exec("cd /; yum list installed php* |grep -P 'php[a-zA-z0-9\-]+'", $phpmodules);
 
 		log_cleanup("-- Replace using 'yum replace {$phpbranch} --replace-with={$select}'", $nolog);
-		setRpmReplaced($phpbranch, $select);
+		setRpmReplaced("{$phpbranch}-cli","{$select}-cli");
 		/*
 			if ($phpmodules[0] === $phpbranch) {
 				unset($phpmodules[0]);
@@ -8258,8 +8286,9 @@ function ipv6_expand($ip){
 
 function getMultiplePhpList()
 {
-	$a = getCleanRpmBranchListOnList('php');
 	$d = glob("/opt/*m/usr/bin/php");
+
+	if (empty($d)) { return array(); }
 
 	foreach ($d as $k => $v) {
 		$e = str_replace('/opt/', '', $v);
@@ -8272,7 +8301,7 @@ function getMultiplePhpList()
 
 function getCleanRpmBranchListOnList($branchtype)
 {
-	$a = getRpmBranchListOnList($branchtype);
+	$a = getListOnList($branchtype);
 
 	$c = array();
 
@@ -8297,7 +8326,7 @@ function getCleanRpmBranchListOnList($branchtype)
 		$a[$k] = str_replace('w', '', str_replace('u', '', $v) . "m");
 	}
 
-	return $a;
+	return array_unique($a);
 }
 
 function glob_recursive($pattern, $flags = 0)
@@ -8322,4 +8351,89 @@ function replace_to_space($text)
 	$text = trim($text);
 
 	return $text;
+}
+
+function setFixSSLPath($nolog = null)
+{
+	exec("sh /script/fixsslpath");
+}
+
+function setInstallLetsencrypt($nolog = null)
+{
+	if (!file_exists("/usr/bin/letsencrypt-auto")) {
+		exec("sh /script/letsencrypt-installer");
+	}
+}
+
+function setRemoveLetsencrypt($nolog = null)
+{
+	exec("sh /script/letsencrypt-remover");
+}
+
+function setInstallAcmesh($nolog = null)
+{
+	if (!file_exists("/root/.acme.sh/acme.sh/acme.sh")) {
+		exec("sh /script/acme.sh-installer");
+	}
+}
+
+function setAllSSLPortions($nolog = null)
+{
+	log_cleanup("Setting All SSL Portions", $nolog);
+
+	log_cleanup("- Installing Letsencrypt-auto", $nolog);
+	setInstallLetsencrypt($nolog);
+
+//	log_cleanup("- Removing Letsencrypt-auto", $nolog);
+//	setRemoveLetsencrypt($nolog);
+
+//	log_cleanup("- Installing acme.sh", $nolog);
+//	setInstallAcmesh($nolog);
+
+	log_cleanup("- Fixing SSL path", $nolog);
+	setFixSSLPath($nolog);
+
+	log_cleanup("- Copying 'openssl' config Files", $nolog);
+	setCopyOpenSSLConfFiles();
+
+	log_cleanup("- Copying 'letsencrypt-auto' config Files", $nolog);
+	setCopyLetsEncryptConfFiles();
+
+	log_cleanup("- Copying 'acme.sh' config Files", $nolog);
+	setCopyAcmeshConfFiles();
+}
+
+function getListOnList($pname)
+{
+	$p = "../etc/list";
+	$f = getLinkCustomfile($p, "{$pname}.lst");
+	$c = trimSpaces(file_get_contents($f));
+
+	$a = explode(",", $c);
+
+	if (!$a) {
+		$a = array($c);
+	}
+
+	return $a;
+}
+
+function callWithSudo($res, $username=null)
+{
+	if(!isset($username)){
+		$username = $res->arglist[0];
+	}
+ 
+	if(isset($res->func)) {
+		log_log("sudo_action", "Running: ".serialize($res->func)." as $username ");
+	} else if(isset($res->robject)) {
+		log_log("sudo_action", "Running: ".serialize($res->robject)." as $username ");
+	}
+
+	$var = lxshell_output("sudo",  "-u", $username,  "__path_php_path", "../bin/common/sudo_action.php",
+			escapeshellarg(base64_encode(serialize($res))));
+
+	$rmt = unserialize(base64_decode($var));
+
+	return $rmt;
 }

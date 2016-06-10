@@ -2,12 +2,21 @@
 
 <?php
 
+// MR -- disable cgi module
+if (file_exists('/etc/httpd/conf.modules.d/01-cgi.conf')) {
+	exec("'cp' -f /opt/configs/apache/etc/conf.modules.d/01-cgi.conf /etc/httpd/conf.modules.d/01-cgi.conf");
+}
+
 if (!file_exists("/var/run/letsencrypt/.well-known/acme-challenge")) {
 	exec("mkdir -p /var/run/letsencrypt/.well-known/acme-challenge");
 }
 
 if (!isset($phpselected)) {
 	$phpselected = 'php';
+}
+
+if (!isset($timeout)) {
+	$timeout = '300';
 }
 
 $srcpath = "/opt/configs/apache/etc";
@@ -43,6 +52,8 @@ $mpmlist = array('prefork', 'itk', 'event', 'worker');
 if (file_exists("/usr/local/lxlabs/kloxo/etc/flag/use_apache24.flg")) {
 	$httptype="httpd24";
 
+	exec("'cp' -f /opt/configs/apache/etc/conf/httpd24.conf /etc/httpd/conf/httpd.conf");
+
 	if (file_exists("{$trgtcmdpath}/00-base.conf")) {
 		exec("sed -i 's/^LoadModule deflate_module/#LoadModule deflate_module/' {$trgtcmdpath}/00-base.conf");
 	}
@@ -55,11 +66,18 @@ if (file_exists("/usr/local/lxlabs/kloxo/etc/flag/use_apache24.flg")) {
 			}
 		}
 	}
+
+	// MR -- disable cgi module
+	if (file_exists("{$trgtcmdpath}/01-cgi.conf")) {
+		exec("sed -i 's/^LoadModule cgid_module/#LoadModule cgid_module/' {$trgtcmdpath}/01-cgi.conf");
+	}
 	
 	// MR -- make blank content
 	exec("echo '' > /etc/sysconfig/httpd");
 } else {
 	$httptype="httpd";
+
+	exec("'cp' -f /opt/configs/apache/etc/conf/httpd.conf /etc/httpd/conf/httpd.conf");
 
 	// as 'httpd' as default mpm
 	exec("echo 'HTTPD=/usr/sbin/httpd' > /etc/sysconfig/httpd");
@@ -70,6 +88,9 @@ if (file_exists("/usr/local/lxlabs/kloxo/etc/flag/use_apache24.flg")) {
 			break;
 		}
 	}
+
+	// MR -- disable cgi module
+	exec("sed -i 's/^LoadModule cgi_module/#LoadModule cgi_module/' {$trgtcpath}/httpd.conf");
 }
 
 if (file_exists("{$srccpath}/custom.{$httptype}.conf")) {
@@ -139,7 +160,7 @@ if (file_exists("{$srcpath}/custom.suphp.conf")) {
 }
 
 foreach ($certnamelist as $ip => $certname) {
-	$certnamelist[$ip] = "/home/kloxo/httpd/ssl/{$certname}";
+	$certnamelist[$ip] = "/home/kloxo/ssl/{$certname}";
 }
 
 if ($reverseproxy) {
@@ -178,11 +199,22 @@ $portnip = "Define port {$ports[0]}\nDefine portssl {$ports[1]}\nDefine ip {$tmp
 
 file_put_contents("{$globalspath}/portnip.conf", $portnip);
 
-
 $defaultdocroot = "/home/kloxo/httpd/default";
 
 if ($indexorder) {
 	$indexorder = implode(' ', $indexorder);
+}
+
+if (file_exists("{$globalspath}/custom.acme-challenge.conf")) {
+	$acmechallenge = "custom.acme-challenge";
+} else {
+	$acmechallenge = "acme-challenge";
+}
+
+if (file_exists("{$globalspath}/custom.header_base.conf")) {
+	$header_base = "custom.header_base";
+} else {
+	$header_base = "header_base";
 }
 
 // MR -- for future purpose, apache user have uid 50000
@@ -262,13 +294,17 @@ foreach ($certnamelist as $ip => $certname) {
 
 	DocumentRoot "<?php echo $defaultdocroot; ?>"
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DirectoryIndex <?php echo $indexorder; ?>
 
 <?php
 		if ($count !== 0) {
 ?>
+
+	<IfModule mod_http2.c>
+		Protocols h2 http/1.1
+	</IfModule>
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -279,13 +315,22 @@ foreach ($certnamelist as $ip => $certname) {
 		SSLCertificateFile <?php echo $certname; ?>.pem
 		SSLCertificateKeyFile <?php echo $certname; ?>.key
 <?php
-				if (file_exists("{$certname}.ca")) {
+			if (file_exists("{$certname}.ca")) {
 
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
+
+		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 <?php
-				}
+			}
 ?>
+	</IfModule>
+<?php
+		} else {
+?>
+
+	<IfModule mod_http2.c>
+		Protocols h2c http/1.1
 	</IfModule>
 <?php
 		}
@@ -312,8 +357,8 @@ foreach ($certnamelist as $ip => $certname) {
 
 		<IfModule mod_fastcgi.c>
 			Alias /default.<?php echo $count; ?>fake "<?php echo $defaultdocroot; ?>/default.<?php echo $count; ?>fake"
-			#FastCGIExternalServer "<?php echo $defaultdocroot; ?>/default.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmportapache; ?> -idle-timeout 120 -pass-header Authorization
-			FastCGIExternalServer "<?php echo $defaultdocroot; ?>/default.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/php-apache.sock -idle-timeout 120 -pass-header Authorization
+			#FastCGIExternalServer "<?php echo $defaultdocroot; ?>/default.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmportapache; ?> -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
+			FastCGIExternalServer "<?php echo $defaultdocroot; ?>/default.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/php-apache.sock -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
 			<FilesMatch \.php$>
 				SetHandler application/x-httpd-fastphp
 			</FilesMatch>
@@ -350,8 +395,10 @@ foreach ($certnamelist as $ip => $certname) {
 				SetHandler "proxy:unix:/opt/configs/php-fpm/sock/php-apache.sock|fcgi://localhost"
 			</FilesMatch>
 			<Proxy "fcgi://localhost">
-				ProxySet timeout=600
-				ProxySet connectiontimeout=300
+				ProxySet timeout=<?php echo $timeout; ?>
+
+				ProxySet connectiontimeout=<?php echo $timeout; ?>
+
 				#ProxySet enablereuse=on
 				ProxySet max=25
 				ProxySet retry=0

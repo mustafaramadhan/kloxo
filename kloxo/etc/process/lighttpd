@@ -10,9 +10,6 @@ if [ ! -f /var/run/lighttpd.pid ] ; then
 	fi
 fi
 
-#echo "  - Process: reload"
-#/etc/rc.d/init.d/lighttpd reload
-
 echo "  - Process: restart"
 /etc/rc.d/init.d/lighttpd stop
 pkill -9 lighttpd

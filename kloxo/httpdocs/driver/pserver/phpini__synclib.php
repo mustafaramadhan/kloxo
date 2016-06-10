@@ -54,19 +54,13 @@ class phpini__sync extends Lxdriverclass
 		}
 
 		$user = $input['user'] = (isset($this->main->__var_web_user)) ? $this->main->__var_web_user : 'apache';
-		$extrabasedir = $input['extrabasedir'] = (isset($this->main->__var_extrabasedir)) ? $this->main->__var_extrabasedir : '';
+	//	$extrabasedir = $input['extrabasedir'] = (isset($this->main->__var_extrabasedir)) ? $this->main->__var_extrabasedir : '';
 
 		$phpini_path = "/opt/configs/phpini/tpl";
 		$phpini_cont = file_get_contents(getLinkCustomfile($phpini_path, "php.ini.tpl"));
 
 		$fcgid_path = "/opt/configs/apache/tpl";
 		$fcgid_cont = file_get_contents(getLinkCustomfile($fcgid_path, "php.fcgi.tpl"));
-
-		$phpfpm_path_etc = "/opt/configs/php-fpm/etc";
-		$phpfpm_path = "/opt/configs/php-fpm/tpl";
-		$phpfpm_cont = file_get_contents(getLinkCustomfile($phpfpm_path, "php53-fpm-pool.conf.tpl"));
-		$phpfpm_main = getLinkCustomfile($phpfpm_path_etc, "php53-fpm.conf");
-		$phpfpm_www = getLinkCustomfile($phpfpm_path_etc . "/php-fpm.d", "www.conf");
 
 		$prefork_path = "/opt/configs/apache/tpl";
 		$prefork_cont = file_get_contents(getLinkCustomfile($prefork_path, "prefork.inc.tpl"));
@@ -84,23 +78,17 @@ class phpini__sync extends Lxdriverclass
 		$endlist[] = "###End Kloxo Area";
 		$endlist[] = "###End Lxadmin PHP config Area";
 
-		$endstring = $endlist[0];
-		$startstring = $stlist[0];
-
 		if ($pclass === 'pserver') {
 			$input['phpinipath'] = "/etc";
 			$input['phpcgipath'] = "/usr/bin/php-cgi";
 
 			$phpini_parse = getParseInlinePhp($phpini_cont, $input);
-			$fcgid_parse = getParseInlinePhp($fcgid_cont, $input);
-			$phpfpm_parse = getParseInlinePhp($phpfpm_cont, $input);
-
 			$phpini_target = '/etc/php.ini';
+			file_put_contents($phpini_target, $phpini_parse);
+
+			$fcgid_parse = getParseInlinePhp($fcgid_cont, $input);
 			$fcgid_target = '/home/kloxo/client/php.fcgi';
 			$fcgid_target_old = '/home/kloxo/client/php5.fcgi';
-			$phpfpm_target = '/etc/php-fpm.d/default.conf';
-
-			file_put_contents($phpini_target, $phpini_parse);
 			file_put_contents($fcgid_target, $fcgid_parse);
 
 			if (file_exists($fcgid_target_old)) {
@@ -109,11 +97,66 @@ class phpini__sync extends Lxdriverclass
 
 			exec("'cp' -f /opt/configs/apache/tpl/php*.fcgi /home/kloxo/client");
 			exec("chmod 0775 /home/kloxo/client/php*.fcgi");
-				
-			file_put_contents($phpfpm_target, $phpfpm_parse);
 
-			lxfile_cp($phpfpm_main, "/etc/php-fpm.conf");
-			lxfile_cp($phpfpm_www, "/etc/php-fpm.d/www.conf");
+			if (!file_exists("/opt/configs/php-fpm/sock")) {
+				exec("mkdir -p /opt/configs/php-fpm/sock");
+			}
+
+			$phpfpm_path_etc = "/opt/configs/php-fpm/etc";
+			$phpfpm_path = "/opt/configs/php-fpm/tpl";
+
+			$phpmfpminit_src = getLinkCustomfile("{$phpfpm_path_etc}/init.d", "phpm-fpm.init");
+			$phpmfpminit_target = "/etc/rc.d/init.d/phpm-fpm";
+			exec("'cp' -f {$phpmfpminit_src} {$phpmfpminit_target}; chmod 755 {$phpmfpminit_target}");
+
+			$phps = getMultiplePhpList();
+
+			$phps = array_merge(array('php'), $phps);
+
+			foreach ($phps as $k => $v) {
+				$input['phpselected'] = $v;
+				array_unique($input);
+
+				$path = "/opt/configs/php-fpm/conf/{$v}";
+
+				if (!file_exists("{$path}/php-fpm.d")) {
+					exec("mkdir -p {$path}/php-fpm.d");
+				}
+
+				$phpfpm_target_default = "{$path}/php-fpm.d/default.conf";
+
+				if ($v === 'php52m') {
+					$phpfpm_global_pre = file_get_contents(getLinkCustomfile($phpfpm_path, "php52-fpm-global-pre.conf.tpl"));
+					$phpfpm_global_post = file_get_contents(getLinkCustomfile($phpfpm_path, "php52-fpm-global-post.conf.tpl"));
+					$phpfpm_default = file_get_contents(getLinkCustomfile($phpfpm_path, "php52-fpm-default.conf.tpl"));
+
+					$phpfpm_target_global_pre = "{$path}/php-fpm_pre.conf";
+					$phpfpm_target_global_post = "{$path}/php-fpm_post.conf";
+
+					$phpfpm_parse_global_pre = getParseInlinePhp($phpfpm_global_pre, $input);
+					file_put_contents($phpfpm_target_global_pre, $phpfpm_parse_global_pre);
+
+					$phpfpm_parse_global_post = getParseInlinePhp($phpfpm_global_post, $input);
+					file_put_contents($phpfpm_target_global_post, $phpfpm_parse_global_post);
+
+					exec("cat {$phpfpm_target_global_pre} {$path}/php-fpm.d/*.conf {$phpfpm_target_global_post} > {$path}/php-fpm.conf");
+				} else {
+					$phpfpm_global = file_get_contents(getLinkCustomfile($phpfpm_path, "php53-fpm-global.conf.tpl"));
+					$phpfpm_default = file_get_contents(getLinkCustomfile($phpfpm_path, "php53-fpm-default.conf.tpl"));
+
+					$phpfpm_target_global = "{$path}/php-fpm.conf";
+
+					$phpfpm_parse_global = getParseInlinePhp($phpfpm_global, $input);
+					file_put_contents($phpfpm_target_global, $phpfpm_parse_global);
+
+					if ($v === 'php') {
+						exec("'cp' -f {$path}/php-fpm.conf /etc/php-fpm.conf");
+					}
+				}
+
+				$phpfpm_parse_default = getParseInlinePhp($phpfpm_default, $input);
+				file_put_contents($phpfpm_target_default, $phpfpm_parse_default);
+			}
 		} else {
 			$input['phpinipath'] = "/home/kloxo/client/{$user}";
 			$input['phpcgipath'] = "/usr/bin/php-cgi";
@@ -128,41 +171,51 @@ class phpini__sync extends Lxdriverclass
 				$input['maxchildren'] = $maxchildren;
 
 				$phpini_parse = getParseInlinePhp($phpini_cont, $input);
-				$fcgid_parse = getParseInlinePhp($fcgid_cont, $input);
-				$phpfpm_parse = getParseInlinePhp($phpfpm_cont, $input);
-				$prefork_parse = getParseInlinePhp($prefork_cont, $input);
-
 				$phpini_target = "/home/kloxo/client/{$user}/php.ini";
-				$fcgid_target = "/home/kloxo/client/{$user}/php.fcgi";
-				$fcgid_target_old = "/home/kloxo/client/{$user}/php5.fcgi";				
-				$phpfpm_target = "/etc/php-fpm.d/{$user}.conf";
-				$prefork_target = "/home/kloxo/client/{$user}/prefork.inc";
-
 				file_put_contents($phpini_target, $phpini_parse);
+
+				$fcgid_parse = getParseInlinePhp($fcgid_cont, $input);
+				$fcgid_target = "/home/kloxo/client/{$user}/php.fcgi";
+				$fcgid_target_old = "/home/kloxo/client/{$user}/php5.fcgi";
 				file_put_contents($fcgid_target, $fcgid_parse);
 				
 				if (file_exists($fcgid_target_old)) {
 					exec("'rm' -f {$fcgid_target_old}");
 				}
-				
-				file_put_contents($phpfpm_target, $phpfpm_parse);
-				file_put_contents($prefork_target, $prefork_parse);
 
 				lxfile_unix_chmod($fcgid_target, "0755");
-			} else {
-			/*
-				$htaccess_parse = '';
 
-				$htaccess_target = "/home/{$user}/kloxoscript/.htaccess";
+				$phps = getMultiplePhpList();
+				$phps = array_merge(array('php'), $phps);
 
-				$nowarning = true;
+				foreach ($phps as $k => $v) {
+					$phpfpm_path = "/opt/configs/php-fpm/tpl";
 
-				file_put_between_comments("{$user}:apache", $stlist, $endlist,
-					$startstring, $endstring, $htaccess_target, $htaccess_parse,
-					$nowarning);
+					if ($v === 'php52m') {
+						$phpfpm_cont = file_get_contents(getLinkCustomfile($phpfpm_path, "php52-fpm-pool.conf.tpl"));
+					} else {
+						$phpfpm_cont = file_get_contents(getLinkCustomfile($phpfpm_path, "php53-fpm-pool.conf.tpl"));
+					}
 
-				lxfile_unix_chown($htaccess_target, "{$user}:apache");
-			*/
+					$input['phpselected'] = $v;
+					array_unique($input);
+
+					$path = "/opt/configs/php-fpm/conf/{$v}";
+
+					if (!file_exists("{$path}/php-fpm.d")) {
+						exec("mkdir -p {$path}/php-fpm.d");
+					}
+
+					$phpfpm_target = "{$path}/php-fpm.d/{$user}.conf";
+
+					$phpfpm_parse = getParseInlinePhp($phpfpm_cont, $input);
+
+					file_put_contents($phpfpm_target, $phpfpm_parse);
+				}
+
+				$prefork_parse = getParseInlinePhp($prefork_cont, $input);
+				$prefork_target = "/home/kloxo/client/{$user}/prefork.inc";
+				file_put_contents($prefork_target, $prefork_parse);
 			}
 		}
 
@@ -192,7 +245,7 @@ class phpini__sync extends Lxdriverclass
 		if ($pclass === 'web') {
 			$droot = $this->main->__var_docrootpath;
 			$htaccess_cont = file_get_contents(getLinkCustomfile($htaccess_path, "htaccess.tpl"));
-			$htaccess_parse = getParseInlinePhp($htaccess_cont, $input);
+			$htaccess_parse = getParseInlinePhp($htaccess_cont, array(''));
 
 			$htaccess_target = "{$droot}/.htaccess";
 

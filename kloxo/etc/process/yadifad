@@ -8,9 +8,6 @@ if [ ! -f /var/run/yadifad.pid ] ; then
 	fi
 fi
 
-#echo "  - Process: reload"
-#/etc/rc.d/init.d/yadifad reload
-
 echo "  - Process: restart"
 /etc/rc.d/init.d/yadifad stop
 pkill -9 yadifad

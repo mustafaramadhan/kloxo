@@ -111,7 +111,8 @@ function os_set_quota($username, $disk, $inode = null)
 		}
 
 		$perblock = getFSBlockSizeInKb();
-		$totalblock = $disk / $perblock;
+	//	$totalblock = $disk / $perblock;
+		$totalblock = $disk;
 	}
 
 	lxshell_return("setquota", "-u", $username, $totalblock, $totalblock, $totalinode, $totalinode, "-a");

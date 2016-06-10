@@ -3,6 +3,14 @@
 
 <?php
 
+if (!isset($phpselected)) {
+	$phpselected = 'php';
+}
+
+if (!isset($timeout)) {
+	$timeout = '300';
+}
+
 if (!file_exists("/var/run/letsencrypt/.well-known/acme-challenge")) {
 	exec("mkdir -p /var/run/letsencrypt/.well-known/acme-challenge");
 }
@@ -58,8 +66,15 @@ foreach ($confs as $k => $v) {
 	}
 }
 
+if (file_exists("{$globalspath}/custom.header_base.conf")) {
+	$header_base = "custom.header_base";
+} else {
+	$header_base = "header_base";
+}
+
 foreach ($certnamelist as $ip => $certname) {
-	$certnamelist[$ip] = "/home/kloxo/httpd/ssl/{$certname}";
+	$cert_ip = $ip;
+	$cert_file = "/home/kloxo/ssl/{$certname}";
 }
 
 if ($indexorder) {
@@ -81,62 +96,44 @@ $tabs = array("", "\t");
 server.port = "<?php echo $ports[0]; ?>"
 <?php echo $portlist[1]; ?> = "<?php echo $ports[1]; ?>"
 
-<?php
 
-foreach ($ports as &$port) {
-	if ($count !== 0) {
-		foreach ($certnamelist as $ip => $certname) {
+$HTTP["host"] =~ "^default\.*" {
+
+	include "<?php echo $globalspath; ?>/acme-challenge.conf"
+
+	$HTTP["scheme"] == "https" {
+
+		include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
+
+		ssl.engine = "enable"
+
+		ssl.pemfile = "<?php echo $cert_file; ?>.pem"
+<?php
+if (file_exists("{$cert_file}.ca")) {
 ?>
 
-$SERVER["socket"] == ":" + <?php echo $portlist[$count]; ?> {
-
-	ssl.engine = "enable"
-
-	ssl.pemfile = "<?php echo $certname; ?>.pem"
+		ssl.ca-file = "<?php echo $cert_file; ?>.ca"
 <?php
-			if (file_exists("{$certname}.ca")) {
-?>
-
-	ssl.ca-file = "<?php echo $certname; ?>.ca"
-<?php
-			}
-?>
-	ssl.use-sslv2 = "disable"
-	ssl.use-sslv3 = "disable"
-<?php
-		}
-	}
-
-	if ($count === 0) {
-?>
-
-<?php echo $tabs[$count]; ?>$HTTP["host"] =~ "^default\.*" {
-
-<?php echo $tabs[$count]; ?>	var.rootdir = "/home/kloxo/httpd/default/"
-<?php echo $tabs[$count]; ?>	var.user = "apache"
-<?php echo $tabs[$count]; ?>	var.fpmport = "<?php echo $fpmportapache; ?>"
-<?php echo $tabs[$count]; ?>	var.phpselected = "php"
-
-<?php echo $tabs[$count]; ?>	server.document-root = var.rootdir
-
-<?php echo $tabs[$count]; ?>	index-file.names = ( <?php echo $indexorder; ?> )
-
-<?php echo $tabs[$count]; ?>	include "<?php echo $globalspath; ?>/switch_standard.conf"
-
-<?php echo $tabs[$count]; ?>}
-
-<?php
-	}
-
-	if ($count !== 0) {
-?>
-}
-<?php
-	}
-
-	$count++;
 }
 ?>
+		ssl.use-sslv2 = "disable"
+		ssl.use-sslv3 = "disable"
+
+	}
+
+	var.rootdir = "/home/kloxo/httpd/default/"
+	var.user = "apache"
+	var.fpmport = "<?php echo $fpmportapache; ?>"
+	var.phpselected = "php"
+	var.timeout = "<?php echo $timeout; ?>"
+
+	server.document-root = var.rootdir
+
+	index-file.names = ( <?php echo $indexorder; ?> )
+
+	include "<?php echo $globalspath; ?>/switch_standard.conf"
+
+}
 
 
 ### end - web of initial - do not remove/modify this line

@@ -1,8 +1,22 @@
 #!/bin/sh
 
+if [ "$1" == "--help" ] || [ "$1" == "-h" ] ; then
+	echo
+	echo " ------------------------------------------------------------------------------"
+	echo "  format: sh $0 <php53s/php54s>"
+	echo " ------------------------------------------------------------------------------"
+	echo
+	exit
+fi
+
 INIT_DIR="/usr/local/lxlabs/kloxo/init"
 
 if [ "$1" != "" ] ; then
+	 if [[ "$1" != "php"* ]] ; then
+		echo "Use 'sh $0 --help'"
+		exit
+	fi
+
 	base_name="$1"
 
 	if [ ! -f /opt/${base_name}/custom/php-cli.sh ] ; then

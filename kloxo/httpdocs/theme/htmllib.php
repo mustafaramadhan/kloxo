@@ -377,13 +377,16 @@ class HtmlLib
 			if (!isset($pa[$k])) {
 				$pa[$k] = null;
 			}
+
 			if (!isset($pb[$k])) {
 				$pb[$k] = null;
 			}
 		}
 
-		foreach ($rvar as $k) if ($pa[$k] != $pb[$k]) {
-			return false;
+		foreach ($rvar as $k) {
+			if ($pa[$k] != $pb[$k]) {
+				return false;
+			}
 		}
 
 		return true;
@@ -966,6 +969,7 @@ class HtmlLib
 			if (!csb($k, "__v_dialog")) {
 				continue;
 			}
+
 			$talist[$k] = $a;
 		}
 
@@ -3289,8 +3293,10 @@ class HtmlLib
 
 	function fix_variable_overload(&$descr, $classdesc)
 	{
-		foreach ($descr as &$d) if (strstr($d, "[%v]") !== false) {
-			$d = str_replace("[%v]", $classdesc, $d);
+		foreach ($descr as &$d) {
+			if (strstr($d, "[%v]") !== false) {
+				$d = str_replace("[%v]", $classdesc, $d);
+			}
 		}
 	}
 
@@ -3766,6 +3772,7 @@ class HtmlLib
 					foreach ($a as $k => $v) {
 						if (strpos($property, $k) !== false) {
 							$spanchar = $v;
+							break;
 						}
 					}
 
@@ -3839,6 +3846,7 @@ class HtmlLib
 								foreach ($a as $k => $v) {
 									if (strpos($name, $k) !== false) {
 										$tico = $v;
+										break;
 									}
 								}
 
@@ -3854,7 +3862,6 @@ class HtmlLib
 				}
 			}
 ?>
-
 			<td <?= $bgcolorstring ?> <?= $wrapstr ?> <?= $align ?> class="collist"> <span title='<?= $alt ?>'>
 <?php
 		//	$method = ($__external) ? "get" : $sgbl->method;
@@ -3868,7 +3875,6 @@ class HtmlLib
 
 			$this->print_input_vars($post);
 ?>
-
 				<a class="insidelist" <?= $target ?> <?= $urlhelp ?> href="<?= $url ?>"> <?= $pname ?> </a></span>
 			</td>
 <?php
@@ -4511,7 +4517,6 @@ class HtmlLib
 
 		if (!$sellist && !$this->isResourceClass($class)) {
 ?>
-
 		<br/>
 		<div class="div_showhide">
 			<fieldset style="padding: 0 ; text-align: center ; margin: 0; border: 0; border-top: 1px solid <?= $bordertop ?>">
@@ -4632,14 +4637,12 @@ class HtmlLib
 
 					$el = explode("__", $filtername);
 ?>
-
 					<td width="6" style="border: 1px solid #<?= $col ?>; <?= $bgcolorstring ?>">
 						<form name="perpage_<?= $i ?><?= $unique_name ?>" method="get" action="/display.php" accept-charset="utf-8">
 <?php
 					$this->print_current_input_var_unset_filter($filtername, array('pagesize', 'pagenum'));
 					$this->print_current_input_vars(array('frm_hpfilter'));
 ?>
-
 							<input type="hidden" id="frm_hpfilter[<?= $filtername ?>][pagesize]" name="frm_hpfilter[<?= $filtername ?>][pagesize]" value="<?= $l ?>">
 						</form>
 						<a href="javascript:perpage_<?= $i ?><?= $unique_name ?>.submit()">&nbsp;<?= $l ?>&nbsp;</a>
@@ -4649,7 +4652,6 @@ class HtmlLib
 				}
 			}
 ?>
-
 				</tr>
 			</table>
 		</div>
@@ -4662,7 +4664,6 @@ class HtmlLib
 			$divclass = "div_standard";
 		}
 ?>
-
 		<div class="<?= $divclass ?>">
 			<table style="margin:0;padding:0" cellspacing="1" cellpadding="3" width="100%" align="center">
 				<tr>
@@ -4676,7 +4677,6 @@ class HtmlLib
 		//	$checked = "checked disabled";
 			$checked = "";
 ?>
-
 					<td style="width: 10px; text-align: center; background:#cde">
 						<form name="formselectall<?= $unique_name ?>" method="get" accept-charset="utf-8">
 							<?= $filteropacitystringspan ?>
@@ -4742,7 +4742,6 @@ class HtmlLib
 					$wrapstr .= " style='background:#edc {$img_url}'";
 				}
 ?>
-
 					<td <?= $wrapstr ?> width="<?= $width ?>">
 						<table cellspacing="0" cellpadding="2"  border="0">
 							<tr>
@@ -4833,7 +4832,6 @@ class HtmlLib
 <?php
 		*/
 ?>
-
 					<tr height='22' id='<?= $rowuniqueid ?>' class='tablerow<?= $count ?>'>
 <?php
 
@@ -4931,7 +4929,6 @@ class HtmlLib
 			return;
 		}
 ?>
-
 			<script>
 				ckcount<?=$unique_name;?> = <?=$rowcount . ";  ";?>;
 
@@ -4942,7 +4939,6 @@ class HtmlLib
 <?php
 		if ($sellist) {
 ?>
-
 									<table <?= $blackstyle ?>>
 										<tr>
 											<td>
@@ -7862,13 +7858,19 @@ class HtmlLib
 					$value = preg_replace("+(https://[^ \n]*)+", "<a href='$1' target='_blank' style='text-decoration:underline'> " . $login->getKeywordUc('click_here') . " </a>", $value);
 			//	}
 
-				$value = str_replace("\n", "\n<br /> ", $value);
+				if ($value !== "") {
+					$value = str_replace("\n", "\n<br />", trim($value, "\n"));
+				} else {
+					$value = "&nbsp;";
+				}
+
 				$ttname = $variable->name;
 
 				// Don't ever make this hidden. It is absolutely not necessary. The value is available directly itself.
 ?>
 
-					<?= $variable_description ?>: &nbsp; <?= $value ?>
+					<?= $variable_description ?>
+					<div style='border: 1px solid #aaa; background-color: #dfe; padding: 2px'><?= $value ?></div>
 
 <?php
 				break;

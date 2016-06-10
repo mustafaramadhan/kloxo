@@ -55,6 +55,8 @@ class ffile__common
 			$fullname = "{$this->main->root}/$f";
 			lxfile_rm_rec("$fullname");
 		}
+
+		return $this->main->root;
 	}
 
 	function resampimagejpg($forcedwidth, $forcedheight, $sourcefile, $destfile)
@@ -233,6 +235,9 @@ class ffile__common
 		$extractdir = coreFfile::getRealPath($this->main->zip_extract_dir_f);
 		$fulzippath = "{$this->main->root}/$extractdir";
 
+		// MR -- file automatically with .tar extension if enabled
+		$extracttotar = $this->main->extract_to_tar_f;
+
 		$zipd = trim($this->main->zip_extract_dir_f);
 		$zipd = trim($this->main->zip_extract_dir_f, "/");
 
@@ -262,11 +267,29 @@ class ffile__common
 		if ($this->main->ttype === "zip") {
 			$cmd = "/usr/bin/unzip -oq '$fullpath'";
 		} else if ($this->main->ttype === "tgz") {
-			$cmd = "/bin/tar -xzf '$fullpath'";
+			if ($extracttotar) {
+				$cmd = "/bin/gzip -dfN '$fullpath'";
+			} else {
+				$cmd = "/bin/tar -xzf '$fullpath'";
+			}
 		} else if ($this->main->ttype === "tbz2") {
-			$cmd = "/bin/tar -xjf '$fullpath'";
+			if ($extracttotar) {
+				$cmd = "/usr/bin/bzip2 -dfk '$fullpath'";
+			} else {
+				$cmd = "/bin/tar -xjf '$fullpath'";
+			}
+		} else if ($this->main->ttype === "gz") {
+			$cmd = "/bin/gzip -dfN '$fullpath'";
+		} else if ($this->main->ttype === "bz2") {
+			$cmd = "/usr/bin/bzip2 -dfk '$fullpath'";
 		} else if ($this->main->ttype === "txz") {
-			$cmd = "/bin/tar -xJf '$fullpath'";
+			if ($extracttotar) {
+				$cmd = "/usr/bin/xz -dfk '$fullpath'";
+			} else {
+				$cmd = "/bin/tar -xJf '$fullpath'";
+			}
+		} else if ($this->main->ttype === "xz") {
+			$cmd = "/usr/bin/xz -dfk '$fullpath'";
 		} else if ($this->main->ttype === "p7z") {
 			$cmd = "/usr/bin/7za e -y '$fullpath'";
 		} else if ($this->main->ttype === "rar") {
@@ -303,13 +326,14 @@ class ffile__common
 			throw new lxException($login->getThrow('file_exists'), '', $fullpath);
 		}
 	*/
-		$date = date("M-d-H");
-	//	check_file_if_owned_by_and_throw("NewArchive-$date.zip", $this->main->__username_o);
+	//	$date = date("M-d-H");
+		$date = date("Y-m-d-h-i-s");
+	//	check_file_if_owned_by_and_throw("NewArchive_$date.zip", $this->main->__username_o);
 
-	//	$ret = new_process_cmd($this->main->__username_o, $fullpath, "zip -qu -r NewArchive-$date $list");
-		$ret = new_process_cmd('__system__', $fullpath, "zip -qu -r NewArchive-$date $list");
+	//	$ret = new_process_cmd($this->main->__username_o, $fullpath, "zip -qu -r NewArchive_$date $list");
+		$ret = new_process_cmd('__system__', $fullpath, "zip -qu -r NewArchive_$date $list");
 
-		return "$fullpath/NewArchive-$date.zip";
+		return "$fullpath/NewArchive_$date.zip";
 	}
 
 	function newDir()

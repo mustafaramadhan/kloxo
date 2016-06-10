@@ -504,8 +504,8 @@ function lxfile_stat($file, $duflag)
 	}
 
 	get_file_type($file, $list);
-	return $list;
 
+	return $list;
 }
 
 function get_file_type($file, &$stat)
@@ -533,56 +533,54 @@ function get_file_type($file, &$stat)
 
 		$stat['ttype'] = "filelink";
 		$stat['linkto'] = $dst;
+
 		return;
 	}
 
 	if (is_dir($file)) {
 		$stat['ttype'] =  "directory";
+
 		return;
 	}
+
 	$list = pathinfo($file);
 
 	$ext = null;
+
 	if (isset($list['extension']))  {
 		$ext = $list['extension'];
+
+		// MR -- exception for tar.gz/.bz2/.xz
+		if (($ext === 'gz') || ($ext === 'bz2') || ($ext === 'xz')) {
+			if (strrpos($list['filename'], '.tar') !== false) {
+				$ext = 'tar.' . $ext;
+			}
+		}
 	}
 
 	if ($ext === "zip") {
 		$stat['ttype'] =  "zip";
-		return;
-	}
-
-	if ($ext === "tgz" || $ext === "tar.gz" || $ext === "gz") {
+	} else if ($ext === "tgz" || $ext === "tar.gz") {
 		$stat['ttype'] = "tgz";
-		return;
-	}
-
-	if ($ext === "tbz2" || $ext === "tar.bz2" || $ext === "bz2") {
+	} else if ($ext === "gz") {
+		$stat['ttype'] = "gz";
+	} else if ($ext === "tbz2" || $ext === "tar.bz2") {
 		$stat['ttype'] = "tbz2";
-		return;
-	}
-
-	if ($ext === "txz" || $ext === "tar.xz" || $ext === "xz") {
+	} else if ($ext === "bz2") {
+		$stat['ttype'] = "bz2";
+	} else if ($ext === "txz" || $ext === "tar.xz") {
 		$stat['ttype'] = "txz";
-		return;
-	}
-
-	if ($ext === "7z") {
+	} else if ($ext === "xz") {
+		$stat['ttype'] = "xz";
+	} else if ($ext === "7z") {
 		$stat['ttype'] = "p7z";
-		return;
-	}
-
-	if ($ext === "rar") {
+	} else if ($ext === "rar") {
 		$stat['ttype'] = "rar";
-		return;
-	}
-
-	if ($ext === "tar") {
+	} else if ($ext === "tar") {
 		$stat['ttype'] = "tar";
-		return;
+	} else {
+		$stat['ttype'] = "file";
 	}
-
-	$stat['ttype'] = "file";
 }
 
 function lxfile_dstat($dir, $duflag)

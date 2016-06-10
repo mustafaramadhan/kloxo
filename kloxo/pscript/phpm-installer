@@ -61,7 +61,7 @@ elif yum list ${src_name} >/dev/null 2>&1 ; then
 elif yum list ${src_name}w >/dev/null 2>&1 ; then
 	pack_name="${src_name}w"
 else
-	echo "- No PHP packages exists. Only detecting '${src_name}u' and '${src_name}'. Exit"
+	echo "- No PHP packages exists. Only detecting '${src_name}u', '${src_name}' or '${src_name}w'. Exit"
 	echo
 	exit
 fi
@@ -100,7 +100,11 @@ if [ -f /opt/${base_name}/version ] ; then
 			echo $x
 			echo $x >>/opt/${base_name}/install.log
 			. /script/counter-end.inc
-			exit	
+
+			cd /
+			sh /script/phpm-config-setup $base_name
+
+			exit
 		fi
 
 		echo "${pack_verrel}" >/opt/${base_name}/version
@@ -149,7 +153,6 @@ done
 'rm' -rf ./*.rpm
 
 cd /
-
 sh /script/phpm-config-setup $base_name
 
 if [ -f /opt/${base_name}/${base_name} ] ; then

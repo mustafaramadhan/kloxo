@@ -113,8 +113,6 @@ function updatecleanup_main()
 	exec("chkconfig qmail on");
 	createRestartFile("qmail");
 */
-//	log_cleanup("Fix SSL path for domain");
-//	exec("mv -f /home/*/ssl /home/kloxo/client/*/");
 
 	if (isset($opt['without-services'])) {
 		// no action
@@ -122,8 +120,7 @@ function updatecleanup_main()
 		setInitialServices();
 
 		log_cleanup("Fix services");
-		$fixapps = array("dns", "webcache", "web", "php", "mail-all", "ftp-all", "skeleton");
-		setUpdateConfigWithVersionCheck($fixapps, $opt['type']);
+		setUpdateConfigWithVersionCheck(getListOnList('fix'), $opt['type']);
 	}
 
 	// MR -- installatron need ownership as root:root

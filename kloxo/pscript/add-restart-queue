@@ -1,0 +1,3 @@
+#!/bin/sh
+
+echo '' > /usr/local/lxlabs/kloxo/etc/.restart/._restart_${1}

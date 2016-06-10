@@ -69,7 +69,7 @@ class coreFfile
 		dprint("$path\n");
 		self::check_for_break($root, $path);
 
-		dprint("In getLxstat $path $duflag\n");
+	//	dprint("In getLxstat $path $duflag\n");
 
 		$stat = lxfile_stat($path, $duflag);
 		$stat = self::createFfileVariables($stat);
@@ -144,6 +144,9 @@ class coreFfile
 			$list = explode("\n", $res);
 			$list = preg_grep("/Archive:/", $list, PREG_GREP_INVERT);
 			$stat['zipcontent'] = implode("\n", $list);
+		} else if ($stat['ttype'] === 'gz' || $stat['ttype'] === 'bz2'
+				|| $stat['ttype'] === 'xz') {
+			$stat = "{$stat['ttype']} without tar";
 		} else if (self::is_image($path)) {
 			$stat = self::get_image_info($path);
 		} else if (!coreFfile::is_a_directory($stat['mode'])) {

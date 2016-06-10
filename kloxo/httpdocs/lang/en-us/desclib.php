@@ -495,10 +495,10 @@ $__description["p"] = array("P");
 $__description["protected"] = array("Protected");
 $__description["not_protected"] = array("Not Protected");
 $__description["not_applicable"] = array("Not Applicable");
-$__description["perm"] = array("Perm");
-$__description["ren"] = array("Ren");
+$__description["perm"] = array("Permissions");
+$__description["ren"] = array("Rename");
 $__description["rename"] = array("Rename");
-$__description["dn"] = array("Dn");
+$__description["dn"] = array("Download");
 $__description["download"] = array("Download");
 $__description["modified"] = array("Modified");
 $__description["Size"] = array("Size");
@@ -515,7 +515,8 @@ $__description["zip_file_name"] = array("Zip File Name");
 $__description["upload_file"] = array("Upload File");
 $__description["overwrite_existing_file"] = array("Overwrite Existing File");
 $__description["overwrite_existing_files"] = array("Overwrite Existing Files");
-$__description["extract_zip_to_here."] = array("Extract Zip To Here.");
+$__description["extract_zip_to_here"] = array("Extract Zip To Here");
+$__description["extract_to_tar_file"] = array("Extract To TAR file");
 $__description["convert_to_format"] = array("Convert To Format");
 $__description["image"] = array("Image");
 $__description["height"] = array("Height");
@@ -656,14 +657,15 @@ $__description["email_address"] = array("Email Address");
 $__description["subject_alt_name"] = array("Subject Alternative Name (SAN)");
 $__description["ssl_action"] = array("Action");
 $__description["ssl_parent"] = array("SSL Parent");
-$__description["ssl_uploadfile"] = array("SSL File");
-$__description["ssl_uploadtext"] = array("SSL Text");
+$__description["ssl_file"] = array("SSL File");
+$__description["ssl_text"] = array("SSL Text");
 $__description["ssl_letsencrypt"] = array("Let's Encrypt");
 $__description["ssl_link"] = array("SSL Link");
 
 $__description["ssl_certificate"] = array("SSL Certificate");
 $__description["ssl_key_bits"] = array("Key Bits");
 $__description["ssl_certificate_name"] = array("Certificate Name");
+$__description["ssl_add_type"] = array("Add Type");
 $__description["ssl_parent_domain"] = array("Parent Domain");
 $__description["slave_ID (master_is_localhost)"] = array("Slave ID (master Is Localhost)");
 $__description["CSR"] = array("CSR");
@@ -702,7 +704,7 @@ $__description["mssql_database_name"] = array("MSSQL Database Name");
 $__description["mysql_database"] = array("MySQL Database");
 $__description["mysql_database_name"] = array("MySQL Database Name");
 $__description["mysqldisk:mysql_disk_usage"] = array("MySQLdisk:MySQL Disk Usage");
-$__description["all_mysql_database"] = array("All MySQL Database");
+$__description["all_mysql_database"] = array("All Database");
 $__description["database_user"] = array("Database User");
 $__description["database_user_name"] = array("Database User Name");
 $__description["resource_plan"] = array("Resource Plan");
@@ -795,7 +797,7 @@ $__description["client"] = array("Client");
 $__description["whitelist_ip"] = array("Whitelist IP");
 $__description["server_wide_mail_configuration"] = array("Server Wide Mail Configuration");
 $__description["queue_life_time"] = array("Queue Life Time");
-$__description["my_name"] = array("My Name");
+$__description["my_name"] = array("My Name (Domain Name)");
 $__description["no_of_mail_send"] = array("No Of Mail Send");
 $__description["enable_maps_protection"] = array("Enable Maps Protection");
 $__description["enable_spamdyke"] = array("Enable Spamdyke");
@@ -1295,7 +1297,9 @@ $__description["php_configuration"] = array("PHP Configuration");
 $__description["manage_php_configuration"] = array("Manage PHP Configuration");
 $__description["PHP_config"] = array("PHP Configure");
 $__description["advanced_PHP_config"] = array("Advanced PHP Configure");
-$__description["web_selector"] = array("Web / PHP Selector");
+//$__description["web_selector"] = array("Web / PHP Selector and Timeout");
+//$__description["web_selector"] = array("Web Features");
+$__description["web_features"] = array("Web Features");
 $__description["dav_user"] = array("DAV User");
 $__description["dav_user_name"] = array("DAV User Name");
 $__description["web_disk"] = array("Web Disk");
@@ -1371,15 +1375,17 @@ $__description["change_name"] = array("Change Name");
 
 $__description["clientname_as_prefix"] = array("Clientname as Databasename Prefix (only first 16 chars if longer)");
 
-$__description["multiple_php_enable"] = array("Multiple PHP Enable");
+$__description["multiple_php_enable"] = array("Multiple PHP Enable (for 'php-fpm')");
 $__description["multiple_php_ready_server"] = array("Multiple PHP Ready (left blank to re-list)");
 $__description["multiple_php_ready"] = array("Multiple PHP Ready");
 $__description["multiple_php_ratio"] = array("Multiple PHP Ratio");
 $__description["php_selected"] = array("PHP Selected");
 $__description["web_selected"] = array("Web Selected");
+$__description["time_out"] = array("Timeout (seconds)");
 
 $__description["multiple_php_install"] = array("Multiple PHP Install");
 $__description["multiple_php_already_installed"] = array("Multiple PHP Already Installed");
+$__description["multiple_php_remove"] = array("Multiple PHP Remove");
 
 $__description["max_input_vars"] = array("Max Input Vars");
 
@@ -1397,4 +1403,6 @@ $__description["master_ip"] = array("Master IP Address");
 $__description["slave_domain"] = array("Slave Domain");
 
 $__description["allowedblocked_ip"] = array("Allowed / Blocked IP");
+
+$__description["all_sslcert"] = array("All SSLCert");
 

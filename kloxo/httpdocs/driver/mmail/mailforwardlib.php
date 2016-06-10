@@ -121,7 +121,7 @@ class MailForward extends Lxdb
 class all_mailforward extends mailforward
 {
 	static $__desc =  array("n", "",  "all_mailforward");
-	static $__desc_parent_name_f =  array("n", "",  "domain");
+	static $__desc_parent_name_f =  array("n", "",  "owner");
 	static $__desc_parent_clname =  array("n", "",  "domain");
 
 	function isSelect()

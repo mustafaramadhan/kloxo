@@ -53,6 +53,5 @@ file_put_contents("{$kpath}/init/hiawatha.conf", $content);
 file_put_contents("{$kpath}/init/port-nonssl", $nonsslport);
 file_put_contents("{$kpath}/init/port-ssl", $sslport);
 
-file_put_contents("{$cpath}/cp/.nonssl.port", $nonsslport);
-file_put_contents("{$cpath}/cp/.ssl.port", $sslport);
-
+file_put_contents("{$hpath}/cp/.nonssl.port", $nonsslport);
+file_put_contents("{$hpath}/cp/.ssl.port", $sslport);

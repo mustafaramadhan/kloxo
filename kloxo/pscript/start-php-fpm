@@ -1,0 +1,28 @@
+#!/bin/sh
+
+#list=(php-fpm phpm-fpm)
+
+if [ -f /script/custom.restart-list.inc ] ; then
+	. /script/custom.restart-list.inc
+else
+	. /script/restart-list.inc
+fi
+
+list=${list_phpfpm[*]}
+
+if [ "$1" == "--help" ] || [ "$1" == "-h" ] ; then
+	echo ""
+	echo " ------------------------------------------------------------------------------"
+	echo "  format: sh $0"
+	echo " ------------------------------------------------------------------------------"
+	echo ""
+	exit
+else
+	ASQMAIL=""
+
+	for item in ${list[*]} ; do
+		if [ "$(chkconfig --list ${item}|grep ':on')" != "" ] ; then
+			/etc/init.d/${item} start
+		fi
+	done
+fi

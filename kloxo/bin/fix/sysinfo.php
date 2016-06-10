@@ -13,6 +13,8 @@ $kloxomrver = $kloxomrver[0];
 exec("cat /etc/*release", $osrelease);
 exec("uname -m", $osplateform);
 
+$out = null;
+
 $mysqlbranch = getRpmBranchInstalled('mysql');
 if ($mysqlbranch) {
 	exec("rpm -q {$mysqlbranch}", $out);
@@ -216,13 +218,31 @@ if (!isset($phptype)) {
 	$phptype = '[unknown]';
 }
 
-$seddata = 's/^custom_name=\"\(.*\)\"/\1/';
-exec("cat /etc/rc.d/init.d/php-fpm|grep 'custom_name='|sed -e '" . $seddata . "'", $out);
+$seddata = 's/^prog=\"\(.*\)\"/\1/';
+exec("cat /etc/rc.d/init.d/php-fpm|grep 'prog='|sed -e '" . $seddata . "'", $out);
 
 if ($out[0] !== null) {
 	$phpused = $out[0];
+
+	if ($phpused === "php-fpm") {
+		$phpused = '--PHP Branch--';
+	}
 } else {
-	$phpused = '--Use PHP Branch--';
+	$phpused = '--PHP Branch--';
+}
+
+$out = null;
+
+$spamapp = slave_get_driver('spam');
+if ($spamapp === 'spamassassin') {
+	$spamapp === 'spamassassin-toaster';
+}
+exec("rpm -q $spamapp", $out);
+
+if ($out[0] !== null) {
+	$spamapp = $out[0];
+} else {
+	$spamapp = '--uninstalled--';
 }
 
 $out = null;
@@ -231,6 +251,7 @@ exec("free -m", $meminfo);
 
 exec("df -h /", $diskinfo);
 
+echo "";
 echo "\n";
 echo "A. Control Panel:" .
 	"               \n"; // need more space because overwrite waiting line
@@ -245,16 +266,26 @@ echo "   - Hostname: " . gethostname() . "\n";
 echo "C. Services:\n";
 echo "   1. MySQL: " .  $appmysql . "\n";
 echo "   2. PHP: \n";
-echo "      - Branch: " .  $appphp . "\n";
+echo "      - 'Branch' installed: " .  $appphp . "\n";
 if ($phpmdirs) {
-	echo "      - Multiple: \n";
+	echo "      - 'Multiple' installed: \n";
 	foreach ($phpmdirs as $k => $v) {
 		$v1 = str_replace("/", "", str_replace("/opt/", "", $v));
 		$v2  = file_get_contents($v . "/version");
 		echo "        * " . $v1 . "-" . str_replace("\n", "", $v2) . "\n";
 	}
 }
-echo "      - Used: " . $phpused . "\n";
+echo "      - 'Used' selected: " . $phpused . "\n";
+
+$out = null;
+exec("chkconfig --list 'phpm-fpm'|grep ':on'", $out);
+
+if ($out[0] !== null) {
+	echo "      - 'Multiple' status: enable\n";
+} else {
+	echo "      - 'Multiple' status: disable\n";
+}
+
 echo "   3. Web Used: " . slave_get_driver('web') . "\n";
 echo "     - Hiawatha: " .  $apphiawatha . "\n";
 echo "     - Lighttpd: " .  $applighttpd . "\n";
@@ -280,7 +311,7 @@ if ($appcourierimap !== '--uninstalled--') {
 	echo "      - pop3/imap4: " . $appcourierimap  . "\n";
 }
 
-echo "      - spam: " . slave_get_driver('spam')  . "\n";
+echo "      - spam: " . $spamapp  . "\n";
 
 //echo "\n";
 echo "D. Memory:\n";
@@ -293,4 +324,3 @@ foreach ($diskinfo as $k => $v) {
 	echo "   " . $v . "\n";
 }
 echo "\n";
-

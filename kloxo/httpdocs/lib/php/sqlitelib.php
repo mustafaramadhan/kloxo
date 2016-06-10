@@ -1,4 +1,7 @@
 <?php
+
+ini_set('memory_limit', '-1');
+
 /*
 * Note #1
 * kloxo relies on isset in other scripts

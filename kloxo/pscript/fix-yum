@@ -3,6 +3,7 @@
 ## run if found: ** Found 3 pre-existing rpmdb problem(s), 'yum check' output follows
 
 yum clean all
+rm -f /var/lib/rpm/__db*
 rpm --rebuilddb
 yum update -y
 yum clean all

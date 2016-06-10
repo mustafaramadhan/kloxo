@@ -1,6 +1,6 @@
 <?php
 
-include_once "lib/php/coreFfilelib.php";
+include_once "lib/php/coreffilelib.php";
 
 class Ffile extends Lxclass
 {
@@ -26,7 +26,10 @@ class Ffile extends Lxclass
 	static $__desc_ttype_v_zip = array("", "", "zip");
 	static $__desc_ttype_v_tgz = array("", "", "tgz");
 	static $__desc_ttype_v_tbz2 = array("", "", "tbz2");
+	static $__desc_ttype_v_gz = array("", "", "gz");
+	static $__desc_ttype_v_bz2 = array("", "", "bz2");
 	static $__desc_ttype_v_txz = array("", "", "txz");
+	static $__desc_ttype_v_xz = array("", "", "xz");
 	static $__desc_ttype_v_p7z = array("", "", "p7z");
 	static $__desc_ttype_v_rar = array("", "", "rar");
 	static $__desc_ttype_v_tar = array("", "", "tar");
@@ -44,7 +47,8 @@ class Ffile extends Lxclass
 	static $__desc_uid = array("", "", "user");
 	static $__desc_content = array("t", "", "file");
 	static $__desc___username_o = array("", "", "user_name");
-	static $__desc_other_username = array("", "", "owner");
+//	static $__desc_other_username = array("", "", "owner");
+	static $__desc_other_username = array("", "", "owner", "a=updateform&sa=perm");
 	static $__desc_pvrename = array("b", "", "ren", "a=updateform&sa=rename");
 	static $__desc_pvrename_v_rename = array("", "", "rename");
 	static $__desc_pvdownload = array("b", "", "dn", "a=update&sa=download");
@@ -72,7 +76,8 @@ class Ffile extends Lxclass
 	static $__desc_upload_file_f = array("F", "", "upload_file");
 	static $__desc_upload_overwrite_f = array("f", "", "overwrite_existing_file");
 	static $__desc_zip_overwrite_f = array("f", "", "overwrite_existing_files");
-	static $__desc_zip_extract_dir_f = array("", "", "extract_zip_to_here.");
+	static $__desc_zip_extract_dir_f = array("", "", "extract_zip_to_here");
+	static $__desc_extract_to_tar_f = array("f", "", "extract_to_tar_file");
 	static $__desc_fake_f = array("", "", "");
 	static $__desc_new_format_f = array("", "", "convert_to_format");
 
@@ -141,8 +146,7 @@ class Ffile extends Lxclass
 
 	function getFullPath()
 	{
-		$this->fullpath = "{$this->root}/{$this->nname}";
-
+		$this->fullpath = preg_replace('/(\/){1,3}(.*)/', '/$2', "{$this->root}/{$this->nname}");
 		return $this->fullpath;
 	}
 
@@ -223,15 +227,15 @@ class Ffile extends Lxclass
 
 	function print_back()
 	{
-		?>
-	<table width=90%>
+?>
+	<table width='90%'>
 		<tr>
 			<td>
 				<a href="<?php echo $_SERVER['PHP_SELF'] ?>?frm_action=show&frm_o_nname=<?php echo dirname($this->nname) ?>"> Back </a>
 			</td>
 		</tr>
 	</table>
-	<?php
+<?php
 	}
 
 	function isDisplay($fpath = NULL)
@@ -750,7 +754,8 @@ class Ffile extends Lxclass
 				$this->image_height = '20';
 				$vlist['image_width'] = null;
 				$vlist['image_height'] = null;
-				return $vlist;
+
+				break;
 
 			case "convert_image":
 				$extlist = array('gif' => 'gif', 'jpg' => 'jpg', 'png' => 'png');
@@ -758,7 +763,8 @@ class Ffile extends Lxclass
 				unset($extlist[$ext]);
 				$vlist['nname'] = array('M', null);
 				$vlist['new_format_f'] = array('s', $extlist);
-				return $vlist;
+
+				break;
 
 			case "diskspace":
 				$vlist['diskspace'] = array('M', "calculate disk space");
@@ -814,10 +820,19 @@ class Ffile extends Lxclass
 				$this->getContent();
 				$vlist['zipcontent'] = null;
 				$vlist['zip_extract_dir_f'] = array('m', dirname($this->nname));
+			
 			//	$vlist['zip_overwrite_f'] = null;
+
+				if (($this->ttype === 'tgz')
+						|| ($this->ttype === 'tbz2')
+						|| ($this->ttype === 'txz')) {
+
+					$vlist['extract_to_tar_f'] = null;
+				}
+
 				$vlist['__v_button'] = "Extract";
 
-				return $vlist;
+				break;
 
 			case "perm":
 				$vlist['select_f'] = array();
@@ -843,7 +858,7 @@ class Ffile extends Lxclass
 				$vlist['upload_overwrite_f'] = null;
 				$vlist['__v_button'] = "Upload";
 				
-				return $vlist;
+				break;
 
 			case "download_from_ftp":
 				$vlist['download_ftp_f'] = null;
@@ -853,19 +868,19 @@ class Ffile extends Lxclass
 				$vlist['download_overwrite_f'] = null;
 				$vlist['__v_button'] = "Upload";
 
-				return $vlist;
+				break;
 
 			case "backupftpupload":
 				$this->downloadFromBackup($vlist);
 
-				return $vlist;
+				break;
 
 			case "download_from_http":
 				$vlist['download_url_f'] = null;
 				$vlist['download_overwrite_f'] = null;
 				$vlist['__v_button'] = "Upload";
 
-				return $vlist;
+				break;
 		}
 
 	//	dprint($subaction);
@@ -930,6 +945,7 @@ class Ffile extends Lxclass
 	{
 	//	$stat['mode'] = $this->mode;
 		$stat['ttype'] = $this->ttype;
+	//	$stat['ttype'] = os_getZipType($this->getFullPath());
 
 		$stat = rl_exec_get(null, $this->__readserver, array("coreFfile", "getContent"), array($this->__username_o, $this->root, $this->getFullPath(), $stat, $this->numlines));
 
@@ -1067,8 +1083,9 @@ class Ffile extends Lxclass
 	{
 		if ($this->ttype === 'zip' || $this->ttype === 'tar' 
 				|| $this->ttype === 'tgz' || $this->ttype === 'tbz2'
-				|| $this->ttype === 'txz' || $this->ttype === 'p7z'
-				| $this->ttype === 'rar') {
+				|| $this->ttype === 'gz'  || $this->ttype === 'bz2'
+				|| $this->ttype === 'txz' || $this->ttype === 'xz'
+				|| $this->ttype === 'p7z' || $this->ttype === 'rar') {
 			return true;
 		}
 
@@ -1370,9 +1387,11 @@ class Ffile extends Lxclass
 				continue;
 			}
 
-			$fpath = str_replace("//", "/", $fpathp . "/" . $file);
+		//	$fpath = str_replace("//", "/", $fpathp . "/" . $file);
+		//	$file = str_replace("//", "/", $parent->nname . "/" . $file);
 
-			$file = str_replace("//", "/", $parent->nname . "/" . $file);
+			$fpath = preg_replace('/(\/){1,3}(.*)/', '/$2', "{$fpathp}/{$file}");
+			$file = preg_replace('/(\/){1,3}(.*)/', '/$2', "{$parent->nname}/{$file}");
 			
 			if (!isset($parent->ffile_l)) {
 				$parent->ffile_l = null;

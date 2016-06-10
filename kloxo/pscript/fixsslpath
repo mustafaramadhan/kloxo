@@ -1,0 +1,44 @@
+#!/bin/sh
+
+ssl_file=$(dir -l /home/kloxo/client/*/ssl/*.pem 2>/dev/null|awk '{print $9}'|tr '\n' ' ')
+
+ssl_path="/home/kloxo/ssl"
+
+if [ ! -d ${ssl_path} ] ; then
+	mkdir -p ${ssl_path}
+fi
+
+for i in ${ssl_file[*]} ; do
+	j=${i%.pem}
+	d=$(basename ${i} .pem)
+	p=${j%/${d}}
+
+	for m in openssl.sh letsencrypt.sh acme.sh ; do
+		if [ -f ${p}/${m} ] ; then
+			mv -f ${p}/${m} ${ssl_path}/${d}_${m}
+		fi
+	done
+
+	for k in .pem .key .crt .csr .ca _openssl.sh _letsencrypt.sh _acme.sh ; do
+		if [ -f ${j}${k} ] ; then
+			mv -f ${j}${k} ${ssl_path}/${d}${k}
+		fi
+	done
+
+	rm -rf ${j%${d}}
+done
+
+ssl_file2=$(dir -l /home/kloxo/httpd/ssl/*.pem 2>/dev/null|awk '{print $9}'|tr '\n' ' ')
+
+for n in ${ssl_file2[*]} ; do
+	o=${n%.pem}
+	r=$(basename ${n} .pem)
+
+	for q in .pem .key .crt .csr .ca ; do
+		if [ -f ${o}${q} ] ; then
+			mv -f ${o}${q} ${ssl_path}/${r}${q}
+		fi
+	done
+
+	rm -rf ${o%${r}}
+done

@@ -41,7 +41,11 @@
 	if ($maxpar_w < 4) { $maxpar_w = 4; }
 	if ($minpar_w < 2) { $minpar_w = 2; }
 
-	$keepalive = 'Off';
+	if (!isset($keepalive)) {
+		$keepalive = 'Off';
+	} else {
+		$keepalive = 'On';
+	}
 	
 	$mcfactor = 25;
 ?>

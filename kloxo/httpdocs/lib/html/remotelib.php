@@ -55,6 +55,7 @@ function do_do_the_action($rmt)
 
 	return do_local_action($rmt);
 
+	// This code never gets executed
 	if ($rmt->action == "set" || $rmt->action == 'get') {
 		if (isLocalhost($rmt->slaveserver)) {
 		} else {
@@ -811,6 +812,27 @@ function process_server_input($total)
 
 function do_local_action($rmt)
 {
+/*
+	$sudoClass= array("ffile");
+
+	if (isset($rmt->robject)) {
+		$class  = lget_class($rmt->robject);
+		log_log("classes_called_remote", $class);
+
+		if(in_array($class, $sudoClass)) {
+			switch($class) {
+				case "ffile":
+					return callWithSudo($rmt, $rmt->robject->__username_o);
+				default:
+					return callWithSudo($rmt);
+			}
+		}
+	} else {
+		return callWithSudo($rmt);
+	}
+
+	// This code never executes
+*/
 	if ($rmt->action === "set") {
 		$object = $rmt->robject;
 		return $object->doSyncToSystem();

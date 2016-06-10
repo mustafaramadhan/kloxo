@@ -3,7 +3,7 @@
 		$phpselected = 'php';
 		$phpinc="/etc/php-fpm.d";
 	} else {
-		$phpinc="/opt/{$phpselected}/etc/php-fpm.d";
+		$phpinc="/opt/configs/php-fpm/conf/{$phpselected}/php-fpm.d";
 	}
 ?>
 

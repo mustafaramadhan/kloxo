@@ -27,8 +27,9 @@ class Mailinglist extends Lxdb
 	static $__table = 'mailinglist';
 	
 	static $__desc_nname = array("", "", "mailinglist", URL_SHOW);
+	static $__desc_adminemail = array("", "", "admin_email", URL_SHOW);
 	static $__desc_listname = array("n", "", "mailinglist_name");
-	static $__desc_adminemail = array("n", "", "admin_email");
+//	static $__desc_adminemail = array("n", "", "admin_email");
 	static $__desc_post_members_only_flag = array("f", "", "only_members_can_post");
 	static $__desc_post_moderated_flag = array("f", "", "only_moderated_posts");
 	static $__desc_post_moderator_only_flag = array("f", "", "only_moderators_can_post");
@@ -196,6 +197,22 @@ class Mailinglist extends Lxdb
 		return "mmail";
 	}
 
+	static function createListSlist($parent)
+	{
+		$nlist['nname'] = null;
+		$nlist['adminemail'] = null;
+
+		return $nlist;
+	}
+
+	static function createListNlist($parent, $view)
+	{
+		$nlist['nname'] = '70%';
+		$nlist['adminemail'] = '30%';
+
+		return $nlist;
+	}
+
 	static function initThisListRule($parent, $class)
 	{
 		if ($parent->isClient()) {
@@ -233,8 +250,8 @@ class Mailinglist extends Lxdb
 class all_mailinglist extends mailinglist
 {
 	static $__desc = array("", "", "all_mailinglist");
-	static $__desc_parent_name_f = array("n", "", "owner");
-	static $__desc_parent_clname = array("n", "", "owner");
+	static $__desc_parent_name_f = array("n", "", "domain");
+	static $__desc_parent_clname = array("n", "", "domain");
 
 	function isSelect()
 	{

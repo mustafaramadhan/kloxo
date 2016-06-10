@@ -6,6 +6,28 @@
 
 <?php
 
+$custom_header="#CustomHeader = Strict-Transport-Security:max-age=31536000
+\tCustomHeader = X-Content-Type-Options:nosniff
+\tCustomHeader = X-XSS-Protection:1;mode=block
+\tCustomHeader = X-Frame-Options:SAMEORIGIN
+\tCustomHeader = Access-Control-Allow-Origin:*";
+
+$error_handler="Alias = /error:/home/kloxo/httpd/error
+\tErrorHandler = 401:/error/401.html
+\tErrorHandler = 403:/error/403.html
+\tErrorHandler = 404:/error/404.html
+\tErrorHandler = 501:/error/501.html
+\tErrorHandler = 503:/error/503.html";
+
+
+if (!isset($phpselected)) {
+	$phpselected = 'php';
+}
+
+if (!isset($timeout)) {
+	$timeout = '300';
+}
+
 $domclean = str_replace('-', '_', str_replace('.', '_', $domainname));
 
 if (($webcache === 'none') || (!$webcache)) {
@@ -22,13 +44,12 @@ $protocols = array('http', 'https');
 $portnames = array("nonssl", "ssl");
 
 foreach ($certnamelist as $ip => $certname) {
-	$sslpathdef = "/home/kloxo/httpd/ssl";	
-	$sslpath = "/home/kloxo/client/{$user}/ssl";
+	$sslpath = "/home/kloxo/ssl";
 
 	if (file_exists("{$sslpath}/{$domainname}.key")) {
 		$certnamelist[$ip] = "{$sslpath}/{$domainname}";
 	} else {
-		$certnamelist[$ip] = "{$sslpathdef}/{$certname}";
+		$certnamelist[$ip] = "{$sslpath}/{$certname}";
 	}
 }
 
@@ -109,25 +130,38 @@ $disabledocroot = "/home/kloxo/httpd/disable";
 
 $domcleaner = str_replace('-', '_', str_replace('.', '_', $domainname));
 
-if (!$reverseproxy) {
+//if (!$reverseproxy) {
 	if ($statsapp === 'awstats') {
-		if ($statsprotect) {
 ?>
 
 Directory {
-	Path = /awstats
-	PasswordFile = basic:/home/httpd/<?php echo $domainname ?>/__dirprotect/__stats
-}
+	DirectoryId = stats_dir_for_<?php echo $domclean; ?>
 
+	Path = /awstats
+<?php
+		if ($statsprotect) {
+?>
+	PasswordFile = basic:/home/httpd/<?php echo $domainname ?>/__dirprotect/__stats
 <?php
 		}
+?>
+}
+<?php
 	} elseif ($statsapp === 'webalizer') {
 		if ($statsprotect) {
 ?>
 
 Directory {
+	DirectoryId = stats_dir_for_<?php echo $domclean; ?>
+
 	Path = /webstats
+<?php
+		if ($statsprotect) {
+?>
 	PasswordFile = basic:/home/httpd/<?php echo $domainname ?>/__dirprotect/__stats
+<?php
+		}
+?>
 }
 
 <?php
@@ -151,7 +185,7 @@ Directory {
 <?php
 		}
 	}
-}
+//}
 
 if ($webmailremote) {
 ?>
@@ -164,6 +198,12 @@ UrlToolkit {
 <?php
 }
 ?>
+
+UrlToolkit {
+	ToolkitID = cgi_for_<?php echo $domcleaner; ?>
+
+	Match ^/.*\.(pl|cgi)(/|$) UseFastCGI cgi_for_apache
+}
 
 UrlToolkit {
 	ToolkitID = redirect_<?php echo $domcleaner; ?>
@@ -185,15 +225,15 @@ if ($redirectionremote) {
 	}
 }
 ?>
-	Match ^/kloxo/(.*) Redirect https://<?php echo $domainname; ?>:<?php echo $kloxoportssl; ?>/$1
-	Match ^/kloxononssl/(.*) Redirect http://<?php echo $domainname; ?>:<?php echo $kloxoportnonssl; ?>/$1
-	Match ^/webmail/(.*) Redirect http://webmail.<?php echo $domainname; ?>/$1
-	Match ^/cp/(.*) Redirect http://cp.<?php echo $domainname; ?>/$1
+	Match ^/kloxo(|/(.*))$ Redirect https://<?php echo $domainname; ?>:<?php echo $kloxoportssl; ?>/$1
+	Match ^/kloxononssl(|/(.*))$ Redirect http://<?php echo $domainname; ?>:<?php echo $kloxoportnonssl; ?>/$1
+	Match ^/webmail(|/(.*))$ Redirect http://webmail.<?php echo $domainname; ?>/$1
+	Match ^/cp(|/(.*))$ Redirect http://cp.<?php echo $domainname; ?>/$1
 <?php
 if ($enablestats) {
 	if ($statsapp === 'awstats') {
 ?>
-	Match ^/stats/(.*) Redirect http://<?php echo $domainname; ?>/awstats/awstats.pl
+	Match ^/stats(|/(.*))$ Redirect http://<?php echo $domainname ?>/awstats/awstats.pl$1
 <?php
 	}
 }
@@ -201,7 +241,7 @@ if ($enablestats) {
 if ($wwwredirect) {
 ?>
 
-	Match ^/(.*) Redirect http://www.<?php echo $domainname; ?>/$1
+	Match ^/(.*)$ Redirect http://www.<?php echo $domainname; ?>/$1
 <?php
 }
 ?>
@@ -212,7 +252,8 @@ FastCGIserver {
 
 	ConnectTo = /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-<?php echo $user; ?>.sock
 	Extension = php
-	SessionTimeout = 600
+	SessionTimeout = <?php echo $timeout; ?>
+
 }
 
 <?php
@@ -230,23 +271,29 @@ foreach ($certnamelist as $ip => $certname) {
 
 ## cp for '<?php echo $domainname; ?>'
 VirtualHost {
-	CustomHeader = X-Frame-Options:sameorigin
-
 	RequiredBinding = port_<?php echo $portnames[$count]; ?>
 
+
+	Alias = /.well-known:/var/run/letsencrypt/.well-known
+	UseDirectory = well_known
 <?php
 			if ($count !== 0) {
 ?>
+
 	TLScertFile = <?php echo $certname; ?>.pem
 <?php
 				if (file_exists("{$certname}.ca")) {
 ?>
-	RequiredCA = <?php echo $certname; ?>.ca
+	#RequiredCA = <?php echo $certname; ?>.ca
+
+	<?php echo $custom_header; ?>
+
 <?php
 				}
 ?>
+
 	SecureURL = no
-	#MinTLSversion = TLS1.0
+	#MinTLSversion = 1.0
 <?php
 			}
 ?>
@@ -264,8 +311,6 @@ VirtualHost {
 	WebsiteRoot = <?php echo $disabledocroot; ?>
 
 
-	Alias = /.well-known:/var/run/letsencrypt/.well-known
-
 	EnablePathInfo = yes
 <?php
 			if ($reverseproxy) {
@@ -274,9 +319,9 @@ VirtualHost {
 	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
 	UseLocalConfig = yes
 	#IgnoreDotHiawatha = yes
-	#ReverseProxy ^/.* http://127.0.0.1:30080/ 300 keep-alive
-	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
-	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
+	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
+	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
+	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 <?php
 			} else {
 ?>
@@ -293,23 +338,29 @@ VirtualHost {
 
 ## webmail for '<?php echo $domainname; ?>'
 VirtualHost {
-	CustomHeader = X-Frame-Options:sameorigin
-
 	RequiredBinding = port_<?php echo $portnames[$count]; ?>
 
+
+	Alias = /.well-known:/var/run/letsencrypt/.well-known
+	UseDirectory = well_known
 <?php
 			if ($count !== 0) {
 ?>
+
 	TLScertFile = <?php echo $certname; ?>.pem
 <?php
 				if (file_exists("{$certname}.ca")) {
 ?>
-	RequiredCA = <?php echo $certname; ?>.ca
+	#RequiredCA = <?php echo $certname; ?>.ca
+
+	<?php echo $custom_header; ?>
+
 <?php
 				}
 ?>
+
 	SecureURL = no
-	#MinTLSversion = TLS1.0
+	#MinTLSversion = 1.0
 <?php
 			}
 ?>
@@ -327,8 +378,6 @@ VirtualHost {
 	WebsiteRoot = <?php echo $disabledocroot; ?>
 
 
-	Alias = /.well-known:/var/run/letsencrypt/.well-known
-
 	EnablePathInfo = yes
 <?php
 			if ($reverseproxy) {
@@ -337,9 +386,9 @@ VirtualHost {
 	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
 	UseLocalConfig = yes
 	#IgnoreDotHiawatha = yes
-	#ReverseProxy ^/.* http://127.0.0.1:30080/ 300 keep-alive
-	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
-	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
+	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
+	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
+	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 <?php
 			} else {
 ?>
@@ -359,23 +408,29 @@ VirtualHost {
 
 ## cp for '<?php echo $domainname; ?>'
 VirtualHost {
-	CustomHeader = X-Frame-Options:sameorigin
-
 	RequiredBinding = port_<?php echo $portnames[$count]; ?>
 
+
+	Alias = /.well-known:/var/run/letsencrypt/.well-known
+	UseDirectory = well_known
 <?php
 			if ($count !== 0) {
 ?>
+
 	TLScertFile = <?php echo $certname; ?>.pem
 <?php
 				if (file_exists("{$certname}.ca")) {
 ?>
-	RequiredCA = <?php echo $certname; ?>.ca
+	#RequiredCA = <?php echo $certname; ?>.ca
+
+	<?php echo $custom_header; ?>
+
 <?php
 				}
 ?>
+
 	SecureURL = no
-	#MinTLSversion = TLS1.0
+	#MinTLSversion = 1.0
 <?php
 			}
 ?>
@@ -393,18 +448,13 @@ VirtualHost {
 	WebsiteRoot = <?php echo $cpdocroot; ?>
 
 
-	Alias = /.well-known:/var/run/letsencrypt/.well-known
-
 	EnablePathInfo = yes
 
-	TimeForCGI = 600
+	TimeForCGI = <?php echo $timeout; ?>
 
-	Alias = /error:/home/kloxo/httpd/error
-	ErrorHandler = 401:/error/401.html
-	ErrorHandler = 403:/error/403.html
-	ErrorHandler = 404:/error/404.html
-	ErrorHandler = 501:/error/501.html
-	ErrorHandler = 503:/error/503.html
+
+	<?php echo $error_handler; ?>
+
 
 	ExecuteCGI = yes
 <?php
@@ -414,9 +464,9 @@ VirtualHost {
 	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
 	UseLocalConfig = yes
 	#IgnoreDotHiawatha = yes
-	#ReverseProxy ^/.* http://127.0.0.1:30080/ 300 keep-alive
-	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
-	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
+	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
+	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
+	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 <?php
 			} else {
 ?>
@@ -436,23 +486,29 @@ VirtualHost {
 
 ## webmail for '<?php echo $domainname; ?>'
 VirtualHost {
-	CustomHeader = X-Frame-Options:sameorigin
-
 	RequiredBinding = port_<?php echo $portnames[$count]; ?>
 
+
+	Alias = /.well-known:/var/run/letsencrypt/.well-known
+	UseDirectory = well_known
 <?php
 				if ($count !== 0) {
 ?>
+
 	TLScertFile = <?php echo $certname; ?>.pem
 <?php
 					if (file_exists("{$certname}.ca")) {
 ?>
-	RequiredCA = <?php echo $certname; ?>.ca
+	#RequiredCA = <?php echo $certname; ?>.ca
+
+	<?php echo $custom_header; ?>
+
 <?php
 					}
 ?>
+
 	SecureURL = no
-	#MinTLSversion = TLS1.0
+	#MinTLSversion = 1.0
 <?php
 				}
 ?>
@@ -469,8 +525,6 @@ VirtualHost {
 
 	WebsiteRoot = <?php echo $webmaildocroot; ?>
 
-
-	Alias = /.well-known:/var/run/letsencrypt/.well-known
 
 	useToolkit = block_shellshock, redirect_<?php echo str_replace('.', '_', $webmailremote); ?>
 
@@ -482,23 +536,29 @@ VirtualHost {
 
 ## webmail for '<?php echo $domainname; ?>'
 VirtualHost {
-	CustomHeader = X-Frame-Options:sameorigin
-
 	RequiredBinding = port_<?php echo $portnames[$count]; ?>
 
+
+	Alias = /.well-known:/var/run/letsencrypt/.well-known
+	UseDirectory = well_known
 <?php
 				if ($count !== 0) {
 ?>
+
 	TLScertFile = <?php echo $certname; ?>.pem
 <?php
 					if (file_exists("{$certname}.ca")) {
 ?>
-	RequiredCA = <?php echo $certname; ?>.ca
+	#RequiredCA = <?php echo $certname; ?>.ca
+
+	<?php echo $custom_header; ?>
+
 <?php
 					}
 ?>
+
 	SecureURL = no
-	#MinTLSversion = TLS1.0
+	#MinTLSversion = 1.0
 <?php
 				}
 ?>
@@ -516,18 +576,13 @@ VirtualHost {
 	WebsiteRoot = <?php echo $webmaildocroot; ?>
 
 
-	Alias = /.well-known:/var/run/letsencrypt/.well-known
-
 	EnablePathInfo = yes
 
-	TimeForCGI = 600
+	TimeForCGI = <?php echo $timeout; ?>
 
-	Alias = /error:/home/kloxo/httpd/error
-	ErrorHandler = 401:/error/401.html
-	ErrorHandler = 403:/error/403.html
-	ErrorHandler = 404:/error/404.html
-	ErrorHandler = 501:/error/501.html
-	ErrorHandler = 503:/error/503.html
+
+	<?php echo $error_handler; ?>
+
 
 	ExecuteCGI = yes
 <?php
@@ -537,9 +592,9 @@ VirtualHost {
 	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
 	UseLocalConfig = yes
 	#IgnoreDotHiawatha = yes
-	#ReverseProxy ^/.* http://127.0.0.1:30080/ 300 keep-alive
-	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
-	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
+	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
+	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
+	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 <?php
 				} else {
 ?>
@@ -560,24 +615,30 @@ VirtualHost {
 
 ## web for '<?php echo $domainname; ?>'
 VirtualHost {
-	CustomHeader = X-Frame-Options:sameorigin
-
 	RequiredBinding = port_<?php echo $portnames[$count]; ?>
 
+
+	Alias = /.well-known:/var/run/letsencrypt/.well-known
+	UseDirectory = well_known
 <?php
 		if ($count !== 0) {
 			if ($enablessl) {
 ?>
+
 	TLScertFile = <?php echo $certname; ?>.pem
 <?php
 				if (file_exists("{$certname}.ca")) {
 ?>
-	RequiredCA = <?php echo $certname; ?>.ca
+	#RequiredCA = <?php echo $certname; ?>.ca
+
+	<?php echo $custom_header; ?>
+
 <?php
 				}
 ?>
+
 	SecureURL = no
-	#MinTLSversion = TLS1.0
+	#MinTLSversion = 1.0
 <?php
 			}
 		}
@@ -620,8 +681,6 @@ VirtualHost {
 	WebsiteRoot = <?php echo $rootpath; ?>
 
 
-	Alias = /.well-known:/var/run/letsencrypt/.well-known
-
 	EnablePathInfo = yes
 
 	Alias = /__kloxo:/home/<?php echo $user; ?>/kloxoscript
@@ -629,10 +688,8 @@ VirtualHost {
 		if ($enablecgi) {
 ?>
 
-	WrapCGI = <?=$user;?>_wrapper
-
-	## MR -- don't use ScriptAlias but Alias because ScriptAlias not the same as in Apache
-	Alias = /cgi-bin:/home/<?php echo $user; ?>/<?php echo $domainname; ?>/cgi-bin
+	#WrapCGI = <?=$user;?>_wrapper
+	#UseToolkit = cgi_for_<?php echo $domcleaner; ?>
 <?php
 		}
 
@@ -652,6 +709,9 @@ VirtualHost {
 
 	AccessLogfile = /home/httpd/<?php echo $domainname ?>/stats/<?php echo $domainname ?>-custom_log
 	ErrorLogfile = /home/httpd/<?php echo $domainname ?>/stats/<?php echo $domainname ?>-error_log
+
+	UseDirectory = stats_dir_for_<?php echo $domclean; ?>
+
 <?php
 				if ($statsapp === 'awstats') {
 ?>
@@ -683,14 +743,11 @@ VirtualHost {
 
 	UserWebsites = yes
 
-	TimeForCGI = 600
+	TimeForCGI = <?php echo $timeout; ?>
 
-	Alias = /error:/home/kloxo/httpd/error
-	ErrorHandler = 401:/error/401.html
-	ErrorHandler = 403:/error/403.html
-	ErrorHandler = 404:/error/404.html
-	ErrorHandler = 501:/error/501.html
-	ErrorHandler = 503:/error/503.html
+
+	<?php echo $error_handler; ?>
+
 
 	ExecuteCGI = yes
 <?php
@@ -708,9 +765,9 @@ VirtualHost {
 	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
 	UseLocalConfig = yes
 	#IgnoreDotHiawatha = yes
-	#ReverseProxy ^/.* http://127.0.0.1:30080/ 300 keep-alive
-	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
-	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
+	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
+	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
+	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 <?php
 			}
 		}
@@ -752,24 +809,30 @@ VirtualHost {
 
 ## web for redirect '<?php echo $redirdomainname; ?>'
 VirtualHost {
-	CustomHeader = X-Frame-Options:sameorigin
-
 	RequiredBinding = port_<?php echo $portnames[$count]; ?>
 
+
+	Alias = /.well-known:/var/run/letsencrypt/.well-known
+	UseDirectory = well_known
 <?php
 					if ($count !== 0) {
 						if ($enablessl) {
 ?>
+
 	TLScertFile = <?php echo $certname; ?>.pem
 <?php
 							if (file_exists("{$certname}.ca")) {
 ?>
-	RequiredCA = <?php echo $certname; ?>.ca
+	#RequiredCA = <?php echo $certname; ?>.ca
+
+	<?php echo $custom_header; ?>
+
 <?php
 							}
 ?>
+
 	SecureURL = no
-	#MinTLSversion = TLS1.0
+	#MinTLSversion = 1.0
 <?php
 						}
 					}
@@ -789,20 +852,15 @@ VirtualHost {
 	WebsiteRoot = <?php echo $redirfullpath; ?>
 
 
-	Alias = /.well-known:/var/run/letsencrypt/.well-known
-
 	EnablePathInfo = yes
 
 	UserWebsites = yes
 
-	TimeForCGI = 600
+	TimeForCGI = <?php echo $timeout; ?>
 
-	Alias = /error:/home/kloxo/httpd/error
-	ErrorHandler = 401:/error/401.html
-	ErrorHandler = 403:/error/403.html
-	ErrorHandler = 404:/error/404.html
-	ErrorHandler = 501:/error/501.html
-	ErrorHandler = 503:/error/503.html
+
+	<?php echo $error_handler; ?>
+
 
 	ExecuteCGI = yes
 <?php
@@ -812,9 +870,9 @@ VirtualHost {
 	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
 	UseLocalConfig = yes
 	#IgnoreDotHiawatha = yes
-	#ReverseProxy ^/.* http://127.0.0.1:30080/ 300 keep-alive
-	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
-	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
+	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
+	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
+	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 <?php
 					} else {
 ?>
@@ -840,24 +898,30 @@ VirtualHost {
 
 ## web for redirect '<?php echo $redirdomainname; ?>'
 VirtualHost {
-	CustomHeader = X-Frame-Options:sameorigin
-
 	RequiredBinding = port_<?php echo $portnames[$count]; ?>
 
+
+	Alias = /.well-known:/var/run/letsencrypt/.well-known
+	UseDirectory = well_known
 <?php
 					if ($count !== 0) {
 						if ($enablessl) {
 ?>
+
 	TLScertFile = <?php echo $certname; ?>.pem
 <?php
 							if (file_exists("{$certname}.ca")) {
 ?>
-	RequiredCA = <?php echo $certname; ?>.ca
+	#RequiredCA = <?php echo $certname; ?>.ca
+
+	<?php echo $custom_header; ?>
+
 <?php
 							}
 ?>
+
 	SecureURL = no
-	#MinTLSversion = TLS1.0
+	#MinTLSversion = 1.0
 <?php
 						}
 					}
@@ -877,20 +941,15 @@ VirtualHost {
 	WebsiteRoot = <?php echo $redirfullpath; ?>
 
 
-	Alias = /.well-known:/var/run/letsencrypt/.well-known
-
 	EnablePathInfo = yes
 
 	UserWebsites = yes
 
-	TimeForCGI = 600
+	TimeForCGI = <?php echo $timeout; ?>
 
-	Alias = /error:/home/kloxo/httpd/error
-	ErrorHandler = 401:/error/401.html
-	ErrorHandler = 403:/error/403.html
-	ErrorHandler = 404:/error/404.html
-	ErrorHandler = 501:/error/501.html
-	ErrorHandler = 503:/error/503.html
+
+	<?php echo $error_handler; ?>
+
 
 	ExecuteCGI = yes
 <?php
@@ -900,9 +959,9 @@ VirtualHost {
 	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
 	UseLocalConfig = yes
 	#IgnoreDotHiawatha = yes
-	#ReverseProxy ^/.* http://127.0.0.1:30080/ 300 keep-alive
-	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
-	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
+	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
+	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
+	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 <?php
 					} else {
 ?>
@@ -932,23 +991,29 @@ VirtualHost {
 
 ## webmail for parked '<?php echo $parkdomainname; ?>'
 VirtualHost {
-	CustomHeader = X-Frame-Options:sameorigin
-
 	RequiredBinding = port_<?php echo $portnames[$count]; ?>
 
+
+	Alias = /.well-known:/var/run/letsencrypt/.well-known
+	UseDirectory = well_known
 <?php
 					if ($count !== 0) {
 ?>
+
 	TLScertFile = <?php echo $certname; ?>.pem
 <?php
 						if (file_exists("{$certname}.ca")) {
 ?>
-	RequiredCA = <?php echo $certname; ?>.ca
+	#RequiredCA = <?php echo $certname; ?>.ca
+
+	<?php echo $custom_header; ?>
+
 <?php
 						}
 ?>
+
 	SecureURL = no
-	#MinTLSversion = TLS1.0
+	#MinTLSversion = 1.0
 <?php
 					}
 ?>
@@ -966,8 +1031,6 @@ VirtualHost {
 	WebsiteRoot = <?php echo $disabledocroot; ?>
 
 
-	Alias = /.well-known:/var/run/letsencrypt/.well-known
-
 	EnablePathInfo = yes
 <?php
 					if ($reverseproxy) {
@@ -976,9 +1039,9 @@ VirtualHost {
 	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
 	UseLocalConfig = yes
 	#IgnoreDotHiawatha = yes
-	#ReverseProxy ^/.* http://127.0.0.1:30080/ 300 keep-alive
-	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
-	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
+	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
+	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
+	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 <?php
 					} else {
 ?>
@@ -999,23 +1062,29 @@ VirtualHost {
 
 ## webmail for parked '<?php echo $parkdomainname; ?>'
 VirtualHost {
-	CustomHeader = X-Frame-Options:sameorigin
-
 	RequiredBinding = port_<?php echo $portnames[$count]; ?>
 
+
+	Alias = /.well-known:/var/run/letsencrypt/.well-known
+	UseDirectory = well_known
 <?php
 						if ($count !== 0) {
 ?>
+
 	TLScertFile = <?php echo $certname; ?>.pem
 <?php
 							if (file_exists("{$certname}.ca")) {
 ?>
-	RequiredCA = <?php echo $certname; ?>.ca
+	#RequiredCA = <?php echo $certname; ?>.ca
+
+	<?php echo $custom_header; ?>
+
 <?php
 							}
 ?>
+
 	SecureURL = no
-	#MinTLSversion = TLS1.0
+	#MinTLSversion = 1.0
 <?php
 						}
 ?>
@@ -1033,16 +1102,11 @@ VirtualHost {
 	WebsiteRoot = <?php echo $webmaildocroot; ?>
 
 
-	Alias = /.well-known:/var/run/letsencrypt/.well-known
+	TimeForCGI = <?php echo $timeout; ?>
 
-	TimeForCGI = 600
 
-	Alias = /error:/home/kloxo/httpd/error
-	ErrorHandler = 401:/error/401.html
-	ErrorHandler = 403:/error/403.html
-	ErrorHandler = 404:/error/404.html
-	ErrorHandler = 501:/error/501.html
-	ErrorHandler = 503:/error/503.html
+	<?php echo $error_handler; ?>
+
 
 	ExecuteCGI = yes
 <?php
@@ -1052,9 +1116,9 @@ VirtualHost {
 	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
 	UseLocalConfig = yes
 	#IgnoreDotHiawatha = yes
-	#ReverseProxy ^/.* http://127.0.0.1:30080/ 300 keep-alive
-	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
-	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
+	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
+	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
+	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 <?php
 						} else {
 ?>
@@ -1074,23 +1138,29 @@ VirtualHost {
 
 ## webmail for parked '<?php echo $parkdomainname; ?>'
 VirtualHost {
-	CustomHeader = X-Frame-Options:sameorigin
-
 	RequiredBinding = port_<?php echo $portnames[$count]; ?>
 
+
+	Alias = /.well-known:/var/run/letsencrypt/.well-known
+	UseDirectory = well_known
 <?php
 						if ($count !== 0) {
 ?>
+
 	TLScertFile = <?php echo $certname; ?>.pem
 <?php
 							if (file_exists("{$certname}.ca")) {
 ?>
-	RequiredCA = <?php echo $certname; ?>.ca
+	#RequiredCA = <?php echo $certname; ?>.ca
+
+	<?php echo $custom_header; ?>
+
 <?php
 							}
 ?>
+
 	SecureURL = no
-	#MinTLSversion = TLS1.0
+	#MinTLSversion = 1.0
 <?php
 						}
 ?>
@@ -1108,18 +1178,13 @@ VirtualHost {
 	WebsiteRoot = <?php echo $webmaildocroot; ?>
 
 
-	Alias = /.well-known:/var/run/letsencrypt/.well-known
-
 	EnablePathInfo = yes
 
-	TimeForCGI = 600
+	TimeForCGI = <?php echo $timeout; ?>
 
-	Alias = /error:/home/kloxo/httpd/error
-	ErrorHandler = 401:/error/401.html
-	ErrorHandler = 403:/error/403.html
-	ErrorHandler = 404:/error/404.html
-	ErrorHandler = 501:/error/501.html
-	ErrorHandler = 503:/error/503.html
+
+	<?php echo $error_handler; ?>
+
 
 	ExecuteCGI = yes
 <?php
@@ -1129,9 +1194,9 @@ VirtualHost {
 	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
 	UseLocalConfig = yes
 	#IgnoreDotHiawatha = yes
-	#ReverseProxy ^/.* http://127.0.0.1:30080/ 300 keep-alive
-	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
-	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
+	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
+	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
+	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 <?php
 						} else {
 ?>
@@ -1167,23 +1232,29 @@ VirtualHost {
 
 ## webmail for redirect '<?php echo $redirdomainname; ?>'
 VirtualHost {
-	CustomHeader = X-Frame-Options:sameorigin
-
 	RequiredBinding = port_<?php echo $portnames[$count]; ?>
 
+
+	Alias = /.well-known:/var/run/letsencrypt/.well-known
+	UseDirectory = well_known
 <?php
 					if ($count !== 0) {
 ?>
+
 	TLScertFile = <?php echo $certname; ?>.pem
 <?php
 						if (file_exists("{$certname}.ca")) {
 ?>
-	RequiredCA = <?php echo $certname; ?>.ca
+	#RequiredCA = <?php echo $certname; ?>.ca
+
+	<?php echo $custom_header; ?>
+
 <?php
 						}
 ?>
+
 	SecureURL = no
-	#MinTLSversion = TLS1.0
+	#MinTLSversion = 1.0
 <?php
 					}
 ?>
@@ -1201,18 +1272,13 @@ VirtualHost {
 	WebsiteRoot = <?php echo $disabledocroot; ?>
 
 
-	Alias = /.well-known:/var/run/letsencrypt/.well-known
-
 	EnablePathInfo = yes
 
-	TimeForCGI = 600
+	TimeForCGI = <?php echo $timeout; ?>
 
-	Alias = /error:/home/kloxo/httpd/error
-	ErrorHandler = 401:/error/401.html
-	ErrorHandler = 403:/error/403.html
-	ErrorHandler = 404:/error/404.html
-	ErrorHandler = 501:/error/501.html
-	ErrorHandler = 503:/error/503.html
+
+	<?php echo $error_handler; ?>
+
 
 	ExecuteCGI = yes
 <?php
@@ -1222,9 +1288,9 @@ VirtualHost {
 	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
 	UseLocalConfig = yes
 	#IgnoreDotHiawatha = yes
-	#ReverseProxy ^/.* http://127.0.0.1:30080/ 300 keep-alive
-	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
-	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
+	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
+	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
+	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 <?php
 					} else {
 ?>
@@ -1245,23 +1311,29 @@ VirtualHost {
 
 ## webmail for redirect '<?php echo $redirdomainname; ?>'
 VirtualHost {
-	CustomHeader = X-Frame-Options:sameorigin
-
 	RequiredBinding = port_<?php echo $portnames[$count]; ?>
 
+
+	Alias = /.well-known:/var/run/letsencrypt/.well-known
+	UseDirectory = well_known
 <?php
 						if ($count !== 0) {
 ?>
+
 	TLScertFile = <?php echo $certname; ?>.pem
 <?php
 							if (file_exists("{$certname}.ca")) {
 ?>
-	RequiredCA = <?php echo $certname; ?>.ca
+	#RequiredCA = <?php echo $certname; ?>.ca
+
+	<?php echo $custom_header; ?>
+
 <?php
 							}
 ?>
+
 	SecureURL = no
-	#MinTLSversion = TLS1.0
+	#MinTLSversion = 1.0
 <?php
 						}
 ?>
@@ -1279,18 +1351,13 @@ VirtualHost {
 	WebsiteRoot = <?php echo $webmaildocroot; ?>
 
 
-	Alias = /.well-known:/var/run/letsencrypt/.well-known
-
 	EnablePathInfo = yes
 
-	TimeForCGI = 600
+	TimeForCGI = <?php echo $timeout; ?>
 
-	Alias = /error:/home/kloxo/httpd/error
-	ErrorHandler = 401:/error/401.html
-	ErrorHandler = 403:/error/403.html
-	ErrorHandler = 404:/error/404.html
-	ErrorHandler = 501:/error/501.html
-	ErrorHandler = 503:/error/503.html
+
+	<?php echo $error_handler; ?>
+
 
 	ExecuteCGI = yes
 <?php
@@ -1300,9 +1367,9 @@ VirtualHost {
 	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
 	UseLocalConfig = yes
 	#IgnoreDotHiawatha = yes
-	#ReverseProxy ^/.* http://127.0.0.1:30080/ 300 keep-alive
-	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
-	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
+	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
+	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
+	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 <?php
 						} else {
 ?>
@@ -1322,23 +1389,29 @@ VirtualHost {
 
 ## webmail for redirect '<?php echo $redirdomainname; ?>'
 VirtualHost {
-	CustomHeader = X-Frame-Options:sameorigin
-
 	RequiredBinding = port_<?php echo $portnames[$count]; ?>
 
+
+	Alias = /.well-known:/var/run/letsencrypt/.well-known
+	UseDirectory = well_known
 <?php
 						if ($count !== 0) {
 ?>
+
 	TLScertFile = <?php echo $certname; ?>.pem
 <?php
 							if (file_exists("{$certname}.ca")) {
 ?>
-	RequiredCA = <?php echo $certname; ?>.ca
+	#RequiredCA = <?php echo $certname; ?>.ca
+
+	<?php echo $custom_header; ?>
+
 <?php
 							}
 ?>
+
 	SecureURL = no
-	#MinTLSversion = TLS1.0
+	#MinTLSversion = 1.0
 <?php
 						}
 ?>
@@ -1356,18 +1429,13 @@ VirtualHost {
 	WebsiteRoot = <?php echo $webmaildocroot; ?>
 
 
-	Alias = /.well-known:/var/run/letsencrypt/.well-known
-
 	EnablePathInfo = yes
 
-	TimeForCGI = 600
+	TimeForCGI = <?php echo $timeout; ?>
 
-	Alias = /error:/home/kloxo/httpd/error
-	ErrorHandler = 401:/error/401.html
-	ErrorHandler = 403:/error/403.html
-	ErrorHandler = 404:/error/404.html
-	ErrorHandler = 501:/error/501.html
-	ErrorHandler = 503:/error/503.html
+
+	<?php echo $error_handler; ?>
+
 
 	ExecuteCGI = yes
 <?php
@@ -1377,9 +1445,9 @@ VirtualHost {
 	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
 	UseLocalConfig = yes
 	#IgnoreDotHiawatha = yes
-	#ReverseProxy ^/.* http://127.0.0.1:30080/ 300 keep-alive
-	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
-	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ 300 keep-alive
+	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
+	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
+	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 <?php
 						} else {
 ?>

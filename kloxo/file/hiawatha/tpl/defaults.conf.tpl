@@ -6,6 +6,21 @@
 
 <?php
 
+$error_handler="Alias = /error:/home/kloxo/httpd/error
+ErrorHandler = 401:/error/401.html
+ErrorHandler = 403:/error/403.html
+ErrorHandler = 404:/error/404.html
+ErrorHandler = 501:/error/501.html
+ErrorHandler = 503:/error/503.html";
+
+if (!isset($phpselected)) {
+	$phpselected = 'php';
+}
+
+if (!isset($timeout)) {
+	$timeout = '300';
+}
+
 if (!file_exists("/var/run/letsencrypt/.well-known/acme-challenge")) {
 	exec("mkdir -p /var/run/letsencrypt/.well-known/acme-challenge");
 }
@@ -40,7 +55,7 @@ $reverseports = array('30080', '30443');
 $portnames = array('nonssl', 'ssl');
 
 foreach ($certnamelist as $ip => $certname) {
-	$certnamelist[$ip] = "/home/kloxo/httpd/ssl/{$certname}";
+	$certnamelist[$ip] = "/home/kloxo/ssl/{$certname}";
 }
 
 $defaultdocroot = "/home/kloxo/httpd/default";
@@ -86,9 +101,7 @@ UrlToolkit {
 	ToolkitID = permalink
 	RequestURI exists Return
 	## process for 'special dirs' of Kloxo-MR
-	Match ^/(stats|awstats|awstatscss|awstats)(/|$) Return
-	## process for 'special dirs' of Kloxo-MR
-	Match ^/(cp|error|webmail|__kloxo|kloxo|kloxononssl|cgi-bin)(/|$) Return
+	Match ^/(stats|awstats|cp|error|webmail|__kloxo|kloxo|kloxononssl|cgi-bin)(/|$) Return
 	Match ^/(css|files|images|js)(/|$) Return
 	Match ^/(favicon.ico|robots.txt|sitemap.xml)$ Return
 	Match /(.*)\?(.*) Rewrite /index.php?path=$1&$2
@@ -101,7 +114,23 @@ FastCGIserver {
 
 	ConnectTo = /opt/configs/php-fpm/sock/php-apache.sock
 	Extension = php
-	SessionTimeout = 600
+	SessionTimeout = <?php echo $timeout; ?>
+
+}
+
+FastCGIserver {
+	FastCGIid = cgi_for_apache
+
+	ConnectTo = /tmp/fcgiwrap.sock
+	Extension = pl,cgi
+	SessionTimeout = <?php echo $timeout; ?>
+
+}
+
+Directory {
+	DirectoryID = well_known
+	Path = /.well-known
+	AccessList = allow all
 }
 
 CGIhandler = /usr/bin/perl:pl
@@ -124,10 +153,10 @@ Binding {
 
 	#Interface = 0.0.0.0
 	MaxKeepAlive = 120
-	TimeForRequest = 600
-	MaxRequestSize = 102400
-	## not able more than 100MB; hiawatha-9.3-2+ able until 2GB
-	MaxUploadSize = 2000
+	TimeForRequest = <?php echo $timeout; ?>
+
+	MaxRequestSize = 2096128
+	MaxUploadSize = 2047
 <?php
 		if ($count !== 0) {
 ?>
@@ -136,7 +165,7 @@ Binding {
 <?php
 			if (file_exists("{$certname}.ca")) {
 ?>
-	RequiredCA = <?php echo $certname; ?>.ca
+	#RequiredCA = <?php echo $certname; ?>.ca
 <?php
 			}
 		}
@@ -148,27 +177,27 @@ Binding {
 }
 ?>
 
+
+Alias = /.well-known:/var/run/letsencrypt/.well-known
+UseDirectory = well_known
+
 ### 'default' config
 set var_user = apache
 
 Hostname = 0.0.0.0, ::
 WebsiteRoot = <?php echo $defaultdocroot; ?>
 
-Alias = /.well-known:/var/run/letsencrypt/.well-known
 
 EnablePathInfo = yes
 ## MR -- remove by Hiawatha 10+
 #UseGZfile = yes
 FollowSymlinks = no
 
-TimeForCGI = 600
+TimeForCGI = <?php echo $timeout; ?>
 
-Alias = /error:/home/kloxo/httpd/error
-ErrorHandler = 401:/error/401.html
-ErrorHandler = 403:/error/403.html
-ErrorHandler = 404:/error/404.html
-ErrorHandler = 501:/error/501.html
-ErrorHandler = 503:/error/503.html
+
+<?php echo $error_handler; ?>
+
 <?php
 		if ($reverseproxy) {
 ?>
@@ -177,8 +206,8 @@ ErrorHandler = 503:/error/503.html
 UseLocalConfig = yes
 #IgnoreDotHiawatha = yes
 UseToolkit = block_shellshock, findindexfile
-#ReverseProxy ^/.* http://127.0.0.1:30080/ 300 keep-alive
-ReverseProxy !\.(pl|cgi|py|rb|shmtl) http://127.0.0.1:30080/ 300 keep-alive
+#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
+ReverseProxy !\.(pl|cgi|py|rb|shmtl) http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
 <?php
 		} else {
 ?>

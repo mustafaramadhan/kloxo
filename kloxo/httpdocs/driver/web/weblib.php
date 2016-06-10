@@ -351,6 +351,7 @@ class Web extends Lxdb
 
 	static $__desc_web_selected = array("", "", "web_selected");
 	static $__desc_php_selected = array("", "", "php_selected");
+	static $__desc_time_out = array("", "", "time_out");
 
 	static $__acdesc_update_permalink = array("", "", "permalink");
 	static $__acdesc_update_sesubmit = array("", "", "search_engine");
@@ -391,7 +392,8 @@ class Web extends Lxdb
 
 	static $__desc_sslcert_l = array("d", "", "");
 
-	static $__acdesc_update_webselector = array("", "", "web_selector");
+//	static $__acdesc_update_webselector = array("", "", "web_selector");
+	static $__acdesc_update_webfeatures = array("", "", "web_features");
 
 	function createExtraVariables()
 	{
@@ -511,9 +513,13 @@ class Web extends Lxdb
 
 	static function getIndexOrderDefault()
 	{
+	/*
 		return array('index.php', 'index.html', 'index.shtml', 'index.htm', 
 			'index.pl', 'index.py', 'index.cgi', 'index.rb', 
 			'default.htm', 'Default.aspx', 'Default.asp');
+	*/
+		return array('index.php', 'index.shtml', 'index.pl', 'index.py', 'index.cgi', 'index.rb', 
+			'Default.aspx', 'Default.asp', 'index.html', 'index.htm', 'default.htm', 'welcome.html');	
 	}
 	
 	function getQuotaNeedVar()
@@ -1028,8 +1034,10 @@ class Web extends Lxdb
 			$alist['property'][] = "a=updateform&sa=dirindex";
 		} elseif ($ghtml->frm_subaction === 'custom_error') {
 			$alist['property'][] = "a=updateform&sa=custom_error";
-		} elseif ($ghtml->frm_subaction === 'webselector') {
-			$alist['property'][] = "a=updateform&sa=webselector";
+	//	} elseif ($ghtml->frm_subaction === 'webselector') {
+	//		$alist['property'][] = "a=updateform&sa=webselector";
+		} elseif ($ghtml->frm_subaction === 'webfeatures') {
+			$alist['property'][] = "a=updateform&sa=webfeatures";
 		}
 
 		return $alist;
@@ -1096,7 +1104,8 @@ class Web extends Lxdb
 		$alist['action'][] = "a=updateform&sa=restore";
 	*/
 
-		$alist[] = "a=updateform&sa=webselector";
+	//	$alist[] = "a=updateform&sa=webselector";
+		$alist[] = "a=updateform&sa=webfeatures";
 
 		return $alist;
 	}
@@ -1236,12 +1245,14 @@ class Web extends Lxdb
 		return $param;
 	}
 
-	function updateWebselector($param)
+//	function updateWebselector($param)
+	function updateWebfeatures($param)
 	{
 		global $gbl, $sgbl, $login, $ghtml;
 
 		$this->web_selected = $param['web_selected'];
 		$this->php_selected = $param['php_selected'];
+		$this->time_out = $param['time_out'];
 
 		return $param;
 	}
@@ -1252,6 +1263,7 @@ class Web extends Lxdb
 		$this->write();
 
 		exec("sh /script/fixweb --domain={$this->nname}");
+		createRestartFile('restart-web');
 	}
 
 	function updateform($subaction, $param)
@@ -1414,26 +1426,53 @@ class Web extends Lxdb
 
 				return $vlist;
 
-			case "webselector":
-				$a = array('front-end', 'back-end');
+		//	case "webselector":
+			case "webfeatures":
+				$phptype = db_get_value('serverweb', "pserver-{$this->syncserver}", 'php_type');
 
-				$t = '--Default--';
+				if (strpos($driverapp, 'proxy') !== false) {
+					$a = array('front-end', 'back-end');
 
-				if (file_exists('../etc/flag/enablemultiplephp.flg')) {
-					// MR -- WIP for multiple php
-				//	$p = getCleanRpmBranchListOnList('php');
-				//	$l = array_merge(array($t), $p);
-
-					$l = array($t);
+					$vlist['web_selected'] = array("s", $a);
+					$this->setDefaultValue('web_selected', $a[1]);
 				} else {
-					$l = array($t);
+					$x['web_selected'] = "none (as '" . $this->web_selected . "' in proxy)";
+					$this->convertToUnmodifiable($x);
+					$vlist['web_selected'] = $x['web_selected'];
 				}
 
-				$vlist['web_selected'] = array("s", $a);
-				$vlist['php_selected'] = array("s", $l);
+				$l = self::getPhpSelectedList();
 
-				$this->setDefaultValue('web_selected', $a[1]);
-				$this->setDefaultValue('php_selected', $t);
+				if (($driverapp === 'apache') || 
+						((strpos($driverapp, 'proxy') !== false) && 
+						($this->web_selected === 'back-end'))) {
+					if (strpos($phptype, 'php-fpm') !== false) {
+						if (count($l) === 1) {
+							$y['php_selected'] = $l[0];
+							$this->convertToUnmodifiable($y);
+							$vlist['php_selected'] = $y['php_selected'];
+						} else {
+							$vlist['php_selected'] = array("s", $l);
+							$this->setDefaultValue('php_selected', $l[0]);
+						}
+					} else {
+						$y['php_selected'] = '--PHP Used--';
+						$this->convertToUnmodifiable($y);
+						$vlist['php_selected'] = $y['php_selected'];
+					}
+				} else {
+					if (count($l) === 1) {
+						$y['php_selected'] = $l[0];
+						$this->convertToUnmodifiable($y);
+						$vlist['php_selected'] = $y['php_selected'];
+					} else {
+						$vlist['php_selected'] = array("s", $l);
+						$this->setDefaultValue('php_selected', $l[0]);
+					}
+				}
+
+				$vlist['time_out'] = null;
+				$this->setDefaultValue('time_out', '300');
 
 				$vlist['__v_updateall_button'] = array();
 
@@ -1442,6 +1481,20 @@ class Web extends Lxdb
 
 		// MR -- this is for what?
 	//	return parent::updateform($subaction, $param);
+	}
+
+	static function getPhpSelectedList()
+	{
+		$t = '--PHP Used--';
+
+		if (file_exists('../etc/flag/enablemultiplephp.flg')) {
+			$p = getMultiplePhpList();
+			$l = array_merge(array($t), $p);
+		} else {
+			$l = array($t);
+		}
+
+		return $l;
 	}
 
 	static function getSelectList($parent, $var)

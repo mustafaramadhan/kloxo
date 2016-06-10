@@ -34,7 +34,7 @@ start () {
 }
 stop () {
     echo -n $"Stopping $prog: "
-    killproc -p ${pidfile} $prog
+    killproc -p ${pidfile} -d 10 $prog
     RETVAL=$?
     echo
     if [ $RETVAL -eq 0 ] ; then
@@ -49,7 +49,7 @@ restart () {
 
 reload () {
     echo -n $"Reloading $prog: "
-    killproc -p ${pidfile} $prog -USR2
+    killproc -p ${pidfile} -d 10 $prog -USR2
     RETVAL=$?
     echo
 }

@@ -1,20 +1,8 @@
 #!/bin/sh
 
 echo "*** Process for PHP-FPM service ***"
-#if [ $(ls -A /var/run/php-fpm/*.pid) ] ; then
-#	echo "  - No need started"
-#else
-#	/etc/init.d/php-fpm restart
-#fi
-
-#echo "  - Process: reload"
-#/etc/rc.d/init.d/php-fpm reload
-
-#echo "  - Process: restart"
-#/etc/init.d/php-fpm restart
-#sh /script/restart-php-fpm --force
 
 echo "  - Process: restart"
 /etc/rc.d/init.d/php-fpm stop
-pkill -9 php-fpm
+#pkill -9 php-fpm
 /etc/rc.d/init.d/php-fpm start

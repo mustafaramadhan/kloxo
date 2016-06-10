@@ -1,0 +1,4 @@
+#OPTIONS="-f /usr/bin/php-cgi -s /tmp/php-fastcgi.sock -C 4 -P /var/run/spawn-fcgi.pid"
+
+#OPTIONS="-u nginx -g nginx -a 127.0.0.1 -p 9001 -P /var/run/spawn-fcgi.pid -- /usr/sbin/fcgiwrap"
+OPTIONS="-u apache -g apache -s /tmp/fcgiwrap.sock -F 3 -P /var/run/spawn-fcgi.pid -- /usr/sbin/fcgiwrap >/dev/null 2>&1"

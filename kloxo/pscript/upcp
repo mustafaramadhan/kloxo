@@ -1,12 +1,16 @@
 #!/bin/sh
 
 if [ "$(hostname)" == "$(hostname -s)" ] ; then
-	echo "------------------------------------------------------"
+	echo "-------------------------------------------------------------------"
 	echo " WARNING:"
 	echo " - Need change hostname with qualify to FQDN"
 	echo "   (use 'server1.domain.com' instead 'server1')"
 	echo " - May trouble for web and mail without FQDN hostname"
-	echo "------------------------------------------------------"
+	echo "-------------------------------------------------------------------"
+	echo " - For OpenVZ VPS, change hostname from VPS panel"
+	echo " - For Others, change 'HOSTNAME' in '/etc/sysconfig/network' file"
+	echo " - Reboot after change hostname"
+	echo
 	exit
 fi
 

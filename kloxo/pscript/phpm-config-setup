@@ -45,7 +45,7 @@ echo ${x} >>/opt/${base_name}/install.log
 for i in dba dbase eaccelerator ioncube pdo_dblib pdo_odbc pdo_pgsql pgsql suhosin odbc mongo \
 	apc apcu imagick interbase ioncube-loader memcache memcached z-memcached mssql debug \
 	pdo_dblib pdo_firebird mysqlnd_ms mysqlnd_mysql mysqlnd_mysqli mysqlnd pdo_mysqlnd \
-	xdebug xcache opcache lzf redis enchant ; do
+	xdebug xcache opcache lzf redis enchant wddx xml_wddx ; do
 
 	for j in php.d php-zts.d ; do
 		for k in '01-' '10-' '15-' '20-' '25-' '30-' '35-' '40-' '45-' '50-' '55-' \
@@ -67,10 +67,18 @@ for i in dba dbase eaccelerator ioncube pdo_dblib pdo_odbc pdo_pgsql pgsql suhos
 					echo $x
 					echo $x >>/opt/${base_name}/install.log
 
-					if [ -f /opt/${base_name}/etc/php.d/${k}mysql.ini ] ; then
+					if [ -f /opt/${base_name}/etc/${j}/${k}mysql.ini ] ; then
 						'mv' -f /opt/${base_name}/etc/${j}/${k}mysql.ini /opt/${base_name}/etc/${j}/${k}mysql.nonini
+					fi
+
+					if [ -f /opt/${base_name}/etc/${j}/${k}mysqli.ini ] ; then
 						'mv' -f /opt/${base_name}/etc/${j}/${k}mysqli.ini /opt/${base_name}/etc/${j}/${k}mysqli.nonini
-						'mv' -f /opt/${base_name}/etc/${j}/${k}pdo_mysql.ini /opt/${base_name}/etc/${j}/${k}pdo_mysql.nonini
+					fi
+
+					if [ -f /opt/${base_name}/etc/${j}/${k}pdo_mysqlnd.ini ] ; then
+						if [ -f /opt/${base_name}/etc/php.d/${k}pdo_mysql.ini ] ; then		
+							'mv' -f /opt/${base_name}/etc/${j}/${k}pdo_mysql.ini /opt/${base_name}/etc/${j}/${k}pdo_mysql.nonini
+						fi
 					fi
 				else
 					x="-- Disable '${i}' modules in '/etc/${base_name}/etc/${j}'"
@@ -78,6 +86,10 @@ for i in dba dbase eaccelerator ioncube pdo_dblib pdo_odbc pdo_pgsql pgsql suhos
 					echo $x >>/opt/${base_name}/install.log
 
 					'mv' -f /opt/${base_name}/etc/${j}/${k}${i}.ini /opt/${base_name}/etc/${j}/${k}${i}.nonini
+					
+					if [ -f /opt/${base_name}/etc/php.d/${k}xml_wddx.nonini ] ; then
+						'mv' -f /opt/${base_name}/etc/${j}/${k}${i}.nonini /opt/${base_name}/etc/${j}/${k}${i}.ini					
+					fi
 				fi
 			fi
 		done

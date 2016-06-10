@@ -8,7 +8,7 @@
 # processname: httpd
 # config: /etc/httpd/conf/httpd.conf
 # config: /etc/sysconfig/httpd
-# pidfile: /var/run/httpd/httpd.pid
+# pidfile: /var/run/httpd.pid
 #
 ### BEGIN INIT INFO
 # Provides: httpd
@@ -34,14 +34,17 @@ HTTPD_LANG=${HTTPD_LANG-"C"}
 # mod_ssl needs a pass-phrase from the user.
 INITLOG_ARGS=""
 
+# Set HTTPD=/usr/sbin/httpd.worker in /etc/sysconfig/httpd to use a server
+# with the thread-based "worker" MPM; BE WARNED that some modules may not
+# work correctly with a thread-based MPM; notably PHP will refuse to start.
+
 # Path to the apachectl script, server binary, and short-form for messages.
 apachectl=/usr/sbin/apachectl
-httpd=/usr/sbin/httpd
+httpd=${HTTPD-/usr/sbin/httpd}
 prog=httpd
-pidfile=${PIDFILE-/var/run/httpd/httpd.pid}
+pidfile=${PIDFILE-/var/run/httpd.pid}
 lockfile=${LOCKFILE-/var/lock/subsys/httpd}
 RETVAL=0
-STOP_TIMEOUT=${STOP_TIMEOUT-10}
 
 # The semantics of these two functions differ from the way apachectl does
 # things -- attempting to start while running is a failure, and shutdown
@@ -56,12 +59,12 @@ start() {
         return $RETVAL
 }
 
-# When stopping httpd, a delay (of default 10 second) is required
-# before SIGKILLing the httpd parent; this gives enough time for the
-# httpd parent to SIGKILL any errant children.
+# When stopping httpd a delay of >10 second is required before SIGKILLing the
+# httpd parent; this gives enough time for the httpd parent to SIGKILL any
+# errant children.
 stop() {
 	echo -n $"Stopping $prog: "
-	killproc -p ${pidfile} -d ${STOP_TIMEOUT} $httpd
+	killproc -p ${pidfile} -d 10 $httpd
 	RETVAL=$?
 	echo
 	[ $RETVAL = 0 ] && rm -f ${lockfile} ${pidfile}
@@ -69,16 +72,12 @@ stop() {
 reload() {
     echo -n $"Reloading $prog: "
     if ! LANG=$HTTPD_LANG $httpd $OPTIONS -t >&/dev/null; then
-        RETVAL=6
+        RETVAL=$?
         echo $"not reloading due to configuration syntax error"
         failure $"not reloading $httpd due to configuration syntax error"
     else
-        # Force LSB behaviour from killproc
-        LSB=1 killproc -p ${pidfile} $httpd -HUP
+        killproc -p ${pidfile} $httpd -HUP
         RETVAL=$?
-        if [ $RETVAL -eq 7 ]; then
-            failure $"httpd shutdown"
-        fi
     fi
     echo
 }
@@ -92,15 +91,15 @@ case "$1" in
 	stop
 	;;
   status)
-        status -p ${pidfile} $httpd
+        status $httpd
 	RETVAL=$?
 	;;
   restart)
 	stop
 	start
 	;;
-  condrestart|try-restart)
-	if status -p ${pidfile} $httpd >&/dev/null; then
+  condrestart)
+	if [ -f ${pidfile} ] ; then
 		stop
 		start
 	fi
@@ -113,8 +112,8 @@ case "$1" in
 	RETVAL=$?
 	;;
   *)
-	echo $"Usage: $prog {start|stop|restart|condrestart|try-restart|force-reload|reload|status|fullstatus|graceful|help|configtest}"
-	RETVAL=2
+	echo $"Usage: $prog {start|stop|restart|condrestart|reload|status|fullstatus|graceful|help|configtest}"
+	RETVAL=3
 esac
 
 exit $RETVAL

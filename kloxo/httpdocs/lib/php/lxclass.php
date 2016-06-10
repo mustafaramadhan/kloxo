@@ -28,7 +28,7 @@ abstract class Lxclass
 	static $__desc_ccenter_command = array("", "", "ccenter_command");
 	static $__desc_confirm_f = array("", "", "Confirm");
 	static $__desc_ccenter_output = array("T", "", "ccenter_output");
-	static $__desc_ccenter_error = array("", "", "ccenter_error");
+	static $__desc_ccenter_error = array("T", "", "ccenter_error");
 	static $__acdesc_update_toggle_status = array("", "", "status");
 	static $__acdesc_update_disable = array("", "", "disable");
 	static $__acdesc_update_enable = array("", "", "enable");

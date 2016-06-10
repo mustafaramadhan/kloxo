@@ -414,7 +414,7 @@ class Ipaddress extends Lxdb
 
 		// MR -- add for missing (lighttpd error when select because need .pem file
 		if (!lxfile_exists("{$spath}/$name.pem")) {
-			exec("cat {$ppath}/file/ssl/default.crt {$ppath}/file/ssl/default.key > {$ppath}/file/ssl/default.pem");
+			exec("cat {$ppath}/file/ssl/default.key {$ppath}/file/ssl/default.crt > {$ppath}/file/ssl/default.pem");
 			lxfile_cp("{$ppath}/file/ssl/default.pem", "{$spath}/$name.pem");
 		}
 

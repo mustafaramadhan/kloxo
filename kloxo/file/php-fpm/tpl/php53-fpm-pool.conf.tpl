@@ -42,7 +42,11 @@
 		$phpcli = 'php';
 		$phpselected = 'php';
 	} else {
-		$phpcli = "{$phpcli}-cli";
+		if ($phpselected === 'php') {
+			$phpcli = "php";
+		} else {
+			$phpcli = "{$phpselected}-cli";
+		}
 	}
 
 //	exec("php -r 'echo phpversion();'", $out, $ret);
@@ -75,6 +79,8 @@
 		$chroot_dir = "/home/{$user}";
 		$enable_chroot = "";
 	}
+
+	$openbasedir = str_replace("/var/lib/php/session/", "{$session_save_path_flag}/", $openbasedir);
 ?>
 [<?php echo $pool; ?>]
 ;catch_workers_output = yes

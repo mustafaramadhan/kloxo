@@ -126,7 +126,7 @@ function phpcgi_stop() {
 
 		## hidden for wrapper only
 		killproc -p ${wrapper_pidfile} >/dev/null 2>&1
-		killproc -p ${phpcgi_pidfile}
+		killproc -p ${phpcgi_pidfile} -d 10
 
 		retval=$?
 		echo
@@ -145,7 +145,7 @@ function phpcgi_restart() {
 function phpcgi_reload() {
 	if [ ! -f /usr/local/lxlabs/kloxo/init/kloxo_use_php-cgi ] ; then
 		echo -n $"Reloading ${phpcgi_prog}: "
-		killproc -p ${phpcgi_pidfile} ${phpcgi_name} -USR2
+		killproc -p ${phpcgi_pidfile} -d 10 ${phpcgi_name} -USR2
 		RETVAL=$?
 		echo
 	fi

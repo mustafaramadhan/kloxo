@@ -2,6 +2,14 @@
 
 <?php
 
+if (!isset($phpselected)) {
+	$phpselected = 'php';
+}
+
+if (!isset($timeout)) {
+	$timeout = '300';
+}
+
 if (($webcache === 'none') || (!$webcache)) {
     $ports[] = '80';
     $ports[] = '443';
@@ -27,18 +35,23 @@ if (file_exists("{$globalspath}/custom.ssl_base.conf")) {
 	$ssl_base = "ssl_base";
 }
 
+if (file_exists("{$globalspath}/custom.acme-challenge.conf")) {
+	$acme_challenge = "custom.acme-challenge";
+} else {
+	$acme_challenge = "acme-challenge";
+}
+
 $listens = array('listen_nonssl', 'listen_ssl');
 
 $switches = array('', '_ssl');
 
 foreach ($certnamelist as $ip => $certname) {
-	$sslpathdef = "/home/kloxo/httpd/ssl";	
-	$sslpath = "/home/kloxo/client/{$user}/ssl";
+	$sslpath = "/home/kloxo/ssl";
 
 	if (file_exists("{$sslpath}/{$domainname}.key")) {
 		$certnamelist[$ip] = "{$sslpath}/{$domainname}";
 	} else {
-		$certnamelist[$ip] = "{$sslpathdef}/{$certname}";
+		$certnamelist[$ip] = "{$sslpath}/{$certname}";
 	}
 }
 
@@ -125,9 +138,15 @@ if ($out[0]) {
 }
 
 if (file_exists("{$globalspath}/custom.generic.conf")) {
-	$genericconf = 'custom.generic.conf';
+	$generic = 'custom.generic';
 } else {
-	$genericconf = 'generic.conf';
+	$generic = 'generic';
+}
+
+if (file_exists("{$globalspath}/custom.header_base.conf")) {
+	$header_base = "custom.header_base";
+} else {
+	$header_base = "header_base";
 }
 
 if ($disabled) {
@@ -156,24 +175,23 @@ server {
 			if ($count !== 0) {
 ?>
 
-	ssl on;
+	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
 	ssl_certificate <?php echo $certname; ?>.pem;
 	ssl_certificate_key <?php echo $certname; ?>.key;
 <?php
 				if (file_exists("{$certname}.ca")) {
 ?>
 	ssl_trusted_certificate <?php echo $certname; ?>.ca;
+
+	include '<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf';
 <?php
 				}
-?>
-	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
-<?php
 			}
 ?>
 
 	server_name cp.<?php echo $domainname; ?>;
 
-	include '<?php echo $globalspath; ?>/acme-challenge.conf';
+	include '<?php echo $globalspath; ?>/<?php echo $acme_challenge; ?>.conf';
 
 	index <?php echo $indexorder; ?>;
 
@@ -185,6 +203,23 @@ server {
 	set $var_user 'apache';
 	set $var_fpmport '<?php echo $fpmportapache; ?>';
 	set $var_phpselected 'php';
+<?php
+			//if ((!$reverseproxy) || (($reverseproxy) && ($webselected === 'front-end'))) {
+?>
+
+	fastcgi_connect_timeout <?php echo $timeout; ?>s;
+	fastcgi_send_timeout <?php echo $timeout; ?>s;
+	fastcgi_read_timeout <?php echo $timeout; ?>s;
+<?php
+			//} else {
+?>
+
+	proxy_connect_timeout <?php echo $timeout; ?>s;
+	proxy_send_timeout <?php echo $timeout; ?>s;
+	proxy_read_timeout <?php echo $timeout; ?>s;
+<?php
+			//}
+?>
 
 	include '<?php echo $globalspath; ?>/switch_standard<?php echo $switches[$count]; ?>.conf';
 }
@@ -201,24 +236,23 @@ server {
 			if ($count !== 0) {
 ?>
 
-	ssl on;
+	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
 	ssl_certificate <?php echo $certname; ?>.pem;
 	ssl_certificate_key <?php echo $certname; ?>.key;
 <?php
 				if (file_exists("{$certname}.ca")) {
 ?>
 	ssl_trusted_certificate <?php echo $certname; ?>.ca;
+
+	include '<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf';
 <?php
 				}
-?>
-	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
-<?php
 			}
 ?>
 
 	server_name webmail.<?php echo $domainname; ?>;
 
-	include '<?php echo $globalspath; ?>/acme-challenge.conf';
+	include '<?php echo $globalspath; ?>/<?php echo $acme_challenge; ?>.conf';
 
 	index <?php echo $indexorder; ?>;
 
@@ -230,6 +264,23 @@ server {
 	set $var_user 'apache';
 	set $var_fpmport '<?php echo $fpmportapache; ?>';
 	set $var_phpselected 'php';
+<?php
+			//if ((!$reverseproxy) || (($reverseproxy) && ($webselected === 'front-end'))) {
+?>
+
+	fastcgi_connect_timeout <?php echo $timeout; ?>s;
+	fastcgi_send_timeout <?php echo $timeout; ?>s;
+	fastcgi_read_timeout <?php echo $timeout; ?>s;
+<?php
+			//} else {
+?>
+
+	proxy_connect_timeout <?php echo $timeout; ?>s;
+	proxy_send_timeout <?php echo $timeout; ?>s;
+	proxy_read_timeout <?php echo $timeout; ?>s;
+<?php
+			//}
+?>
 
 	include '<?php echo $globalspath; ?>/switch_standard<?php echo $switches[$count]; ?>.conf';
 }
@@ -249,24 +300,23 @@ server {
 			if ($count !== 0) {
 ?>
 
-	ssl on;
+	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
 	ssl_certificate <?php echo $certname; ?>.pem;
 	ssl_certificate_key <?php echo $certname; ?>.key;
 <?php
 				if (file_exists("{$certname}.ca")) {
 ?>
 	ssl_trusted_certificate <?php echo $certname; ?>.ca;
+
+	include '<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf';
 <?php
 				}
-?>
-	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
-<?php
 			}
 ?>
 
 	server_name cp.<?php echo $domainname; ?>;
 
-	include '<?php echo $globalspath; ?>/acme-challenge.conf';
+	include '<?php echo $globalspath; ?>/<?php echo $acme_challenge; ?>.conf';
 
 	index <?php echo $indexorder; ?>;
 
@@ -278,6 +328,23 @@ server {
 	set $var_user 'apache';
 	set $var_fpmport '<?php echo $fpmportapache; ?>';
 	set $var_phpselected 'php';
+<?php
+			//if ((!$reverseproxy) || (($reverseproxy) && ($webselected === 'front-end'))) {
+?>
+
+	fastcgi_connect_timeout <?php echo $timeout; ?>s;
+	fastcgi_send_timeout <?php echo $timeout; ?>s;
+	fastcgi_read_timeout <?php echo $timeout; ?>s;
+<?php
+			//} else {
+?>
+
+	proxy_connect_timeout <?php echo $timeout; ?>s;
+	proxy_send_timeout <?php echo $timeout; ?>s;
+	proxy_read_timeout <?php echo $timeout; ?>s;
+<?php
+			//}
+?>
 
 	include '<?php echo $globalspath; ?>/switch_standard<?php echo $switches[$count]; ?>.conf';
 }
@@ -297,24 +364,23 @@ server {
 				if ($count !== 0) {
 ?>
 
-	ssl on;
+	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
 	ssl_certificate <?php echo $certname; ?>.pem;
 	ssl_certificate_key <?php echo $certname; ?>.key;
 <?php
 					if (file_exists("{$certname}.ca")) {
 ?>
 	ssl_trusted_certificate <?php echo $certname; ?>.ca;
+
+	include '<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf';
 <?php
 					}
-?>
-	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
-<?php
 				}
 ?>
 
 	server_name webmail.<?php echo $domainname; ?>;
 
-	include '<?php echo $globalspath; ?>/acme-challenge.conf';
+	include '<?php echo $globalspath; ?>/<?php echo $acme_challenge; ?>.conf';
 
 	if ($host != '<?php echo $webmailremote; ?>') {
 		rewrite ^/(.*) '<?php echo $protocol; ?><?php echo $webmailremote; ?>/$1' permanent;
@@ -336,24 +402,23 @@ server {
 				if ($count !== 0) {
 ?>
 
-	ssl on;
+	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
 	ssl_certificate <?php echo $certname; ?>.pem;
 	ssl_certificate_key <?php echo $certname; ?>.key;
 <?php
 					if (file_exists("{$certname}.ca")) {
 ?>
 	ssl_trusted_certificate <?php echo $certname; ?>.ca;
+
+	include '<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf';
 <?php
 					}
-?>
-	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
-<?php
 				}
 ?>
 
 	server_name webmail.<?php echo $domainname; ?>;
 
-	include '<?php echo $globalspath; ?>/acme-challenge.conf';
+	include '<?php echo $globalspath; ?>/<?php echo $acme_challenge; ?>.conf';
 
 	index <?php echo $indexorder; ?>;
 
@@ -365,6 +430,23 @@ server {
 	set $var_user 'apache';
 	set $var_fpmport '<?php echo $fpmportapache; ?>';
 	set $var_phpselected 'php';
+<?php
+				//if ((!$reverseproxy) || (($reverseproxy) && ($webselected === 'front-end'))) {
+?>
+
+	fastcgi_connect_timeout <?php echo $timeout; ?>s;
+	fastcgi_send_timeout <?php echo $timeout; ?>s;
+	fastcgi_read_timeout <?php echo $timeout; ?>s;
+<?php
+				//} else {
+?>
+
+	proxy_connect_timeout <?php echo $timeout; ?>s;
+	proxy_send_timeout <?php echo $timeout; ?>s;
+	proxy_read_timeout <?php echo $timeout; ?>s;
+<?php
+				//}
+?>
 
 	include '<?php echo $globalspath; ?>/switch_standard<?php echo $switches[$count]; ?>.conf';
 }
@@ -377,14 +459,6 @@ server {
 ## web for '<?php echo $domainname; ?>'
 server {
 	#disable_symlinks if_not_owner;
-<?php
-		if ($enablecgi) {
-?>
-
-	## MR -- 'enable-cgi' not implementing yet
-<?php
-		}
-?>
 
 	include '<?php echo $globalspath; ?>/<?php echo $listen; ?>.conf';
 
@@ -394,18 +468,17 @@ server {
 			if ($enablessl) {
 ?>
 
-	ssl on;
+	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
 	ssl_certificate <?php echo $certname; ?>.pem;
 	ssl_certificate_key <?php echo $certname; ?>.key;
 <?php
 				if (file_exists("{$certname}.ca")) {
 ?>
 	ssl_trusted_certificate <?php echo $certname; ?>.ca;
+
+	include '<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf';
 <?php
 				}
-?>
-	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
-<?php
 			}
 		}
 
@@ -422,7 +495,7 @@ server {
 		}
 ?>
 
-	include '<?php echo $globalspath; ?>/acme-challenge.conf';
+	include '<?php echo $globalspath; ?>/<?php echo $acme_challenge; ?>.conf';
 
 	index <?php echo $indexorder; ?>;
 
@@ -490,6 +563,13 @@ server {
 
 	root $var_rootdir;
 <?php
+		if ($enablecgi) {
+?>
+
+	include '<?php echo $globalspath; ?>/cgi.conf';
+<?php
+		}
+
 		if ($redirectionlocal) {
 			foreach ($redirectionlocal as $rl) {
 ?>
@@ -527,18 +607,32 @@ server {
 	set $var_fpmport '<?php echo $fpmport; ?>';
 	set $var_phpselected '<?php echo $phpselected; ?>';
 <?php
-		if ((!$reverseproxy) || (($reverseproxy) && ($webselected === 'front-end'))) {
-			if ($enablestats) {
+		//if ((!$reverseproxy) || (($reverseproxy) && ($webselected === 'front-end'))) {
+?>
+
+	fastcgi_connect_timeout <?php echo $timeout; ?>s;
+	fastcgi_send_timeout <?php echo $timeout; ?>s;
+	fastcgi_read_timeout <?php echo $timeout; ?>s;
+<?php
+		//} else {
+?>
+
+	proxy_connect_timeout <?php echo $timeout; ?>s;
+	proxy_send_timeout <?php echo $timeout; ?>s;
+	proxy_read_timeout <?php echo $timeout; ?>s;
+<?php
+		//}
+
+		if ($enablestats) {
 ?>
 
 	include '<?php echo $globalspath; ?>/stats.conf';
 <?php
-				if ($statsprotect) {
+			if ($statsprotect) {
 ?>
 
 	include '<?php echo $globalspath; ?>/dirprotect_stats.conf';
 <?php
-				}
 			}
 		}
 
@@ -629,7 +723,7 @@ server {
 	set $var_kloxoportssl '<?php echo $kloxoportssl; ?>';
 	set $var_kloxoportnonssl '<?php echo $kloxoportnonssl; ?>';
 
-	include '<?php echo $globalspath; ?>/<?php echo $genericconf; ?>';
+	include '<?php echo $globalspath; ?>/<?php echo $generic; ?>.conf';
 }
 
 <?php
@@ -652,16 +746,6 @@ server {
 server {
 	#disable_symlinks if_not_owner;
 
-<?php
-					if ($enablecgi) {
-?>
-
-	## MR -- 'enable-cgi' not implementing yet
-<?php
-					}
-
-?>
-
 	include '<?php echo $globalspath; ?>/<?php echo $listen; ?>.conf';
 
 	include '<?php echo $globalspath; ?>/<?php echo $gzip_base; ?>.conf';
@@ -670,25 +754,24 @@ server {
 						if ($enablessl) {
 ?>
 
-	ssl on;
+	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
 	ssl_certificate <?php echo $certname; ?>.pem;
 	ssl_certificate_key <?php echo $certname; ?>.key;
 <?php
 							if (file_exists("{$certname}.ca")) {
 ?>
 	ssl_trusted_certificate <?php echo $certname; ?>.ca;
+
+	include '<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf';
 <?php
 							}
-?>
-	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
-<?php
 						}
 					}
 ?>
 
 	server_name <?php echo $redirdomainname; ?> www.<?php echo $redirdomainname; ?>;
 
-	include '<?php echo $globalspath; ?>/acme-challenge.conf';
+	include '<?php echo $globalspath; ?>/<?php echo $acme_challenge; ?>.conf';
 
 	index <?php echo $indexorder; ?>;
 
@@ -696,11 +779,36 @@ server {
 	set $var_rootdir '<?php echo $redirfullpath; ?>';
 
 	root $var_rootdir;
+<?php
+
+					if ($enablecgi) {
+?>
+
+	include '<?php echo $globalspath; ?>/cgi.conf';
+<?php
+					}
+?>
 
 	set $var_user '<?php echo $user; ?>';
 	set $var_fpmport '<?php echo $fpmport; ?>';
 	set $var_phpselected '<?php echo $phpselected; ?>';
 <?php
+					//if ((!$reverseproxy) || (($reverseproxy) && ($webselected === 'front-end'))) {
+?>
+
+	fastcgi_connect_timeout <?php echo $timeout; ?>s;
+	fastcgi_send_timeout <?php echo $timeout; ?>s;
+	fastcgi_read_timeout <?php echo $timeout; ?>s;
+<?php
+					//} else {
+?>
+
+	proxy_connect_timeout <?php echo $timeout; ?>s;
+	proxy_send_timeout <?php echo $timeout; ?>s;
+	proxy_read_timeout <?php echo $timeout; ?>s;
+<?php
+					//}
+
 					if (($reverseproxy) && ($webselected === 'front-end')) {
 ?>
 
@@ -728,15 +836,6 @@ server {
 server {
 	#disable_symlinks if_not_owner;
 
-<?php
-					if ($enablecgi) {
-?>
-
-	## MR -- 'enable-cgi' not implementing yet
-<?php
-					}
-?>
-
 	include '<?php echo $globalspath; ?>/<?php echo $listen; ?>.conf';
 
 	include '<?php echo $globalspath; ?>/<?php echo $gzip_base; ?>.conf';
@@ -745,25 +844,24 @@ server {
 						if ($enablessl) {
 ?>
 
-	ssl on;
+	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
 	ssl_certificate <?php echo $certname; ?>.pem;
 	ssl_certificate_key <?php echo $certname; ?>.key;
 <?php
 							if (file_exists("{$certname}.ca")) {
 ?>
 	ssl_trusted_certificate <?php echo $certname; ?>.ca;
+
+	include '<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf';
 <?php
 							}
-?>
-	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
-<?php
 						}
 					}
 ?>
 
 	server_name <?php echo $redirdomainname; ?> www.<?php echo $redirdomainname; ?>;
 
-	include '<?php echo $globalspath; ?>/acme-challenge.conf';
+	include '<?php echo $globalspath; ?>/<?php echo $acme_challenge; ?>.conf';
 
 	index <?php echo $indexorder; ?>;
 
@@ -772,6 +870,14 @@ server {
 	set $var_rootdir '<?php echo $redirfullpath; ?>';
 
 	root $var_rootdir;
+<?php
+					if ($enablecgi) {
+?>
+
+	include '<?php echo $globalspath; ?>/cgi.conf';
+<?php
+					}
+?>
 
 	if ($host != '<?php echo $domainname; ?>') {
 		rewrite ^/(.*) '<?php echo $protocol; ?><?php echo $domainname; ?>/$1';
@@ -802,24 +908,23 @@ server {
 					if ($count !== 0) {
 ?>
 
-	ssl on;
+	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
 	ssl_certificate <?php echo $certname; ?>.pem;
 	ssl_certificate_key <?php echo $certname; ?>.key;
 <?php
 						if (file_exists("{$certname}.ca")) {
 ?>
 	ssl_trusted_certificate <?php echo $certname; ?>.ca;
+
+	include '<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf';
 <?php
 						}
-?>
-	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
-<?php
 					}
 ?>
 
 	server_name webmail.<?php echo $parkdomainname; ?>;
 
-	include '<?php echo $globalspath; ?>/acme-challenge.conf';
+	include '<?php echo $globalspath; ?>/<?php echo $acme_challenge; ?>.conf';
 
 	index <?php echo $indexorder; ?>;
 
@@ -831,6 +936,23 @@ server {
 	set $var_user 'apache';
 	set $var_fpmport '<?php echo $fpmportapache; ?>';
 	set $var_phpselected 'php';
+<?php
+					//if ((!$reverseproxy) || (($reverseproxy) && ($webselected === 'front-end'))) {
+?>
+
+	fastcgi_connect_timeout <?php echo $timeout; ?>s;
+	fastcgi_send_timeout <?php echo $timeout; ?>s;
+	fastcgi_read_timeout <?php echo $timeout; ?>s;
+<?php
+					//} else {
+?>
+
+	proxy_connect_timeout <?php echo $timeout; ?>s;
+	proxy_send_timeout <?php echo $timeout; ?>s;
+	proxy_read_timeout <?php echo $timeout; ?>s;
+<?php
+					//}
+?>
 
 	include '<?php echo $globalspath; ?>/switch_standard<?php echo $switches[$count]; ?>.conf';
 }
@@ -851,24 +973,23 @@ server {
 			  		  if ($count !== 0) {
 ?>
 
-	ssl on;
+	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
 	ssl_certificate <?php echo $certname; ?>.pem;
 	ssl_certificate_key <?php echo $certname; ?>.key;
 <?php
 						if (file_exists("{$certname}.ca")) {
 ?>
 	ssl_trusted_certificate <?php echo $certname; ?>.ca;
+
+	include '<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf';
 <?php
 						}
-?>
-	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
-<?php
 			  		  }
 ?>
 
 	server_name webmail.<?php echo $parkdomainname; ?>;
 
-	include '<?php echo $globalspath; ?>/acme-challenge.conf';
+	include '<?php echo $globalspath; ?>/<?php echo $acme_challenge; ?>.conf';
 
 	if ($host != '<?php echo $webmailremote; ?>') {
 		rewrite ^/(.*) '<?php echo $protocol; ?><?php echo $webmailremote; ?>/$1';
@@ -892,24 +1013,23 @@ server {
 			  			if ($count !== 0) {
 ?>
 
-	ssl on;
+	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
 	ssl_certificate <?php echo $certname; ?>.pem;
 	ssl_certificate_key <?php echo $certname; ?>.key;
 <?php
 							if (file_exists("{$certname}.ca")) {
 ?>
 	ssl_trusted_certificate <?php echo $certname; ?>.ca;
+
+	include '<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf';
 <?php
 							}
-?>
-	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
-<?php
 			  			}
 ?>
 
 	server_name webmail.<?php echo $parkdomainname; ?>;
 
-	include '<?php echo $globalspath; ?>/acme-challenge.conf';
+	include '<?php echo $globalspath; ?>/<?php echo $acme_challenge; ?>.conf';
 
 	index <?php echo $indexorder; ?>;
 
@@ -921,6 +1041,23 @@ server {
 	set $var_user 'apache';
 	set $var_fpmport '<?php echo $fpmportapache; ?>';
 	set $var_phpselected 'php';
+<?php
+						//if ((!$reverseproxy) || (($reverseproxy) && ($webselected === 'front-end'))) {
+?>
+
+	fastcgi_connect_timeout <?php echo $timeout; ?>s;
+	fastcgi_send_timeout <?php echo $timeout; ?>s;
+	fastcgi_read_timeout <?php echo $timeout; ?>s;
+<?php
+						//} else {
+?>
+
+	proxy_connect_timeout <?php echo $timeout; ?>s;
+	proxy_send_timeout <?php echo $timeout; ?>s;
+	proxy_read_timeout <?php echo $timeout; ?>s;
+<?php
+						//}
+?>
 
 	include '<?php echo $globalspath; ?>/switch_standard<?php echo $switches[$count]; ?>.conf';
 }
@@ -957,24 +1094,23 @@ server {
 					if ($count !== 0) {
 ?>
 
-	ssl on;
+	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
 	ssl_certificate <?php echo $certname; ?>.pem;
 	ssl_certificate_key <?php echo $certname; ?>.key;
 <?php
 						if (file_exists("{$certname}.ca")) {
 ?>
 	ssl_trusted_certificate <?php echo $certname; ?>.ca;
+
+	include '<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf';
 <?php
 						}
-?>
-	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
-<?php
 					}
 ?>
 
 	server_name webmail.<?php echo $redirdomainname; ?>;
 
-	include '<?php echo $globalspath; ?>/acme-challenge.conf';
+	include '<?php echo $globalspath; ?>/<?php echo $acme_challenge; ?>.conf';
 
 	index <?php echo $indexorder; ?>;
 
@@ -986,6 +1122,23 @@ server {
 	set $var_user 'apache';
 	set $var_fpmport '<?php echo $fpmportapache; ?>';
 	set $var_phpselected 'php';
+<?php
+					//if ((!$reverseproxy) || (($reverseproxy) && ($webselected === 'front-end'))) {
+?>
+
+	fastcgi_connect_timeout <?php echo $timeout; ?>s;
+	fastcgi_send_timeout <?php echo $timeout; ?>s;
+	fastcgi_read_timeout <?php echo $timeout; ?>s;
+<?php
+					//} else {
+?>
+
+	proxy_connect_timeout <?php echo $timeout; ?>s;
+	proxy_send_timeout <?php echo $timeout; ?>s;
+	proxy_read_timeout <?php echo $timeout; ?>s;
+<?php
+					//}
+?>
 
 	include '<?php echo $globalspath; ?>/switch_standard<?php echo $switches[$count]; ?>.conf';
 }
@@ -1006,24 +1159,23 @@ server {
 			  			if ($count !== 0) {
 ?>
 
-	ssl on;
+	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
 	ssl_certificate <?php echo $certname; ?>.pem;
 	ssl_certificate_key <?php echo $certname; ?>.key;
 <?php
 							if (file_exists("{$certname}.ca")) {
 ?>
 	ssl_trusted_certificate <?php echo $certname; ?>.ca;
+
+	include '<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf';
 <?php
 							}
-?>
-	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
-<?php
 			  			}
 ?>
 
 	server_name webmail.<?php echo $redirdomainname; ?>;
 
-	include '<?php echo $globalspath; ?>/acme-challenge.conf';
+	include '<?php echo $globalspath; ?>/<?php echo $acme_challenge; ?>.conf';
 
 	if ($host != '<?php echo $webmailremote; ?>') {
 		rewrite ^/(.*) '<?php echo $protocol; ?><?php echo $webmailremote; ?>/$1';
@@ -1045,24 +1197,23 @@ server {
 			  			if ($count !== 0) {
 ?>
 
-	ssl on;
+	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
 	ssl_certificate <?php echo $certname; ?>.pem;
 	ssl_certificate_key <?php echo $certname; ?>.key;
 <?php
 							if (file_exists("{$certname}.ca")) {
 ?>
 	ssl_trusted_certificate <?php echo $certname; ?>.ca;
+
+	include '<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf';
 <?php
 							}
-?>
-	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
-<?php
 			  			}
 ?>
 
 	server_name webmail.<?php echo $redirdomainname; ?>;
 
-	include '<?php echo $globalspath; ?>/acme-challenge.conf';
+	include '<?php echo $globalspath; ?>/<?php echo $acme_challenge; ?>.conf';
 
 	index <?php echo $indexorder; ?>;
 
@@ -1074,6 +1225,23 @@ server {
 	set $var_user 'apache';
 	set $var_fpmport '<?php echo $fpmportapache; ?>';
 	set $var_phpselected 'php';
+<?php
+						//if ((!$reverseproxy) || (($reverseproxy) && ($webselected === 'front-end'))) {
+?>
+
+	fastcgi_connect_timeout <?php echo $timeout; ?>s;
+	fastcgi_send_timeout <?php echo $timeout; ?>s;
+	fastcgi_read_timeout <?php echo $timeout; ?>s;
+<?php
+						//} else {
+?>
+
+	proxy_connect_timeout <?php echo $timeout; ?>s;
+	proxy_send_timeout <?php echo $timeout; ?>s;
+	proxy_read_timeout <?php echo $timeout; ?>s;
+<?php
+						//}
+?>
 
 	include '<?php echo $globalspath; ?>/switch_standard<?php echo $switches[$count]; ?>.conf';
 }

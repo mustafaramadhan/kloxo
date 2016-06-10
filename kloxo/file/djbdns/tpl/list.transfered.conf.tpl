@@ -1,5 +1,5 @@
 <?php
-	$dir = "/opt/configs/djbdns/axfrdns";
+	$dir = "/home/djbdns/axfrdns";
 
 	// MR -- importance if not active
 	if (!file_exists($dir)) { return; }
@@ -20,10 +20,14 @@
 		exec_with_all_closed("cd {$dir}; make");
 	}
 
-	$datadir = "/opt/configs/djbdns/tinydns/root";
+	$datadir = "/home/djbdns/tinydns/root";
 
 	if (!file_exists("{$datadir}/slave")) {
 		touch("{$datadir}/slave");
+	}
+
+	if (!file_exists("{$datadir}/reverse")) {
+		touch("{$datadir}/reverse");
 	}
 
 	if (!file_exists("/etc/rc.d/init.d/djbdns")) { return; }

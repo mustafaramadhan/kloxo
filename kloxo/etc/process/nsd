@@ -11,7 +11,6 @@ fi
 if [ -f /usr/sbin/nsd-control ] ; then
 	echo "  - Process with 'nsd-control': transfer + write + reload + notify"
 	for i in transfer write reload notify ; do
-		#nsd-control ${i} >/dev/null 2>&1
 		echo -n "    - ${i}: "
 		nsd-control ${i}
 	done

@@ -1,0 +1,31 @@
+#!/bin/sh
+
+kloxopath='/usr/local/lxlabs/kloxo'
+acmepath='/root/.acme.sh'
+cronfile='/var/spool/cron/root'
+acmeshfile='/usr/bin/acme.sh'
+logpath='/var/log/acme.sh'
+
+if [ -f ${acmepath}/acme.sh ] ; then
+	${acmepath}/acme.sh --uninstall >/dev/null 2>&1
+fi
+
+if [ -L ${acmeshfile} ] ; then
+	rm -f ${acmeshfile} >/dev/null 2>&1
+fi
+
+if [ ! -d ${kloxopath}/acme.sh ] ; then
+	rm -f ${logpath} >/dev/null 2>&1
+fi
+
+if [ ! -d ${logpath} ] ; then
+	rm -f ${logpath} >/dev/null 2>&1
+fi
+
+if [ -f ${cronfile} ] ; then
+	if [ "$(cat ${cronfile}|grep 'acme-cron.sh')" != "" ] ; then
+		## MR -- remove old cron
+		sed -i '/acme\-cron\.sh/d' ${cronfile} >/dev/null 2>&1
+	fi
+fi
+

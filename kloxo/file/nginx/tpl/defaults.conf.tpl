@@ -2,6 +2,22 @@
 
 <?php
 
+$srcpath = "/opt/configs/nginx";
+
+if (file_exists("{$srcpath}/etc/sysconfig/custom.spawn-fcgi")) {
+	exec("'cp' -f {$srcpath}/etc/sysconfig/custom.spawn-fcgi /etc/sysconfig/spawfcgi");
+} else {
+	exec("'cp' -f {$srcpath}/etc/sysconfig/spawn-fcgi /etc/sysconfig/spawfcgi");
+}
+
+if (!isset($phpselected)) {
+	$phpselected = 'php';
+}
+
+if (!isset($timeout)) {
+	$timeout = '300';
+}
+
 if (file_exists("/tmp/nginx")) {
 	// MR -- need change ownership because change nginx user from nginx to apache
 	@exec("chown -R apache:apache /var/cache/nginx*");
@@ -12,15 +28,15 @@ if (!file_exists("/var/run/letsencrypt/.well-known/acme-challenge")) {
 	exec("mkdir -p /var/run/letsencrypt/.well-known/acme-challenge");
 }
 
-$srcconfpath = "/opt/configs/nginx/etc/conf";
-$srcconfdpath = "/opt/configs/nginx/etc/conf.d";
+$srcconfpath = "{$srcpath}/etc/conf";
+$srcconfdpath = "{$srcpath}/etc/conf.d";
 $trgtconfpath = "/etc/nginx";
-$trgtconfdpath = "/etc/nginx/conf.d";
+$trgtconfdpath = "{$trgtconfpath}/conf.d";
 
 $defaultdocroot = "/home/kloxo/httpd/default";
 $cpdocroot = "/home/kloxo/httpd/cp";
 
-$globalspath = "/opt/configs/nginx/conf/globals";
+$globalspath = "{$srcpath}/conf/globals";
 
 if (file_exists("{$globalspath}/custom.gzip.conf")) {
 		$gzip_base = "custom.gzip";
@@ -51,7 +67,7 @@ foreach ($confs as $k => $v) {
 }
 
 foreach ($certnamelist as $ip => $certname) {
-	$certnamelist[$ip] = "/home/kloxo/httpd/ssl/{$certname}";
+	$certnamelist[$ip] = "/home/kloxo/ssl/{$certname}";
 }
 
 $iplist = array('*');
@@ -75,34 +91,24 @@ if ($out[0]) {
 
 if ($reverseproxy) {
 	$confs = array('proxy_standard' => 'switch_standard', 'proxy_wildcards' => 'switch_wildcards',
-	'proxy_standard_ssl' => 'switch_standard_ssl', 'proxy_wildcards_ssl' => 'switch_wildcards_ssl',
-		'stats_none' => 'stats', 'dirprotect_none' => 'dirprotect_stats');
+		'proxy_standard_ssl' => 'switch_standard_ssl', 'proxy_wildcards_ssl' => 'switch_wildcards_ssl');
 } else {
-	if ($stats['app'] === 'webalizer') {
-		$confs = array('php-fpm_standard' => 'switch_standard', 'php-fpm_wildcards' => 'switch_wildcards',
-		'php-fpm_standard_ssl' => 'switch_standard_ssl', 'php-fpm_wildcards_ssl' => 'switch_wildcards_ssl',
-		'stats_webalizer' => 'stats', 'dirprotect_webalizer' => 'dirprotect_stats');
-	} else {
-		$confs = array('php-fpm_standard' => 'switch_standard', 'php-fpm_wildcards' => 'switch_wildcards',
-		'stats_awstats' => 'stats', 'dirprotect_awstats' => 'dirprotect_stats');
-	}
-
+	$confs = array('php-fpm_standard' => 'switch_standard', 'php-fpm_wildcards' => 'switch_wildcards',
+		'php-fpm_standard_ssl' => 'switch_standard_ssl', 'php-fpm_wildcards_ssl' => 'switch_wildcards_ssl');
 }
 
-foreach ($confs as $k => $v) {
-	if (file_exists("{$globalspath}/custom.{$k}.conf")) {
-		copy("{$globalspath}/custom.{$k}.conf", "{$globalspath}/{$v}.conf");
-	} else {
-		copy("{$globalspath}/{$k}.conf", "{$globalspath}/{$v}.conf");
-	}
+if ($stats['app'] === 'webalizer') {
+	$confs = array_merge($confs, array('stats_webalizer' => 'stats', 'dirprotect_webalizer' => 'dirprotect_stats'));
+} else {
+	$confs = array_merge($confs, array('stats_awstats' => 'stats', 'dirprotect_awstats' => 'dirprotect_stats'));
 }
 
 if (($webcache === 'none') || (!$webcache)) {
-	$confs = array('listen_nonssl_front' => 'listen_nonssl', 'listen_ssl_front' => 'listen_ssl',
-		'listen_nonssl_front_default' => 'listen_nonssl_default', 'listen_ssl_front_default' => 'listen_ssl_default');
+	$confs = array_merge($confs, array('listen_nonssl_front' => 'listen_nonssl', 'listen_ssl_front' => 'listen_ssl',
+		'listen_nonssl_front_default' => 'listen_nonssl_default', 'listen_ssl_front_default' => 'listen_ssl_default'));
 } else {
-	$confs = array('listen_nonssl_back' => 'listen_nonssl', 'listen_ssl_back' => 'listen_ssl',
-		'listen_nonssl_back_default' => 'listen_nonssl_default', 'listen_ssl_back_default' => 'listen_ssl_default');
+	$confs = array_merge($confs, array('listen_nonssl_back' => 'listen_nonssl', 'listen_ssl_back' => 'listen_ssl',
+		'listen_nonssl_back_default' => 'listen_nonssl_default', 'listen_ssl_back_default' => 'listen_ssl_default'));
 }
 
 foreach ($confs as $k => $v) {
@@ -117,6 +123,18 @@ if (file_exists("{$globalspath}/custom.ssl_base.conf")) {
 	$ssl_base = "custom.ssl_base";
 } else {
 	$ssl_base = "ssl_base";
+}
+
+if (file_exists("{$globalspath}/custom.acme-challenge.conf")) {
+	$acme_challenge = "custom.acme-challenge";
+} else {
+	$acme_challenge = "acme-challenge";
+}
+
+if (file_exists("{$globalspath}/custom.header_base.conf")) {
+	$header_base = "custom.header_base";
+} else {
+	$header_base = "header_base";
 }
 
 $listens = array('listen_nonssl_default', 'listen_ssl_default');
@@ -138,7 +156,9 @@ server {
 		if ($count !== 0) {
 ?>
 
-	ssl on;
+	include '<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf';
+
+	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
 	ssl_certificate <?php echo $certname; ?>.pem;
 	ssl_certificate_key <?php echo $certname; ?>.key;
 <?php
@@ -147,16 +167,13 @@ server {
 	ssl_trusted_certificate <?php echo $certname; ?>.ca;
 <?php
 			}
-?>
-	include '<?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf';
-<?php
 		}
 
 ?>
 
 	server_name _;
 
-	include '<?php echo $globalspath; ?>/acme-challenge.conf';
+	include '<?php echo $globalspath; ?>/<?php echo $acme_challenge; ?>.conf';
 
 	index <?php echo $indexorder; ?>;
 
@@ -168,6 +185,23 @@ server {
 	set $var_user 'apache';
 	set $var_fpmport '<?php echo $fpmportapache; ?>';
 	set $var_phpselected 'php';
+<?php
+		//if ((!$reverseproxy) || (($reverseproxy) && ($webselected === 'front-end'))) {
+?>
+
+	proxy_connect_timeout <?php echo $timeout; ?>s;
+	proxy_send_timeout <?php echo $timeout; ?>s;
+	proxy_read_timeout <?php echo $timeout; ?>s;
+<?php
+		//} else {
+?>
+
+	fastcgi_connect_timeout <?php echo $timeout; ?>s;
+	fastcgi_send_timeout <?php echo $timeout; ?>s;
+	fastcgi_read_timeout <?php echo $timeout; ?>s;
+<?php
+		//}
+?>
 
 	include '<?php echo $globalspath; ?>/switch_standard<?php echo $switches[$count]; ?>.conf';
 <?php

@@ -9,47 +9,19 @@
 #
 # add and modified by Mustafa Ramadhan <mustafa.ramadhan@lxcenter.org>
 
-/var/log/qmail/*/current {
-    daily
-    rotate 30
-    create
-    compress
-    notifempty
-    missingok
-}
-
-/home/httpd/*/stats/*_log {
+/home/httpd/*/stats/*_log
+/home/*/__processed_stats/*_log
+/usr/local/lxlabs/kloxo/log/*
+{
     daily
     rotate 30
     #create 0664 apache apache
     compress
     notifempty
     missingok
-}
-
-/home/*/__processed_stats/*_log {
-    daily
-    rotate 30
-    #create 0750 root root
-    compress
-    notifempty
-    missingok
-}
-
-/usr/local/lxlabs/kloxo/log/* {
-    daily
-    rotate 30
-    #create 0664 lxlabs lxlabs
-    compress
-    notifempty
-    missingok
-}
-
-/home/*/logs/*.log {
-    daily
-    rotate 30
-    #create 0664 apache apache
-    compress
-    notifempty
-    missingok
+    sharedscripts
+    postrotate
+        sh /scripr/restart-web -y >/dev/null 2>&1 || true
+        sh /scripr/restart -y >/dev/null 2>&1 || true
+    endscript
 }

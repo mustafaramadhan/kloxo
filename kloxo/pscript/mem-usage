@@ -8,7 +8,11 @@ if [ "$(rpm -qa|grep smem)" == "" ] ; then
 	yum install smem -y
 fi
 
-/usr/bin/smem -u -t -k -p
+if ["$1" == "" ] ; then
+	/usr/bin/smem -u -t -k -p
+else
+	/usr/bin/smem $1
+fi
 
 echo ""
 echo "* Note: memory size in MB; web servers also run under 'apache'"

@@ -95,21 +95,6 @@ class phpini extends lxdb
 		if ($this->getParentO()->getClass() === 'pserver') {
 			$list[] = 'multiple_php_flag';
 
-			if ($flag === 'on') {
-			//	$list[] = 'multiple_php_ratio';
-			}
-		} else {
-		/*
-		//	if (!$this->getParentO()->is__table('web')) {
-			if ($this->getParentO()->getClass() !== 'web') {
-				if ($flag === 'on') {
-				//	$list[] = 'multiple_php_ratio';
-				}
-			} else {
-				$list[] = 'web_selected';
-				$list[] = 'php_selected';
-			}
-		*/
 		}
 
 	//	if (!$this->getParentO()->is__table('web')) {
@@ -264,6 +249,22 @@ class phpini extends lxdb
 
 			lxshell_return("__path_php_path", "../bin/fix/fixphpini.php", 
 				"--server={$this->getParentO()->nname}");
+	/*
+			$sp = "/opt/configs/php-fpm/etc/init.d";
+			$tp = "/etc/rc.d/init.d";
+
+			if (file_exists("../etc/flag/enablemultiplephp.flg")) {
+				exec("'cp' -f {$sp}/phpm-fpm.init {$tp}/phpm-fpm; " .
+					"chmod 755 {$tp}/phpm-fpm; chkconfig phpm-fpm on; " .
+					"sh /script/restart-php-fpm -y");
+			} else {
+				exec("'cp' -f {$sp}/phpm-fpm.init {$tp}/phpm-fpm; " .
+					"chmod 755 {$tp}/phpm-fpm; chkconfig phpm-fpm off; " .
+					"chkconfig php-fpm on; service phpm-fpm stop; " .
+					"sh /script/restart-php-fpm -y");
+			}
+	*/
+			exec("sh /script/set-php-fpm");
 		}
 	}
 
@@ -337,25 +338,6 @@ class phpini extends lxdb
 			}
 	//	}
 
-	//	if ($parent->is__table('web')) {
-	/*
-		if ($parent->getClass() === 'web') {
-			if (!isset($this->web_selected)) {
-			//	$this->web_selected = 'back-end';
-			}
-
-			$vlist['web_selected'] = array("s", array('front-end', 'back-end'));
-
-			if (!isset($this->php_selected)) {
-			//	$this->php_selected = '--Default--';
-			}
-
-			$l = array_merge(array('--Default--'), $this->get_multiple_php_list());
-
-			$vlist['php_selected'] = array("s", $l);
-		}
-	*/
-
 		// MR -- still not work (like in 'appearance')
 		// still something wrong with 'updateall' process!
 	//	if ($parent->is__table('pserver')) {
@@ -383,15 +365,16 @@ class phpini extends lxdb
 
 			array_unique($list);
 
-			$user = $this->getParentO()->nname;
-
 			foreach ($list as $k => $v) {
 				if ($v === 'session_save_path_flag') {
-					$path = "/home/kloxo/client/{$user}/session";
-					exec("mkdir -p $path");
-					$this->initialValue($v, $path);
-					// MR -- fix for permissions fail
-					exec("chmod 777 $path");
+					if ($this->getParentO()->getClass() === 'client') {
+						$user = $this->getParentO()->nname;
+						$path = "/home/kloxo/client/{$user}/session";
+						exec("mkdir -p $path");
+						$this->initialValue($v, $path);
+						// MR -- fix for permissions fail
+						exec("chmod 777 $path");
+					}
 				} else {
 					$this->initialValue($v, $b->$v);
 				}
@@ -464,9 +447,6 @@ class phpini extends lxdb
 
 	//	$vlist['date_timezone_flag'] = array('s', timezone_identifiers_list());
 		$vlist['date_timezone_flag'] = array('s', getTimeZoneList());
-
-	//	$this->initialValue('web_selected', 'back-end');
-	//	$this->initialValue('php_selected', '--Php Used (default)--');
 	}
 
 	function initialValue($var, $val)

@@ -22,5 +22,5 @@ if [ "${ret}" == "yes" ] ; then
 	/etc/rc.d/init.d/kloxo start
 fi
 
-echo "  - Process: reload"
-/etc/rc.d/init.d/kloxo reload
+echo "  - Process: restart"
+/etc/rc.d/init.d/kloxo restart

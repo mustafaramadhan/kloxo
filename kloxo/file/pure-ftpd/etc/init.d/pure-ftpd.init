@@ -32,16 +32,18 @@ start() {
 	echo -n $"Starting $prog: "
 	daemon "$pure_launch_script $pure_config --daemonize > /dev/null"
 	RETVAL=$?
-	[ $RETVAL = 0 ] && touch /var/lock/subsys/pure-ftpd
 	echo
+	[ $RETVAL = 0 ] && touch /var/lock/subsys/pure-ftpd
+	return $RETVAL
 }
 
 stop() {
 	echo -n $"Stopping $prog: "
 	killproc pure-ftpd
 	RETVAL=$?
-	[ $RETVAL = 0 ] && rm -f /var/lock/subsys/pure-ftpd
 	echo
+	[ $RETVAL = 0 ] && rm -f /var/lock/subsys/pure-ftpd
+	return $RETVAL
 }
 
 # See how we were called.

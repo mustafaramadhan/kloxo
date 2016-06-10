@@ -1,6 +1,6 @@
 <?php
 
-// MR -- add quote (') in value may make trouble to popup appear
+// MR -- add quote (') in value may make trouble to popup appear (throw); use * (star)
 
 $__keyword["under"] = "Under";
 $__keyword["filtered"] = "Filtered";
@@ -407,6 +407,9 @@ $__throw["secondary_php_not_work_for"] = "Secondary PHP not work for";
 $__throw["only_work_for_php-type_for_php-fpm"] = "Only work for PHP-Type for php-fpm";
 $__throw["other_install_process_still_running"] = "Other install process still running";
 $__throw["install_process_running_in_background"] = "Install process running in background";
+$__throw["php_already_in_used"] = "Already use by *PHP Used*";
+
+$__throw["no_options_selected"] = "No options selected";
 
 $__throw["path_already_exists"] = "Path already exists";
 $__throw["can_not_access_application_directory"] = "Can not access application directory";

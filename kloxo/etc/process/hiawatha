@@ -18,10 +18,7 @@ if [ ! -f /var/run/hiawatha.pid ] ; then
 	fi
 fi
 
-#echo "  - Process: reload"
-#/etc/rc.d/init.d/hiawatha reload
-
 echo "  - Process: restart"
 /etc/rc.d/init.d/hiawatha stop
-pkill -9 hiawatha
+#pkill -9 hiawatha
 /etc/rc.d/init.d/hiawatha start

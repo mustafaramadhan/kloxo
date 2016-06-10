@@ -9,9 +9,8 @@ class client__sync extends lxDriverClass {
 		lxfile_rm_rec("__path_client_root/{$this->main->nname}");
 		lxfile_rm_rec("__path_customer_root/{$this->main->getPathFromName()}");
 
-		// MR -- remember: using lxfile_rm may not work!
-		unlink("/etc/php-fpm.d/{$this->main->nname}.conf");
-	//	createRestartFile("php-fpm");
+		exec("'rm' -f /opt/configs/php-fpm/conf/php*/php-fpm.d/{$this->main->username}.conf");
+		createRestartFile("php-fpm");
 	}
 
 	function dbactionAdd()

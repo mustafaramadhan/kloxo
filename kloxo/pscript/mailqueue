@@ -1,3 +1,4 @@
 #!/bin/sh
 
-perl /usr/local/lxlabs/kloxo/bin/misc/qmHandle $@
+chmod 755 /usr/local/lxlabs/kloxo/bin/misc/qmHandle
+/usr/local/lxlabs/kloxo/bin/misc/qmHandle $@

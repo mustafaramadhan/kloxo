@@ -1,0 +1,38 @@
+#!/bin/sh
+
+kloxopath='/usr/local/lxlabs/kloxo'
+sharepath='/root/.local/share'
+
+if [ -d ${kloxopath}/letsencrypt ] ; then
+	rm -rf ${kloxopath}/letsencrypt
+
+fi
+
+if [ -d ${kloxopath}/certbot ] ; then
+	rm -rf ${kloxopath}/certbot
+	rm -rf ${sharepath}/certbot
+fi
+
+if [ -d ${sharepath}/certbot ] ; then
+	rm -rf ${sharepath}/certbot
+fi
+
+if [ -d ${sharepath}/letsencrypt ] ; then
+	rm -rf ${sharepath}/letsencrypt
+fi
+
+if [ -L /usr/bin/letsencrypt-auto ] ; then
+	rm -f /usr/bin/letsencrypt-auto
+fi
+
+if [ -L /usr/bin/certbot-auto ] ; then
+	rm -f /usr/bin/certbot-auto
+fi
+
+if [ -L /usr/bin/py26reqs.txt ] ; then
+	rm -f /usr/bin/py26reqs.txt
+fi
+
+if [ -d /opt/configs/letsencrypt ] ; then
+	rm -rf /opt/configs/letsencrypt
+fi

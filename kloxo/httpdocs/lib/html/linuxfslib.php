@@ -424,19 +424,39 @@ function os_getZipType($file)
 	$out = lxshell_output("file", "-b", $file);
 
 	if (csa($out, "gzip")) {
-		return "tgz";
+		$out2 = lxshell_output("file", "-b", '-z', $file);
+
+		if (csa($out2, "POSIX tar")) {
+			return "tgz";
+		} else {
+			return "gz";
+		}
 	} else if (csa($out, "bzip2")) {
-		return "tbz2";
+		$out2 = lxshell_output("file", "-b", '-z', $file);
+
+		if (csa($out2, "POSIX tar")) {
+			return "tbz2";
+		} else {
+			return "bz2";
+		}
 	} else if (csa($out, "xz")) {
-		return "txz";
+		$out2 = lxshell_output("file", "-b", '-z', $file);
+
+		if (csa($out2, "POSIX tar")) {
+			return "txz";
+		} else {
+			return "xz";
+		}
 	} else if (csa($out, "tar")) {
 		return "tar";
 	} else if (csa($out, "7z")) {
 		return "p7z";
 	} else if (csa($out, "rar")) {
 		return "rar";
-	} else {
+	} else if (csa($out, "Zip")) {
 		return "zip";
+	} else {
+		return null;
 	}
 }
 

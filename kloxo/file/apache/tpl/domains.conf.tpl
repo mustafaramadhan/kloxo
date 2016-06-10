@@ -6,6 +6,10 @@ if (!isset($phpselected)) {
 	$phpselected = 'php';
 }
 
+if (!isset($timeout)) {
+	$timeout = '300';
+}
+
 $globalspath = "/opt/configs/apache/conf/globals";
 
 if ($reverseproxy) {
@@ -39,13 +43,12 @@ if ($reverseproxy) {
 }
 
 foreach ($certnamelist as $ip => $certname) {
-	$sslpathdef = "/home/kloxo/httpd/ssl";	
-	$sslpath = "/home/kloxo/client/{$user}/ssl";
+	$sslpath = "/home/kloxo/ssl";
 
 	if (file_exists("{$sslpath}/{$domainname}.key")) {
 		$certnamelist[$ip] = "{$sslpath}/{$domainname}";
 	} else {
-		$certnamelist[$ip] = "{$sslpathdef}/{$certname}";
+		$certnamelist[$ip] = "{$sslpath}/{$certname}";
 	}
 }
 
@@ -109,6 +112,18 @@ if ($blockips) {
 	$blockips = implode(' ', $blockips);
 }
 
+if (file_exists("{$globalspath}/custom.acme-challenge.conf")) {
+	$acmechallenge = "custom.acme-challenge";
+} else {
+	$acmechallenge = "acme-challenge";
+}
+
+if (file_exists("{$globalspath}/custom.header_base.conf")) {
+	$header_base = "custom.header_base";
+} else {
+	$header_base = "header_base";
+}
+
 $userinfo = posix_getpwnam($user);
 
 if ($userinfo) {
@@ -142,17 +157,18 @@ foreach ($certnamelist as $ip => $certname) {
 <IfVersion >= 2.4>
 	Include <?php echo $globalspath; ?>/portnip.conf
 </IfVersion>
+
 <?php
 	if (!$reverseproxy) {
 		if ($ip !== '*') {
 ?>
-
 Define ipalloc <?php echo $ip; ?>
 
 <IfVersion < 2.4>
 	NameVirtualHost ${ipalloc}:${port}
 	NameVirtualHost ${ipalloc}:${portssl}
 </IfVersion>
+
 <?php
 		}
 	}
@@ -175,7 +191,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $domainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $disablepath; ?>"
 
@@ -184,6 +200,10 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 			if ($count !== 0) {
 ?>
+
+	<IfModule mod_http2.c>
+		Protocols h2 http/1.1
+	</IfModule>
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -197,9 +217,18 @@ foreach ($certnamelist as $ip => $certname) {
 				if (file_exists("{$certname}.ca")) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
+
+		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 <?php
 				}
 ?>
+	</IfModule>
+<?php
+			} else {
+?>
+
+	<IfModule mod_http2.c>
+		Protocols h2c http/1.1
 	</IfModule>
 <?php
 			}
@@ -226,8 +255,8 @@ foreach ($certnamelist as $ip => $certname) {
 
 		<IfModule mod_fastcgi.c>
 			Alias /webmail.<?php echo $domainname; ?>.<?php echo $count; ?>fake "<?php echo $disablepath; ?>/webmail.<?php echo $domainname; ?>.<?php echo $count; ?>fake"
-			#FastCGIExternalServer "<?php echo $disablepath; ?>/webmail.<?php echo $domainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmportapache; ?> -idle-timeout 300 -pass-header Authorization
-			FastCGIExternalServer "<?php echo $disablepath; ?>/webmail.<?php echo $domainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock -idle-timeout 300 -pass-header Authorization
+			#FastCGIExternalServer "<?php echo $disablepath; ?>/webmail.<?php echo $domainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmportapache; ?> -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
+			FastCGIExternalServer "<?php echo $disablepath; ?>/webmail.<?php echo $domainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
 			<FilesMatch \.php$>
 				SetHandler application/x-httpd-fastphp
 			</FilesMatch>
@@ -241,6 +270,8 @@ foreach ($certnamelist as $ip => $certname) {
 			<IfModule !mod_itk.c>
 				<IfModule !mod_fastcgi.c>
 					<IfModule mod_fcgid.c>
+						FcgidIOTimeout <?php echo $timeout; ?>
+
 						<Directory "<?php echo $disablepath; ?>/">
 							Options +ExecCGI
 							<FilesMatch \.php$>
@@ -264,8 +295,9 @@ foreach ($certnamelist as $ip => $certname) {
 				SetHandler "proxy:unix:/opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock|fcgi://localhost"
 			</FilesMatch>
 			<Proxy "fcgi://localhost">
-				ProxySet timeout=600
-				ProxySet connectiontimeout=300
+				ProxySet timeout=<?php echo $timeout; ?>
+
+				ProxySet connectiontimeout=<?php echo $timeout; ?>
 				#ProxySet enablereuse=on
 				ProxySet max=25
 				ProxySet retry=0
@@ -294,7 +326,6 @@ foreach ($certnamelist as $ip => $certname) {
 		} else {
 ?>
 
-
 ## cp for '<?php echo $domainname; ?>'
 <VirtualHost ${ip}:<?php echo $portlist[$count]; ?> >
 
@@ -303,7 +334,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName cp.<?php echo $domainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $cpdocroot; ?>"
 
@@ -312,6 +343,10 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 		if ($count !== 0) {
 ?>
+
+	<IfModule mod_http2.c>
+		Protocols h2 http/1.1
+	</IfModule>
 
 	<IfModule mod_ssl.c>
 		SSLEngine on
@@ -322,12 +357,21 @@ foreach ($certnamelist as $ip => $certname) {
 		SSLCertificateFile <?php echo $certname; ?>.pem
 		SSLCertificateKeyFile <?php echo $certname; ?>.key
 <?php
-				if (file_exists("{$certname}.ca")) {
+			if (file_exists("{$certname}.ca")) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
+
+		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 <?php
-				}
+			}
 ?>
+	</IfModule>
+<?php
+		} else {
+?>
+
+	<IfModule mod_http2.c>
+		Protocols h2c http/1.1
 	</IfModule>
 <?php
 		}
@@ -354,8 +398,8 @@ foreach ($certnamelist as $ip => $certname) {
 
 		<IfModule mod_fastcgi.c>
 			Alias /cp.<?php echo $domainname; ?>.<?php echo $count; ?>fake "<?php echo $cpdocroot; ?>/cp.<?php echo $domainname; ?>.<?php echo $count; ?>fake"
-			#FastCGIExternalServer "<?php echo $cpdocroot; ?>/cp.<?php echo $domainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmportapache; ?> -idle-timeout 300 -pass-header Authorization
-			FastCGIExternalServer "<?php echo $cpdocroot; ?>/cp.<?php echo $domainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock -idle-timeout 300 -pass-header Authorization
+			#FastCGIExternalServer "<?php echo $cpdocroot; ?>/cp.<?php echo $domainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmportapache; ?> -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
+			FastCGIExternalServer "<?php echo $cpdocroot; ?>/cp.<?php echo $domainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
 			<FilesMatch \.php$>
 				SetHandler application/x-httpd-fastphp
 			</FilesMatch>
@@ -369,6 +413,8 @@ foreach ($certnamelist as $ip => $certname) {
 			<IfModule !mod_itk.c>
 				<IfModule !mod_fastcgi.c>
 					<IfModule mod_fcgid.c>
+						FcgidIOTimeout <?php echo $timeout; ?>
+
 						<Directory "<?php echo $cpdocroot; ?>/">
 							Options +ExecCGI
 							<FilesMatch \.php$>
@@ -392,8 +438,10 @@ foreach ($certnamelist as $ip => $certname) {
 				SetHandler "proxy:unix:/opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock|fcgi://localhost"
 			</FilesMatch>
 			<Proxy "fcgi://localhost">
-				ProxySet timeout=600
-				ProxySet connectiontimeout=300
+				ProxySet timeout=<?php echo $timeout; ?>
+
+				ProxySet connectiontimeout=<?php echo $timeout; ?>
+
 				#ProxySet enablereuse=on
 				ProxySet max=25
 				ProxySet retry=0
@@ -431,7 +479,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $domainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $webmaildocroot; ?>"
 
@@ -439,6 +487,10 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 			if ($count !== 0) {
 ?>
+
+	<IfModule mod_http2.c>
+		Protocols h2 http/1.1
+	</IfModule>
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -452,9 +504,18 @@ foreach ($certnamelist as $ip => $certname) {
 				if (file_exists("{$certname}.ca")) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
+
+		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 <?php
 				}
 ?>
+	</IfModule>
+<?php
+			} else {
+?>
+
+	<IfModule mod_http2.c>
+		Protocols h2c http/1.1
 	</IfModule>
 <?php
 			}
@@ -474,7 +535,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $domainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $webmaildocroot; ?>"
 
@@ -483,6 +544,10 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 			if ($count !== 0) {
 ?>
+
+	<IfModule mod_http2.c>
+		Protocols h2 http/1.1
+	</IfModule>
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -496,9 +561,18 @@ foreach ($certnamelist as $ip => $certname) {
 				if (file_exists("{$certname}.ca")) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
+
+		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 <?php
 				}
 ?>
+	</IfModule>
+<?php
+			} else {
+?>
+
+	<IfModule mod_http2.c>
+		Protocols h2c http/1.1
 	</IfModule>
 <?php
 			}
@@ -525,8 +599,8 @@ foreach ($certnamelist as $ip => $certname) {
 
 		<IfModule mod_fastcgi.c>
 			Alias /webmail.<?php echo $domainname; ?>.<?php echo $count; ?>fake "<?php echo $webmaildocroot; ?>/webmail.<?php echo $domainname; ?>.<?php echo $count; ?>fake"
-			#FastCGIExternalServer "<?php echo $webmaildocroot; ?>/webmail.<?php echo $domainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmportapache; ?> -idle-timeout 300 -pass-header Authorization
-			FastCGIExternalServer "<?php echo $webmaildocroot; ?>/webmail.<?php echo $domainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock -idle-timeout 300 -pass-header Authorization
+			#FastCGIExternalServer "<?php echo $webmaildocroot; ?>/webmail.<?php echo $domainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmportapache; ?> -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
+			FastCGIExternalServer "<?php echo $webmaildocroot; ?>/webmail.<?php echo $domainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
 			<FilesMatch \.php$>
 				SetHandler application/x-httpd-fastphp
 			</FilesMatch>
@@ -540,6 +614,8 @@ foreach ($certnamelist as $ip => $certname) {
 			<IfModule !mod_itk.c>
 				<IfModule !mod_fastcgi.c>
 					<IfModule mod_fcgid.c>
+						FcgidIOTimeout <?php echo $timeout; ?>
+
 						<Directory "<?php echo $webmaildocroot; ?>/">
 							Options +ExecCGI
 							<FilesMatch \.php$>
@@ -563,8 +639,10 @@ foreach ($certnamelist as $ip => $certname) {
 				SetHandler "proxy:unix:/opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock|fcgi://localhost"
 			</FilesMatch>
 			<Proxy "fcgi://localhost">
-				ProxySet timeout=600
-				ProxySet connectiontimeout=300
+				ProxySet timeout=<?php echo $timeout; ?>
+
+				ProxySet connectiontimeout=<?php echo $timeout; ?>
+
 				#ProxySet enablereuse=on
 				ProxySet max=25
 				ProxySet retry=0
@@ -618,11 +696,15 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerAlias <?php echo $serveralias; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 <?php
 		if ($count !== 0) {
 			if ($enablessl) {
 ?>
+
+	<IfModule mod_http2.c>
+		Protocols h2 http/1.1
+	</IfModule>
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -636,9 +718,18 @@ foreach ($certnamelist as $ip => $certname) {
 				if (file_exists("{$certname}.ca")) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
+
+		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 <?php
 				}
 ?>
+	</IfModule>
+<?php
+			} else {
+?>
+
+	<IfModule mod_http2.c>
+		Protocols h2c http/1.1
 	</IfModule>
 <?php
 			}
@@ -674,25 +765,18 @@ foreach ($certnamelist as $ip => $certname) {
 	DirectoryIndex <?php echo $indexorder; ?>
 
 
-	Alias /__kloxo "/home/<?php echo $user; ?>/kloxoscript/"
+	AliasMatch "/__kloxo(/|$)(.*)" "/home/<?php echo $user; ?>/kloxoscript$1$2"
 
 	Redirect "/kloxo" "https://cp.<?php echo $domainname; ?>:<?php echo $kloxoportssl; ?>"
 	Redirect "/kloxononssl" "http://cp.<?php echo $domainname; ?>:<?php echo $kloxoportnonssl; ?>"
 	Redirect "/webmail" "<?php echo $protocol; ?>webmail.<?php echo $domainname; ?>"
 	Redirect "/cp" "<?php echo $protocol; ?>cp.<?php echo $domainname; ?>"
 <?php
-		if (($enablecgi) && ($driver[0] !== 'hiawatha')) {
-?>
-
-	ScriptAlias /cgi-bin/ "/home/<?php echo $user; ?>/<?php echo $domainname; ?>/cgi-bin/"
-<?php
-		}
-
 		if ($redirectionlocal) {
 			foreach ($redirectionlocal as $rl) {
 ?>
 
-	Alias <?php echo $rl[0]; ?> "<?php echo $rootpath; ?><?php echo $rl[1]; ?>/"
+	AliasMatch "<?php echo $rl[0]; ?>(/|$)(.*)" "<?php echo $rootpath; ?><?php echo $rl[1]; ?>$1$2"
 <?php
 			}
 		}
@@ -713,8 +797,6 @@ foreach ($certnamelist as $ip => $certname) {
 				}
 			}
 		}
-
-		if ($enablephp) {
 ?>
 
 	<IfModule suexec.c>
@@ -747,8 +829,8 @@ foreach ($certnamelist as $ip => $certname) {
 
 		<IfModule mod_fastcgi.c>
 			Alias /<?php echo $domainname; ?>.<?php echo $count; ?>fake "<?php echo $rootpath; ?>/<?php echo $domainname; ?>.<?php echo $count; ?>fake"
-			#FastCGIExternalServer "<?php echo $rootpath; ?>/<?php echo $domainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmport; ?> -idle-timeout 300 -pass-header Authorization
-			FastCGIExternalServer "<?php echo $rootpath; ?>/<?php echo $domainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-<?php echo $sockuser; ?>.sock -idle-timeout 300 -pass-header Authorization
+			#FastCGIExternalServer "<?php echo $rootpath; ?>/<?php echo $domainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmport; ?> -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
+			FastCGIExternalServer "<?php echo $rootpath; ?>/<?php echo $domainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-<?php echo $sockuser; ?>.sock -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
 			<FilesMatch \.php$>
 				SetHandler application/x-httpd-fastphp
 			</FilesMatch>
@@ -762,6 +844,8 @@ foreach ($certnamelist as $ip => $certname) {
 			<IfModule !mod_itk.c>
 				<IfModule !mod_fastcgi.c>
 					<IfModule mod_fcgid.c>
+						FcgidIOTimeout <?php echo $timeout; ?>
+
 						<Directory "<?php echo $rootpath; ?>/">
 							Options +ExecCGI
 							<FilesMatch \.php$>
@@ -785,8 +869,10 @@ foreach ($certnamelist as $ip => $certname) {
 				SetHandler "proxy:unix:/opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-<?php echo $sockuser; ?>.sock|fcgi://localhost"
 			</FilesMatch>
 			<Proxy "fcgi://localhost">
-				ProxySet timeout=600
-				ProxySet connectiontimeout=300
+				ProxySet timeout=<?php echo $timeout; ?>
+
+				ProxySet connectiontimeout=<?php echo $timeout; ?>
+
 				#ProxySet enablereuse=on
 				ProxySet max=25
 				ProxySet retry=0
@@ -804,29 +890,40 @@ foreach ($certnamelist as $ip => $certname) {
 			Require all granted
 		</IfVersion>
 <?php
-			if (($enablecgi) && ($driver[0] !== 'hiawatha')) {
+		if ($enablecgi) {
 ?>
 		Options +ExecCGI
 		<FilesMatch \.(cgi|pl)$>
-			SetHandler cgi-script
+			#<IfModule !mod_fastcgi.c>
+				<IfModule mod_suphp.c>
+					SuPhp_UserGroup <?php echo $sockuser; ?> <?php echo $sockuser; ?>
+
+					SetHandler x-suphp-cgi
+				</IfModule>
+			#</IfModule>
 		</FilesMatch>
 <?php
-			}
+		}
 ?>
 	</Directory>
+<?php
+	//	if (($enablecgi) && ($driver[0] !== 'hiawatha')) {
+		if ($enablecgi) {
+?>
+
+	ScriptAliasMatch "/cgi-bin(/|$)(.*)" "/home/<?php echo $user; ?>/<?php echo $domainname; ?>/cgi-bin$1$2"
+<?php
+		}
+?>
 
 	<IfModule mod_php5.c>
 		php_admin_value sendmail_path "/usr/sbin/sendmail -t -i"
 		php_admin_value sendmail_from "<?php echo $domainname; ?>"
 		Include /home/kloxo/client/<?php echo $user; ?>/prefork.inc
 	</IfModule>
-<?php
-		}
-?>
 
 	<Location "/">
 		Options <?php echo $dirindex; ?> -FollowSymlinks +SymLinksIfOwnerMatch
-
 		<IfModule mod_php5.c>
 			php_admin_value open_basedir "/home/<?php echo $user; ?>:/tmp:/usr/share/pear:/var/lib/php/session/:/home/kloxo/httpd/script:/home/kloxo/httpd/disable/:<?php echo $extrabasedir; ?>"
 		</IfModule>
@@ -841,10 +938,31 @@ foreach ($certnamelist as $ip => $certname) {
 			if ($statsapp === 'awstats') {
 ?>
 
-	ScriptAlias /awstats/ "/home/kloxo/httpd/awstats/wwwroot/cgi-bin/"
+	<Directory "/home/kloxo/httpd/awstats/wwwroot/cgi-bin/">
+		AllowOverride All
+		<IfVersion < 2.4>
+			Order allow,deny
+			Allow from all
+		</IfVersion>
+		<IfVersion >= 2.4>
+			Require all granted
+		</IfVersion>
 
-	Alias /awstatscss "/home/kloxo/httpd/awstats/wwwroot/css/"
-	Alias /awstatsicons "/home/kloxo/httpd/awstats/wwwroot/icon/"
+		Options +ExecCGI
+		<FilesMatch \.(cgi|pl)$>
+			#<IfModule !mod_fastcgi.c>
+				<IfModule mod_suphp.c>
+					SuPhp_UserGroup apache apache
+					SetHandler x-suphp-cgi
+				</IfModule>
+			#</IfModule>
+		</FilesMatch>
+	</Directory>
+
+	ScriptAliasMatch "/awstats(/|$)(.*)" "/home/kloxo/httpd/awstats/wwwroot/cgi-bin$1$2"
+
+	AliasMatch "/awstatscss(/|$)(.*)" "/home/kloxo/httpd/awstats/wwwroot/css$1$2"
+	AliasMatch "/awstatsicons(/|$)(.*)" "/home/kloxo/httpd/awstats/wwwroot/icon$1$2"
 
 	Redirect "/stats" "<?php echo $protocol; ?><?php echo $domainname; ?>/awstats/awstats.pl"
 	Redirect "/stats/" "<?php echo $protocol; ?><?php echo $domainname; ?>/awstats/awstats.pl"
@@ -868,7 +986,7 @@ foreach ($certnamelist as $ip => $certname) {
 			} elseif ($statsapp === 'webalizer') {
 ?>
 
-	Alias /stats "/home/httpd/<?php echo $domainname; ?>/webstats/"
+	AliasMatch "/stats(/|$)(.*)" "/home/httpd/<?php echo $domainname; ?>/webstats$1$2"
 
 	<Location "/stats/">
 		Options +Indexes
@@ -966,7 +1084,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerAlias www.<?php echo $redirdomainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $redirfullpath; ?>"
 
@@ -976,6 +1094,10 @@ foreach ($certnamelist as $ip => $certname) {
 					if ($count !== 0) {
 						if ($enablessl) {
 ?>
+
+	<IfModule mod_http2.c>
+		Protocols h2 http/1.1
+	</IfModule>
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -989,9 +1111,18 @@ foreach ($certnamelist as $ip => $certname) {
 							if (file_exists("{$certname}.ca")) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
+
+		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 <?php
 							}
 ?>
+	</IfModule>
+<?php
+						} else {
+?>
+
+	<IfModule mod_http2.c>
+		Protocols h2c http/1.1
 	</IfModule>
 <?php
 						}
@@ -1030,8 +1161,8 @@ foreach ($certnamelist as $ip => $certname) {
 
 		<IfModule mod_fastcgi.c>
 			Alias /<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake "<?php echo $redirfullpath; ?>/<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake"
-			#FastCGIExternalServer "<?php echo $redirfullpath; ?>/<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmport; ?> -idle-timeout 300 -pass-header Authorization
-			FastCGIExternalServer "<?php echo $redirfullpath; ?>/<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-<?php echo $sockuser; ?>.sock -idle-timeout 300 -pass-header Authorization
+			#FastCGIExternalServer "<?php echo $redirfullpath; ?>/<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmport; ?> -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
+			FastCGIExternalServer "<?php echo $redirfullpath; ?>/<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-<?php echo $sockuser; ?>.sock -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
 			<FilesMatch \.php$>
 				SetHandler application/x-httpd-fastphp
 			</FilesMatch>
@@ -1045,6 +1176,8 @@ foreach ($certnamelist as $ip => $certname) {
 			<IfModule !mod_itk.c>
 				<IfModule !mod_fastcgi.c>
 					<IfModule mod_fcgid.c>
+						FcgidIOTimeout <?php echo $timeout; ?>
+
 						<Directory "<?php echo $redirfullpath; ?>/">
 							Options +ExecCGI
 							<FilesMatch \.php$>
@@ -1068,8 +1201,10 @@ foreach ($certnamelist as $ip => $certname) {
 				SetHandler "proxy:unix:/opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-<?php echo $sockuser; ?>.sock|fcgi://localhost"
 			</FilesMatch>
 			<Proxy "fcgi://localhost">
-				ProxySet timeout=600
-				ProxySet connectiontimeout=300
+				ProxySet timeout=<?php echo $timeout; ?>
+
+				ProxySet connectiontimeout=<?php echo $timeout; ?>
+
 				#ProxySet enablereuse=on
 				ProxySet max=25
 				ProxySet retry=0
@@ -1089,16 +1224,32 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 					}
 
-					if (($enablecgi) && ($driver[0] !== 'hiawatha')) {
+				//	if (($enablecgi) && ($driver[0] !== 'hiawatha')) {
+					if ($enablecgi) {
 ?>
 		Options +ExecCGI
 		<FilesMatch \.(cgi|pl)$>
-			SetHandler cgi-script
+			#<IfModule !mod_fastcgi.c>
+				<IfModule mod_suphp.c>
+					SuPhp_UserGroup a <?php echo $sockuser; ?> <?php echo $sockuser; ?>
+
+					SetHandler x-suphp-cgi
+				</IfModule>
+			#</IfModule>
 		</FilesMatch>
 <?php
 					}
 ?>
 	</Directory>
+<?php
+				//	if (($enablecgi) && ($driver[0] !== 'hiawatha')) {
+					if ($enablecgi) {
+?>
+
+	ScriptAliasMatch "/cgi-bin(/|$)(.*)" "/home/<?php echo $user; ?>/<?php echo $redirdomainname; ?>/cgi-bin$1$2"
+<?php
+					}
+?>
 
 </VirtualHost>
 
@@ -1117,7 +1268,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerAlias www.<?php echo $redirdomainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $rootpath; ?>"
 
@@ -1126,6 +1277,10 @@ foreach ($certnamelist as $ip => $certname) {
 					if ($count !== 0) {
 						if ($enablessl) {
 ?>
+
+	<IfModule mod_http2.c>
+		Protocols h2 http/1.1
+	</IfModule>
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -1139,9 +1294,18 @@ foreach ($certnamelist as $ip => $certname) {
 							if (file_exists("{$certname}.ca")) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
+
+		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 <?php
 							}
 ?>
+	</IfModule>
+<?php
+						} else {
+?>
+
+	<IfModule mod_http2.c>
+		Protocols h2c http/1.1
 	</IfModule>
 <?php
 						}
@@ -1171,7 +1335,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $parkdomainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $disablepath; ?>"
 
@@ -1180,6 +1344,10 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 					if ($count !== 0) {
 ?>
+
+	<IfModule mod_http2.c>
+		Protocols h2 http/1.1
+	</IfModule>
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -1193,9 +1361,18 @@ foreach ($certnamelist as $ip => $certname) {
 						if (file_exists("{$certname}.ca")) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
+
+		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 <?php
 						}
 ?>
+	</IfModule>
+<?php
+					} else {
+?>
+
+	<IfModule mod_http2.c>
+		Protocols h2c http/1.1
 	</IfModule>
 <?php
 					}
@@ -1222,8 +1399,8 @@ foreach ($certnamelist as $ip => $certname) {
 
 		<IfModule mod_fastcgi.c>
 			Alias /webmailwebmail.<?php echo $parkdomainname; ?>.<?php echo $count; ?>fake "<?php echo $disablepath; ?>/webmail.<?php echo $parkdomainname; ?>.<?php echo $count; ?>fake"
-			#FastCGIExternalServer "<?php echo $disablepath; ?>/webmail.<?php echo $parkdomainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmportapache; ?> -idle-timeout 300 -pass-header Authorization
-			FastCGIExternalServer "<?php echo $disablepath; ?>/webmail.<?php echo $parkdomainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock -idle-timeout 300 -pass-header Authorization
+			#FastCGIExternalServer "<?php echo $disablepath; ?>/webmail.<?php echo $parkdomainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmportapache; ?> -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
+			FastCGIExternalServer "<?php echo $disablepath; ?>/webmail.<?php echo $parkdomainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
 			<FilesMatch \.php$>
 				SetHandler application/x-httpd-fastphp
 			</FilesMatch>
@@ -1237,6 +1414,8 @@ foreach ($certnamelist as $ip => $certname) {
 			<IfModule !mod_itk.c>
 				<IfModule !mod_fastcgi.c>
 					<IfModule mod_fcgid.c>
+						FcgidIOTimeout <?php echo $timeout; ?>
+
 						<Directory "<?php echo $disablepath; ?>/">
 							Options +ExecCGI
 							<FilesMatch \.php$>
@@ -1260,8 +1439,10 @@ foreach ($certnamelist as $ip => $certname) {
 				SetHandler "proxy:unix:/opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock|fcgi://localhost"
 			</FilesMatch>
 			<Proxy "fcgi://localhost">
-				ProxySet timeout=600
-				ProxySet connectiontimeout=300
+				ProxySet timeout=<?php echo $timeout; ?>
+
+				ProxySet connectiontimeout=<?php echo $timeout; ?>
+
 				#ProxySet enablereuse=on
 				ProxySet max=25
 				ProxySet retry=0
@@ -1299,7 +1480,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $parkdomainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $webmaildocroot; ?>"
 
@@ -1307,6 +1488,10 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 						if ($count !== 0) {
 ?>
+
+	<IfModule mod_http2.c>
+		Protocols h2 http/1.1
+	</IfModule>
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -1320,10 +1505,19 @@ foreach ($certnamelist as $ip => $certname) {
 							if (file_exists("{$certname}.ca")) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
+
+		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 <?php
 							}
 ?>
 		</IfModule>
+<?php
+						} else {
+?>
+
+	<IfModule mod_http2.c>
+		Protocols h2c http/1.1
+	</IfModule>
 <?php
 						}
 ?>
@@ -1342,7 +1536,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $parkdomainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $webmaildocroot; ?>"
 
@@ -1351,6 +1545,10 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 						if ($count !== 0) {
 ?>
+
+	<IfModule mod_http2.c>
+		Protocols h2 http/1.1
+	</IfModule>
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -1364,9 +1562,18 @@ foreach ($certnamelist as $ip => $certname) {
 							if (file_exists("{$certname}.ca")) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
+
+		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 <?php
 							}
 ?>
+	</IfModule>
+<?php
+						} else {
+?>
+
+	<IfModule mod_http2.c>
+		Protocols h2c http/1.1
 	</IfModule>
 <?php
 						}
@@ -1393,8 +1600,8 @@ foreach ($certnamelist as $ip => $certname) {
 
 		<IfModule mod_fastcgi.c>
 			Alias /webmail.<?php echo $parkdomainname; ?>.<?php echo $count; ?>fake "<?php echo $webmaildocroot; ?>/webmail.<?php echo $parkdomainname; ?>.<?php echo $count; ?>fake"
-			#FastCGIExternalServer "<?php echo $webmaildocroot; ?>/webmail.<?php echo $parkdomainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmportapache; ?> -idle-timeout 300 -pass-header Authorization
-			FastCGIExternalServer "<?php echo $webmaildocroot; ?>/webmail.<?php echo $parkdomainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock -idle-timeout 300 -pass-header Authorization
+			#FastCGIExternalServer "<?php echo $webmaildocroot; ?>/webmail.<?php echo $parkdomainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmportapache; ?> -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
+			FastCGIExternalServer "<?php echo $webmaildocroot; ?>/webmail.<?php echo $parkdomainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
 			<FilesMatch \.php$>
 				SetHandler application/x-httpd-fastphp
 			</FilesMatch>
@@ -1408,6 +1615,8 @@ foreach ($certnamelist as $ip => $certname) {
 			<IfModule !mod_itk.c>
 				<IfModule !mod_fastcgi.c>
 					<IfModule mod_fcgid.c>
+						FcgidIOTimeout <?php echo $timeout; ?>
+
 						<Directory "<?php echo $webmaildocroot; ?>/">
 							Options +ExecCGI
 							<FilesMatch \.php$>
@@ -1431,8 +1640,10 @@ foreach ($certnamelist as $ip => $certname) {
 				SetHandler "proxy:unix:/opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock|fcgi://localhost"
 			</FilesMatch>
 			<Proxy "fcgi://localhost">
-				ProxySet timeout=600
-				ProxySet connectiontimeout=300
+				ProxySet timeout=<?php echo $timeout; ?>
+
+				ProxySet connectiontimeout=<?php echo $timeout; ?>
+
 				#ProxySet enablereuse=on
 				ProxySet max=25
 				ProxySet retry=0
@@ -1485,7 +1696,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $redirdomainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $disablepath; ?>"
 
@@ -1494,6 +1705,10 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 					if ($count !== 0) {
 ?>
+
+	<IfModule mod_http2.c>
+		Protocols h2 http/1.1
+	</IfModule>
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -1507,9 +1722,18 @@ foreach ($certnamelist as $ip => $certname) {
 						if (file_exists("{$certname}.ca")) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
+
+		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 <?php
 						}
 ?>
+	</IfModule>
+<?php
+					} else {
+?>
+
+	<IfModule mod_http2.c>
+		Protocols h2c http/1.1
 	</IfModule>
 <?php
 					}
@@ -1536,8 +1760,8 @@ foreach ($certnamelist as $ip => $certname) {
 
 		<IfModule mod_fastcgi.c>
 			Alias /webmail.<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake "<?php echo $disablepath; ?>/webmail.<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake"
-			#FastCGIExternalServer "<?php echo $disablepath; ?>/webmail.<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmportapache; ?> -idle-timeout 300 -pass-header Authorization
-			FastCGIExternalServer "<?php echo $disablepath; ?>/webmail.<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock -idle-timeout 300 -pass-header Authorization
+			#FastCGIExternalServer "<?php echo $disablepath; ?>/webmail.<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmportapache; ?> -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
+			FastCGIExternalServer "<?php echo $disablepath; ?>/webmail.<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
 			<FilesMatch \.php$>
 				SetHandler application/x-httpd-fastphp
 			</FilesMatch>
@@ -1551,6 +1775,8 @@ foreach ($certnamelist as $ip => $certname) {
 			<IfModule !mod_itk.c>
 				<IfModule !mod_fastcgi.c>
 					<IfModule mod_fcgid.c>
+						FcgidIOTimeout <?php echo $timeout; ?>
+
 						<Directory "<?php echo $disablepath; ?>/">
 							Options +ExecCGI
 							<FilesMatch \.php$>
@@ -1574,8 +1800,10 @@ foreach ($certnamelist as $ip => $certname) {
 				SetHandler "proxy:unix:/opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock|fcgi://localhost"
 			</FilesMatch>
 			<Proxy "fcgi://localhost">
-				ProxySet timeout=600
-				ProxySet connectiontimeout=300
+				ProxySet timeout=<?php echo $timeout; ?>
+
+				ProxySet connectiontimeout=<?php echo $timeout; ?>
+
 				#ProxySet enablereuse=on
 				ProxySet max=25
 				ProxySet retry=0
@@ -1613,7 +1841,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $redirdomainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $webmaildocroot; ?>"
 
@@ -1621,6 +1849,10 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 						if ($count !== 0) {
 ?>
+
+	<IfModule mod_http2.c>
+		Protocols h2 http/1.1
+	</IfModule>
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -1634,9 +1866,18 @@ foreach ($certnamelist as $ip => $certname) {
 							if (file_exists("{$certname}.ca")) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
+
+		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 <?php
 							}
 ?>
+	</IfModule>
+<?php
+						} else {
+?>
+
+	<IfModule mod_http2.c>
+		Protocols h2c http/1.1
 	</IfModule>
 <?php
 						}
@@ -1656,7 +1897,7 @@ foreach ($certnamelist as $ip => $certname) {
 	ServerName webmail.<?php echo $redirdomainname; ?>
 
 
-	Include <?php echo $globalspath; ?>/acme-challenge.conf
+	Include <?php echo $globalspath; ?>/<?php echo $acmechallenge; ?>.conf
 
 	DocumentRoot "<?php echo $webmaildocroot; ?>"
 
@@ -1665,6 +1906,10 @@ foreach ($certnamelist as $ip => $certname) {
 <?php
 						if ($count !== 0) {
 ?>
+
+	<IfModule mod_http2.c>
+		Protocols h2 http/1.1
+	</IfModule>
 
 	<IfModule mod_ssl.c>
 		SSLEngine On
@@ -1678,9 +1923,18 @@ foreach ($certnamelist as $ip => $certname) {
 							if (file_exists("{$certname}.ca")) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
+
+		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
 <?php
 							}
 ?>
+	</IfModule>
+<?php
+						} else {
+?>
+
+	<IfModule mod_http2.c>
+		Protocols h2c http/1.1
 	</IfModule>
 <?php
 						}
@@ -1707,8 +1961,8 @@ foreach ($certnamelist as $ip => $certname) {
 
 		<IfModule mod_fastcgi.c>
 			Alias /webmail.<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake "<?php echo $webmaildocroot; ?>/webmail.<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake"
-			#FastCGIExternalServer "<?php echo $webmaildocroot; ?>/webmail.<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmportapache; ?> -idle-timeout 300 -pass-header Authorization
-			FastCGIExternalServer "<?php echo $webmaildocroot; ?>/webmail.<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock -idle-timeout 300 -pass-header Authorization
+			#FastCGIExternalServer "<?php echo $webmaildocroot; ?>/webmail.<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake" -host 127.0.0.1:<?php echo $fpmportapache; ?> -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
+			FastCGIExternalServer "<?php echo $webmaildocroot; ?>/webmail.<?php echo $redirdomainname; ?>.<?php echo $count; ?>fake" -socket /opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock -idle-timeout <?php echo $timeout; ?> -pass-header Authorization
 			<FilesMatch \.php$>
 				SetHandler application/x-httpd-fastphp
 			</FilesMatch>
@@ -1722,6 +1976,8 @@ foreach ($certnamelist as $ip => $certname) {
 			<IfModule !mod_itk.c>
 				<IfModule !mod_fastcgi.c>
 					<IfModule mod_fcgid.c>
+						FcgidIOTimeout <?php echo $timeout; ?>
+
 						<Directory "<?php echo $webmaildocroot; ?>/">
 							Options +ExecCGI
 							<FilesMatch \.php$>
@@ -1745,8 +2001,9 @@ foreach ($certnamelist as $ip => $certname) {
 				SetHandler "proxy:unix:/opt/configs/php-fpm/sock/<?php echo $phpselected; ?>-apache.sock|fcgi://localhost"
 			</FilesMatch>
 			<Proxy "fcgi://localhost">
-				ProxySet timeout=600
-				ProxySet connectiontimeout=300
+				ProxySet timeout=<?php echo $timeout; ?>
+
+				ProxySet connectiontimeout=<?php echo $timeout; ?>
 				#ProxySet enablereuse=on
 				ProxySet max=25
 				ProxySet retry=0

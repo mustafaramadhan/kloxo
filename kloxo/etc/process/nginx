@@ -8,9 +8,6 @@ if [ ! -f /var/run/nginx.pid ] ; then
 	fi
 fi
 
-#echo "  - Process: reload"
-#/etc/rc.d/init.d/nginx reload
-
 echo "  - Process: restart"
 /etc/rc.d/init.d/nginx stop
 pkill -9 nginx

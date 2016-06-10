@@ -1,5 +1,5 @@
 <?php
-	include_once("../lib/redirect.php");
+	include_once "../lib/redirect.php";
 
 	$page = 'Login';
 ?>

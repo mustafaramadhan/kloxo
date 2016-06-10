@@ -78,7 +78,7 @@ class ftpuser extends Lxclient
 		global $gbl, $sgbl, $login, $ghtml;
 
 		$nlist['status'] = '3%';
-		$nlist['parent_clname'] = '5%';
+	//	$nlist['parent_clname'] = '5%';
 		$nlist['syncserver'] = '10%';
 		$nlist['nname'] = '25%';
 		$nlist['directory'] = '50%';
@@ -176,7 +176,7 @@ class all_ftpuser extends ftpuser
 {
 	static $__desc = array("", "", "all_ftpuser");
 	static $__desc_parent_name_f = array("n", "", "owner");
-	static $__desc_parent_clname = array("n", "", "owner");
+//	static $__desc_parent_clname = array("n", "", "owner");
 
 	function isSelect()
 	{
@@ -197,7 +197,7 @@ class all_ftpuser extends ftpuser
 	static function createListSlist($parent)
 	{
 		$nlist['nname'] = null;
-		$nlist['parent_clname'] = null;
+	//	$nlist['parent_clname'] = null;
 
 		return $nlist;
 	}

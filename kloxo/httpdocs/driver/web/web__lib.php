@@ -135,7 +135,7 @@ class web__ extends lxDriverClass
 
 		lxfile_cp(getLinkCustomfile("/opt/configs/{$altname}/etc/init.d", "{$webserver}.init"),
 			"/etc/rc.d/init.d/{$webserver}");
-	
+	/*	
 		if ($webserver === 'httpd') {
 			exec("httpd -V|grep 'version'|grep '/2.4'", $out, $ret);
 
@@ -145,7 +145,7 @@ class web__ extends lxDriverClass
 				exec("rm -f /etc/sysconfig/httpd24");
 			}
 		}
-
+	*/
 		exec("chmod 755 /etc/rc.d/init.d/{$webserver}");
 	}
 
@@ -224,6 +224,7 @@ class web__ extends lxDriverClass
 
 		$input['webselected'] = $this->getWebSelected();
 		$input['phpselected'] = $this->getPhpSelected();
+		$input['timeout'] = $this->getWebTimeout();
 
 		$input['apacheextratext'] = $this->getApacheExtraText();
 		$input['lighttpdextratext'] = $this->getLighttpdExtraText();
@@ -393,7 +394,7 @@ class web__ extends lxDriverClass
 			}
 		}
 
-	//	createRestartFile('php-fpm');
+	//	createRestartFile('restart-php-fpm');
 	}
 
 
@@ -586,7 +587,7 @@ class web__ extends lxDriverClass
 	}
 	function AddExtraBaseDir()
 	{
-		$extrabasedir = $this->main->__var_extrabasedir;
+		$extrabasedir = ($this->main->__var_extrabasedir) ? $this->main->__var_extrabasedir : '';
 
 		return trim($extrabasedir);
 	}
@@ -962,6 +963,22 @@ class web__ extends lxDriverClass
 		} else {
 			$ret = $this->main->php_selected;
 		}
+	
+		// MR -- convert
+		if (strpos(strtolower($ret), 'php used') !== false) {
+			$ret = 'php';
+		}
+
+		return $ret;
+	}
+
+	function getWebTimeout()
+	{
+		if ((!isset($this->main->time_out)) || (!$this->main->time_out) || (strtolower($this->main->time_out) === '300')) {
+			$ret = '300';
+		} else {
+			$ret = $this->main->time_out;
+		}
 
 		return $ret;
 	}
@@ -1255,7 +1272,7 @@ class web__ extends lxDriverClass
 		$uname = $this->getUser();
 
 		$spath="/home/{$uname}/ssl";
-		$dpath="/home/kloxo/client/{$uname}";
+		$dpath="/home/kloxo/ssl";
 
 		if (file_exists($spath)) {
 			exec("mv -f {$spath} {$dpath}");

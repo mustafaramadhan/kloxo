@@ -23,6 +23,7 @@ class serverweb extends lxdb
 
 	static $__desc_multiple_php_install = array("", "", "multiple_php_install");
 	static $__desc_multiple_php_already_installed = array("", "", "multiple_php_already_installed");
+	static $__desc_multiple_php_remove = array("", "", "multiple_php_remove");
 
 	function createShowUpdateform()
 	{
@@ -36,6 +37,7 @@ class serverweb extends lxdb
 			$uflist['php_branch'] = null;
 
 			$uflist['multiple_php_install'] = null;
+			$uflist['multiple_php_remove'] = null;
 
 			if (isWebProxyOrApache()) {
 				$uflist['php_type'] = null;
@@ -51,9 +53,11 @@ class serverweb extends lxdb
 
 		return $uflist;
 	}
-
+/*
 	function preUpdate($subaction, $param)
 	{
+		global $login;
+
 		// MR -- preUpdate (also preAdd) is new function; process before Update/Add
 
 		// MR -- still any trouble passing value so use this trick
@@ -62,6 +66,10 @@ class serverweb extends lxdb
 			// MR -- $this->multiple_php_install (frm_serverweb_c_multiple_php_install) still empty
 			// so, use frm_serverweb_b_multiple_php_install (second multiselect)
 			$this->multiple_php_install = $_POST['frm_serverweb_b_multiple_php_install'];
+
+			if ($this->multiple_php_install === '') {
+				throw new lxException($login->getThrow('no_options_selected'), '', $this->multiple_php_install);
+			}
 
 			$join = implode(',', $this->multiple_php_install);
 
@@ -72,7 +80,7 @@ class serverweb extends lxdb
 		}
 
 	}
-
+*/
 	function updateform($subaction, $param)
 	{
 		switch($subaction) {
@@ -177,7 +185,7 @@ class serverweb extends lxdb
 			case "php_branch":
 				$this->php_branch = null;
 
-				$a = getRpmBranchListOnList('php');
+				$a = getListOnList('php');
 				$vlist['php_branch'] = array('s', $a);
 
 				$this->setDefaultValue('php_branch', getRpmBranchInstalledOnList('php'));
@@ -191,21 +199,24 @@ class serverweb extends lxdb
 				$a = getCleanRpmBranchListOnList('php');
 
 			//	$g = rl_exec_get(null, $this->syncserver, "getMultiplePhpList");
-				$g = implode(" ", getMultiplePhpList());
+				$g = getMultiplePhpList();
 
-				$vlist['multiple_php_already_installed'] = array("M", $g);
+				$u = array_diff($a, $g);
 
-				$vlist['multiple_php_install'] = array("U", $a);
+				$h = implode(" ", getMultiplePhpList());
 
-				// MR -- not able to 'default' value
-			//	$this->setDefaultValue('multiple_php_install', $f);
+				$vlist['multiple_php_already_installed'] = array("M", $h);
+
+				$vlist['multiple_php_install'] = array("U", $u);
 
 				break;
 			case "php_used":
 				$this->php_used = null;
 
 				$d = getMultiplePhpList();
-				$s = '--Use PHP Branch--';
+				$g = getInitialPhpFpmConfig();
+
+				$s = '--PHP Branch--';
             
 				if (isset($d)) {
 					foreach ($d as $k => $v) {
@@ -216,28 +227,27 @@ class serverweb extends lxdb
 
 					$d = array_merge(array($s), $d);
 				} else { 
-					$d = array('--Use PHP Branch--');
+					$d = array($s);
 				}
+
+				if ($g === 'php') {
+					$j = $s;
+				} else {
+					$j = $g;
+				}
+
+				$this->setDefaultValue('php_used', $j);
 
 				$vlist['php_used'] = array('s', $d);
 
-				foreach ($d as $k => $v) {
+				break;
 
-					if ($v === $s) {
-						$t = "prog=\"php-fpm\"";
-					} else {
-						$t = "custom_name=\"{$v}\"";
-					}
+			case "multiple_php_remove":
+				$this->multiple_php_remove = null;
 
-				//	exec("cat /etc/rc.d/init.d/php-fpm|grep '{$t}'", $out, $ret);
-		
-					$ret = rl_exec_get(null, $this->syncserver, "exec", array("cat /etc/rc.d/init.d/php-fpm|grep '{$t}'"));
+				$a = getMultiplePhpList();
 
-					if ($ret === $t) {
-						$this->setDefaultValue('php_used', $v);
-						break;
-					}
-				}
+				$vlist['multiple_php_remove'] = array("U", $a);
 
 				break;
 

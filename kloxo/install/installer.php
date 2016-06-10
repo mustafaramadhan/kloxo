@@ -362,7 +362,7 @@ function kloxo_install_step1()
 		"automake", "make", "libtool", "openssl-devel", "pure-ftpd", "yum-protectbase",
 		"yum-plugin-replace", "crontabs", "make", "glibc-static", "net-snmp", "tmpwatch",
 		"rkhunter", "quota", "xinetd", "screen", "telnet", "ncdu", "sysstat", "net-tools",
-		"xz", "xz-libs", "p7zip", "p7zip-plugins", "rar", "unrar");
+		"xz", "xz-libs", "p7zip", "p7zip-plugins", "rar", "unrar", "lxjailshell");
 
 	$list = implode(" ", $packages);
 

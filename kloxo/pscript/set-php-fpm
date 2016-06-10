@@ -17,39 +17,58 @@ echo "- For help, type 'sh $0 --help'"
 
 if [ "$#" == 0 ] ; then
 	echo "- No argument supplied. Defaulting to localhost (master) servers"
+	php_target="php"
+else
+	php_target=$1
 fi
 
 echo
 
-kipath="/usr/local/lxlabs/kloxo/init"
+kpath="/usr/local/lxlabs/kloxo"
 eripath="/etc/rc.d/init.d"
 
-if [ -f ${kipath}/custom.php-fpm.init.base ] ; then
-	pcfile="${kipath}/custom.php-fpm.init.base"
+if [ -f ${kpath}/init/custom.php-fpm.init.base ] ; then
+	pcfile="${kpath}/init/custom.php-fpm.init.base"
 else
-	pcfile="${kipath}/php-fpm.init.base"
+	pcfile="${kpath}/init/php-fpm.init.base"
 fi
 
-if [ "${1}" == "php" ] ; then
+if [ -f ${kpath}/etc/flag/enablemultiplephp.flg ] ; then
+	echo "- 'Multiple PHP' is enable. Using it"
+
+	'cp' -f /opt/configs/php-fpm/etc/init.d/phpm-fpm.init ${eripath}/phpm-fpm
+	chown root:root ${eripath}/phpm-fpm
+	chmod 0755 ${eripath}/phpm-fpm
+	chkconfig phpm-fpm on
+	sh /script/add-restart-queue restart-php-fpm
+else
+	chkconfig phpm-fpm off
+	service phpm-fpm stop >/dev/null 2>&1
+fi
+
+if [ "${php_target}" == "php" ] ; then
+	echo "- No argument and then use 'PHP Branch'"
+
 	'cp' -f ${pcfile} ${eripath}/php-fpm
-	sed -i 's:__custom_name__:'${1}':' ${eripath}/php-fpm
+	sed -i 's:__custom_name__:'${php_target}':' ${eripath}/php-fpm
 	chown root:root ${eripath}/php-fpm
 	chmod 0755 ${eripath}/php-fpm
 	chkconfig php-fpm on
-	service php-fpm restart
+	sh /script/add-restart-queue restart-php-fpm
 else
-	if [ ! -f /opt/${1}/usr/sbin/php-fpm ] ; then
-		echo "Need ${1} installing with 'sh /script/phpm-installer ${1}'"
+	if [ ! -f /opt/${php_target}/usr/sbin/php-fpm ] ; then
+		echo "- Need ${php_target} installing with 'sh /script/phpm-installer ${php_target}'"
 	else
-		if [ ! -f /opt/${1}/custom/php-fpm.init ] ; then
-			echo "${1} not support php-fpm (need php 5.3.3+)" 
-		else
-			'cp' -f ${pcfile} ${eripath}/php-fpm
-			sed -i 's:__custom_name__:'${1}':' ${eripath}/php-fpm
-			chown root:root ${eripath}/php-fpm
-			chmod 0755 ${eripath}/php-fpm
-			chkconfig php-fpm on
-			service php-fpm restart
-		fi
+		echo "- Set ${php_target} as php-fpm target for 'PHP Used'"
+
+		'cp' -f ${pcfile} ${eripath}/php-fpm
+		sed -i 's:__custom_name__:'${php_target}':' ${eripath}/php-fpm
+		chown root:root ${eripath}/php-fpm
+		chmod 0755 ${eripath}/php-fpm
+		chkconfig php-fpm on
+		sh /script/add-restart-queue restart-php-fpm
 	fi
 fi
+
+rm -f ${kpath}/etc/flag/use_php*.flg
+echo '' > ${kpath}/etc/flag/use_${php_target}.flg

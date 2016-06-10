@@ -8,9 +8,6 @@ if [ ! -f /var/run/xinetd.pid ] ; then
 	fi
 fi
 
-#echo "  - Process: reload"
-#/etc/rc.d/init.d/xinetd reload
-
 echo "  - Process: restart"
 /etc/rc.d/init.d/xinetd stop
 pkill -9 xinetd

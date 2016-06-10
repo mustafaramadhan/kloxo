@@ -21,27 +21,20 @@ then
 fi
 
 RETVAL=0
-
-base_name="php"
-custom_name="__custom_name__"
-
-fpm_prog="${custom_name}-fpm"
-
-fpm_conf="/etc/php-fpm.conf"
-
-pidfile="/var/run/php-fpm/php-fpm.pid"
-lockfile="/var/lock/subsys/php-fpm"
+prog="__custom_name__-fpm"
+pidfile=${PIDFILE-/var/run/php-fpm/php-fpm.pid}
+lockfile=${LOCKFILE-/var/lock/subsys/php-fpm}
 
 start () {
-    echo -n $"Starting $fpm_prog: "
-    daemon --pidfile ${pidfile} $fpm_prog --fpm-config $fpm_conf --daemonize
+    echo -n $"Starting $prog (PHP Used): "
+    daemon --pidfile ${pidfile} $prog
     RETVAL=$?
     echo
     [ $RETVAL -eq 0 ] && touch ${lockfile}
 }
 stop () {
-    echo -n $"Stopping $fpm_prog: "
-    killproc -p ${pidfile} $fpm_prog
+    echo -n $"Stopping $prog (PHP Used): "
+    killproc -p ${pidfile} -d 10 $prog
     RETVAL=$?
     echo
     if [ $RETVAL -eq 0 ] ; then
@@ -55,8 +48,8 @@ restart () {
 }
 
 reload () {
-    echo -n $"Reloading $fpm_prog: "
-    killproc -p ${pidfile} $fpm_prog -USR2
+    echo -n $"Reloading $prog (PHP Used): "
+    killproc -p ${pidfile} -d 10 $prog -USR2
     RETVAL=$?
     echo
 }
@@ -71,7 +64,7 @@ case "$1" in
     stop
     ;;
   status)
-    status -p ${pidfile} $fpm_prog
+    status -p ${pidfile} $prog
     RETVAL=$?
     ;;
   restart)

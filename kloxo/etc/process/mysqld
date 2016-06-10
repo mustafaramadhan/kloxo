@@ -3,25 +3,18 @@
 echo "*** Process for MYSQL/MARIADB service ***"
 
 if [ -f /etc/rc.d/init.d/mysql ] ; then
-	if [ "$(/etc/rc.d/init.d/mysql status|grep pid)" == "" ] ; then
-		/etc/rc.d/init.d/mysql start
-	fi
-	sleep 1
-elif [ -f /etc/rc.d/init.d/mysqld ] ; then
-	if [ "$(/etc/rc.d/init.d/mysqld status|grep pid)" == "" ] ; then
-		/etc/rc.d/init.d/mysqld start
-	fi
-	sleep 1
+	prog="mysql"
+else
+	prog="mysqld"
 fi
 
-echo "  - Process: restart"
-if [ -f /etc/rc.d/init.d/mysql ] ; then
-	/etc/rc.d/init.d/mysql stop
-	pkill -9 mysql
-	/etc/rc.d/init.d/mysql start
-elif [ -f /etc/rc.d/init.d/mysqld ] ; then
-	/etc/rc.d/init.d/mysqld stop
-	pkill -9 mysqld
-	/etc/rc.d/init.d/mysqld start
+if [ "$(/etc/rc.d/init.d/${prog} status|grep pid)" == "" ] ; then
+	/etc/rc.d/init.d/${prog} start
 fi
-echo "No message for restart"
+sleep 1
+
+echo "  - Process: restart"
+/etc/rc.d/init.d/${prog} stop
+pkill -9 ${prog}
+pkill -9 mysqld_safe
+/etc/rc.d/init.d/${prog} start

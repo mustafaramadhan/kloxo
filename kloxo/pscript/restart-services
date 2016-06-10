@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#list=(mysqld mysql named djbdns pdns nsd mydns yadifad varnish trafficserver squid httpd nginx lighttpd hiawatha qmail xinetd php-fpm)
+#list=(mysqld mysql named djbdns pdns nsd mydns yadifad varnish trafficserver squid httpd nginx lighttpd hiawatha qmail ftp php-fpm)
 
 if [ -f /script/custom.restart-list.inc ] ; then
 	. /script/custom.restart-list.inc

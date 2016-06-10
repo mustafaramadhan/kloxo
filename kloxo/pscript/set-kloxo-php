@@ -2,13 +2,13 @@
 
 #!/bin/sh
 
-if [ "$1" == "--help" ] ; then
+if [ "$1" == "--help" ] || [ "$1" == "-h" ] ; then
 	echo
 	echo " ------------------------------------------------------------------------------"
 	echo "  format: sh $0 <fpm/cgi>"
 	echo " ------------------------------------------------------------------------------"
 	echo
-	exit;
+	exit
 fi
 
 echo
@@ -17,10 +17,7 @@ echo "- For help, type '$0 --help'"
 if [ "$#" == 0 ] ; then
 	echo "- No argument supplied. Defaulting to 'fpm'"
 	echo
-	#exit
 fi
-
-base_name="${1}"
 
 if [ "${1}" == 'cgi' ] ; then
 	echo '' > /usr/local/lxlabs/kloxo/init/kloxo_use_php-cgi

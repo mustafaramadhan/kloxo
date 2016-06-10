@@ -23,40 +23,42 @@
 # Version: 1.0 (2013-01-11 - by Mustafa Ramadhan <mustafa@bigraf.com>)
 #
 
-if ! [ -d ./kloxo/httpdocs ] ; then
-	if [ "$#" == 0 ] ; then
-		echo
-		echo " ----------------------------------------------------------------------"
-		echo "  format: sh $0 --fork=<> --branch=<>"
-		echo " ----------------------------------------------------------------------"
-		echo "  --fork - example: lxcenter or mustafaramadhan (for certain developer)"
-		echo "  --branch - example: master or dev"
-		echo
-		echo "  * Pack main kloxo package from git"
-		echo "  * Thirdparty packages download directly for latest version"
-		echo "  * Then run kloxo-installer.sh which the same place with local copy"
-		echo
-		echo " - If detect './kloxo/httpdocs' and then used it as source" 
-		exit;
-	fi
+if [ "$1" == "--help" ] || [ "$1" == "-h" ] ; then
+	echo
+	echo " ----------------------------------------------------------------------"
+	echo "  format: sh $0 --fork=<> --branch=<>"
+	echo " ----------------------------------------------------------------------"
+	echo "  --fork - example: lxcenter or mustafaramadhan (for certain developer)"
+	echo "  --branch - example: master or dev"
+	echo
+	echo "  * Pack main kloxo package from git"
+	echo "  * Thirdparty packages download directly for latest version"
+	echo "  * Then run kloxo-installer.sh which the same place with local copy"
+	echo
+	echo " - If detect './kloxo/httpdocs' and then used it as source" 
+	exit
 fi
 
 echo "Start pack..."
 
-request1=$1
-kloxo_fork=${request1#--fork\=}
+if [ "$1" == "" ] ; then
+	kloxo_fork="mustafaramadhan"
+else
+	kloxo_fork=${1#--fork\=}
+fi
 
-request2=$2
-kloxo_branch=${request2#--branch\=}
-
-kloxo_path=${kloxo_fork}/kloxomr7-$ver/zipball/${kloxo_branch}
+if [ "$2" == "" ] ; then
+	kloxo_branch="dev"
+else
+	kloxo_branch=${2#--branch\=}
+fi
 
 if [ "$(rpm -qa|grep unzip)" == "" ] ; then
 	yum install zip unzip -y
 fi
 
 if [ ! -d ./kloxo/httpdocs ] ; then
-	echo "Download git from "${kloxo_path}
+	echo "Download git"
 	'rm' -rf ${kloxo_branch}* > /dev/null 2>&1
 	wget https://github.com/${kloxo_fork}/kloxo/archive/${kloxo_branch}.zip -O kloxo-mr-${kloxo_branch}.zip
 
@@ -69,12 +71,6 @@ else
 fi
 
 'cp' -rf ./kloxo/install/installer.sh ./
-
-#cd ./kloxo/cexe
-#yum -y install which cpp gcc gcc-c++ glibc* openssl-devel automake autoconf libtool make
-#make
-
-#cd ../../
 
 ver=`cat ./kloxo/bin/kloxoversion`
 
@@ -132,5 +128,7 @@ tar -czf kloxomr7-$ver.tar.gz "./kloxomr7-$ver/bin" "./kloxomr7-$ver/cexe" "./kl
 
 echo
 echo "Now you can run 'sh ./installer.sh' for installing"
+echo
+echo "Run '$0 --help' for helping"
 echo
 echo "... the end"
