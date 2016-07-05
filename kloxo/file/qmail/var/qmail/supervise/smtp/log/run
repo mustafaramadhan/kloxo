@@ -1,5 +1,10 @@
 #!/bin/sh
 
+if [ -f ./custom.run ] ; then
+	. ./custom.run
+	return $?
+fi
+
 #LOGSIZE=`cat /var/qmail/control/logsize`
 #LOGCOUNT=`cat /var/qmail/control/logcount`
 

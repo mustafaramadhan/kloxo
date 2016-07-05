@@ -185,6 +185,9 @@ $__keyword["info_resourceplan"] = $__keyword["resourceplan"];
 $__keyword["info_skin"] = "Skin";
 
 $__keyword["click_help"] = "Click 'Help' for more info";
+$__keyword["login_as"] = "Login as";
+
+$__keyword['startapi_warning'] = "StartAPI: 'issue' is free but 're-issue' (before expire) and 'revoke' may payed";
 
 $__throw["domain_is_already_owned"] = "Domain is already owned. Please enable: [b]I Confirm That I Am The Owner Of Domain[/b]";
 $__throw["invalid_domain_name"] = "Invalid domain name";
@@ -255,7 +258,7 @@ $__throw["skeleton_should_be_zip"] = "Skeleton should be zip";
 $__throw["message_sent"] = "Message sent";
 $__throw["no_contact_email"] = "No contact email";
 $__throw["resource_quota_more_than_available"] = "Resource quota more than available";
-$__throw["installapp_needs_valid_contactemail"] = "Installapp needs valid contactemail";
+$__throw["easyinstaller_needs_valid_contactemail"] = "Needs valid contactemail";
 // $__throw["type_of_adding_more_than_parent"] = "Type of adding more than parent";
 $__throw["client_type_more_than_parent"] = "Client type more than parent";
 $__throw["use_double_underscore"] = "Use double underscore";

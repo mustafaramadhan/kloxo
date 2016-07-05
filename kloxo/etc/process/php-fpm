@@ -4,5 +4,5 @@ echo "*** Process for PHP-FPM service ***"
 
 echo "  - Process: restart"
 /etc/rc.d/init.d/php-fpm stop
-#pkill -9 php-fpm
+'rm' -f /opt/configs/php-fpm/sock/php-*.sock
 /etc/rc.d/init.d/php-fpm start

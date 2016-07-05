@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 class phpini_flag_b extends lxaclass
 {
@@ -46,6 +46,7 @@ class phpini_flag_b extends lxaclass
 	static $__desc_max_input_vars_flag = array("", "", "max_input_vars");
 
 	static $__desc_date_timezone_flag = array("s", "", "date_timezone");
+	static $__desc_phpfpm_type_flag = array("s", "", "phpfpm_type");
 }
 
 class phpini extends lxdb
@@ -68,7 +69,6 @@ class phpini extends lxdb
 
 	function getInheritedList()
 	{
-		global $ghtml, $login;
 	/*
 		$list[] = 'enable_xcache_flag';
 		$list[] = 'enable_zend_flag';
@@ -83,18 +83,13 @@ class phpini extends lxdb
 
 	function getLocalList()
 	{
-		global $ghtml, $login;
-
 		$server = $this->syncserver;
-		$server_phpini = unserialize(base64_decode(db_get_value("phpini", "pserver-{$server}", 
+		$server_phpini = unserialize(base64_decode(db_get_value("phpini", "pserver-{$server}",
 			"ser_phpini_flag_b")));
-
-		$flag = $server_phpini->multiple_php_flag;
 
 	//	if ($this->getParentO()->is__table('pserver')) {
 		if ($this->getParentO()->getClass() === 'pserver') {
 			$list[] = 'multiple_php_flag';
-
 		}
 
 	//	if (!$this->getParentO()->is__table('web')) {
@@ -104,6 +99,7 @@ class phpini extends lxdb
 			$list[] = 'log_errors_flag';
 			$list[] = 'output_compression_flag';
 			$list[] = 'date_timezone_flag';
+			$list[] = 'phpfpm_type_flag';
 		//	$list[] = 'session_autostart_flag' ;
 			$list[] = 'session_save_path_flag';
 	//	}
@@ -148,7 +144,9 @@ class phpini extends lxdb
 	function getAdminList()
 	{
 		global $login;
-		
+
+		$list = null;
+
 		if (!$login->isAdmin()) {
 			$list[] = 'disable_functions';
 			$list[] = 'max_execution_time_flag';
@@ -157,17 +155,16 @@ class phpini extends lxdb
 			$list[] = 'post_max_size_flag';
 			$list[] = "upload_max_filesize";
 			$list[] = 'session_save_path_flag';
-
-			return $list;
 		}
+
+		return $list;
 	}
 
 	function fixphpIniFlag()
 	{
 		if (!isset($this->phpini_flag_b) || get_class($this->phpini_flag_b) !== 'phpini_flag_b') {
-		//	if ($this->getParentO()->getClass() === 'web') { return; }
-		//	if ($this->getParentO()->getClass() === 'domain') { return; }
-
+		//if ($this->getParentO()->getClass() === 'web') { return; }
+		//if ($this->getParentO()->getClass() === 'domain') { return; }
 			$this->phpini_flag_b = new phpini_flag_b(null, null, $this->nname);
 			$this->setUpInitialValues();
 		}
@@ -175,36 +172,36 @@ class phpini extends lxdb
 
 	function createExtraVariables()
 	{
-		global $gbl, $sgbl, $login, $ghtml;
+		global $gbl, $login;
 
 		$this->fixphpIniFlag();
 		$gen = $login->getObject('general')->generalmisc_b;
 
-	//	if (!$this->getParentO()->is__table('pserver')) {
+		//	if (!$this->getParentO()->is__table('pserver')) {
 		if ($this->getParentO()->getClass() !== 'pserver') {
 			$ob = new phpini(null, $this->syncserver, createParentName('pserver', $this->syncserver));
 			$ob->get();
 			$ob->fixphpIniFlag();
 
 			// MR -- trick for escape web-based php.ini
-		//	if ($this->getParentO()->is__table('web')) {
+			//	if ($this->getParentO()->is__table('web')) {
 			if ($this->getParentO()->getClass() === 'web') {
 				$this->__var_docrootpath = $this->getParentO()->getFullDocRoot();
 			}
 
 			$list = $this->getInheritedList();
-			
+
 			foreach ($list as $l) {
 				$this->phpini_flag_b->$l = $ob->phpini_flag_b->$l;
 			}
 
 			// MR -- trick for escape web-based php.ini
-		//	if ($this->getParentO()->is__table('web')) {
+			//	if ($this->getParentO()->is__table('web')) {
 			if ($this->getParentO()->getClass() === 'web') {
 				$this->__var_web_user = $this->getParentO()->username;
-		//		$this->__var_customer_name = $this->getParentO()->customer_name;
-		//		$this->__var_disable_openbasedir = (isset($this->getParentO()->webmisc_b->disable_openbasedir)) ?
-		//			$this->getParentO()->webmisc_b->disable_openbasedir : null;
+			//	$this->__var_customer_name = $this->getParentO()->customer_name;
+			//	$this->__var_disable_openbasedir = (isset($this->getParentO()->webmisc_b->disable_openbasedir)) ?
+			//	$this->getParentO()->webmisc_b->disable_openbasedir : null;
 			} else {
 				$this->__var_web_user = $this->getParentO()->nname;
 			}
@@ -247,24 +244,23 @@ class phpini extends lxdb
 				@unlink('../etc/flag/enablemultiplephp.flg');
 			}
 
-			lxshell_return("__path_php_path", "../bin/fix/fixphpini.php", 
+			lxshell_return("__path_php_path", "../bin/fix/fixphpini.php",
 				"--server={$this->getParentO()->nname}");
-	/*
+
 			$sp = "/opt/configs/php-fpm/etc/init.d";
 			$tp = "/etc/rc.d/init.d";
 
 			if (file_exists("../etc/flag/enablemultiplephp.flg")) {
 				exec("'cp' -f {$sp}/phpm-fpm.init {$tp}/phpm-fpm; " .
 					"chmod 755 {$tp}/phpm-fpm; chkconfig phpm-fpm on; " .
-					"sh /script/restart-php-fpm -y");
+					"chkconfig php-fpm off; service php-fpm stop; " .
+					"service phpm-fpm start");
 			} else {
 				exec("'cp' -f {$sp}/phpm-fpm.init {$tp}/phpm-fpm; " .
 					"chmod 755 {$tp}/phpm-fpm; chkconfig phpm-fpm off; " .
 					"chkconfig php-fpm on; service phpm-fpm stop; " .
-					"sh /script/restart-php-fpm -y");
+					"service php-fpm start");
 			}
-	*/
-			exec("sh /script/set-php-fpm");
 		}
 	}
 
@@ -331,10 +327,16 @@ class phpini extends lxdb
 			}
 
 			if ($subaction !== 'extraedit') {
-				$this->initialValue('date_timezone_flag', 'Europe/London');
-
+				$this->initialValue('phpini_flag_b-date_timezone_flag', 'Europe/London');
 			//	$vlist["phpini_flag_b-date_timezone_flag"] = array('s', timezone_identifiers_list());
 				$vlist["phpini_flag_b-date_timezone_flag"] = array('s', getTimeZoneList());
+
+				if ($login->isAdmin()) {
+					$this->initialValue('phpini_flag_b-phpfpm_type_flag', 'ondemand');
+					$vlist["phpini_flag_b-phpfpm_type_flag"] = array('s', self::getPhpfpmTypeList());
+				} else {
+					$vlist["phpini_flag_b-phpfpm_type_flag"] = array('s', array($this->phpini_flag_b->phpfpm_type_flag));
+				}
 			}
 	//	}
 
@@ -348,11 +350,13 @@ class phpini extends lxdb
 		return $vlist;
 	}
 
+	static function getPhpfpmTypeList()
+	{
+		return array('ondemand', 'dynamic', 'static');
+	}
 
 	function setUpInitialValues()
 	{
-		global $gbl, $ghtml, $login;
-
 		if ($this->getParentO()->getClass() === 'pserver') {
 			$this->initialValuesBasic();
 		} else {
@@ -445,14 +449,11 @@ class phpini extends lxdb
 			$this->initialValue('date_timezone_flag', 'Europe/London');
 		}
 
-	//	$vlist['date_timezone_flag'] = array('s', timezone_identifiers_list());
-		$vlist['date_timezone_flag'] = array('s', getTimeZoneList());
+		$this->initialValue('phpfpm_type_flag', 'ondemand');
 	}
 
 	function initialValue($var, $val)
 	{
-		global $login;
-
 		if (!isset($this->phpini_flag_b->$var) || !$this->phpini_flag_b->$var) {
 			$this->phpini_flag_b->$var = $val;
 		}
@@ -460,9 +461,6 @@ class phpini extends lxdb
 
 	function initialValueRpmStatus($var)
 	{
-		$srcpath = '/opt/configs/phpini/etc/php.d';
-		$trgtpath = '/etc/php.d';
-
 		if ($var === 'enable_xcache_flag') {
 			$module = "xcache";
 			$active = isPhpModuleActive($module);
@@ -481,7 +479,7 @@ class phpini extends lxdb
 			}
 		} elseif ($var === 'enable_zend_flag') {
 			$modulebase = "zend";
-		
+
 			if (version_compare(getPhpVersion(), "5.3.0", ">=")) {
 				$modulelist = array("{$modulebase}-guard-loader");
 				$ininamelist = array("zendguard");
@@ -496,8 +494,6 @@ class phpini extends lxdb
 				if ($active) { break; }
 			}
 		}
-
-		$t = str_replace('_flag', '.flg', $var);
 
 		if ($active) {
 			$this->phpini_flag_b->$var = 'on';

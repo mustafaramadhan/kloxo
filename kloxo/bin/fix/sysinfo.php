@@ -81,17 +81,6 @@ if ($hiawathabranch) {
 	exec("rpm -q {$hiawathabranch}", $out);
 	$apphiawatha = trim($out[0]);
 	$kloxohiawatha = $apphiawatha;
-
-	$out = null;
-
-	exec("chkconfig --list|grep 'hiawatha'|grep ':on'", $out);
-
-	if ($out[0] !== null) {
-		$apphiawatha = "--used--";
-	} else {
-	//	$apphiawatha .= " (also as webserver)";
-		$apphiawatha = "--unused--";
-	}
 } else {
 	$apphiawatha = '--uninstalled--';
 }
@@ -214,9 +203,7 @@ $b = implode("", $a);
 
 $phptype = db_get_value('serverweb', "pserver-{$b}", 'php_type');
 
-if (!isset($phptype)) {
-	$phptype = '[unknown]';
-}
+if (!isset($phptype)) { $phptype = 'php-fpm_event (default)'; }
 
 $seddata = 's/^prog=\"\(.*\)\"/\1/';
 exec("cat /etc/rc.d/init.d/php-fpm|grep 'prog='|sed -e '" . $seddata . "'", $out);
@@ -233,10 +220,36 @@ if ($out[0] !== null) {
 
 $out = null;
 
-$spamapp = slave_get_driver('spam');
-if ($spamapp === 'spamassassin') {
-	$spamapp === 'spamassassin-toaster';
+$pop3app = slave_get_driver('pop3');
+
+if (pop3app === 'courier') { $pop3app = 'courier-imap'; }
+
+exec("rpm -q $pop3app-toaster", $out);
+
+if ($out[0] !== null) {
+	$pop3app = $out[0];
+} else {
+	$pop3app = 'none';
 }
+
+$out = null;
+
+$smtpapp = slave_get_driver('smtp');
+
+exec("rpm -q $smtpapp-toaster", $out);
+
+if ($out[0] !== null) {
+	$smtpapp = $out[0];
+} else {
+	$smtpapp = 'none';
+}
+
+$out = null;
+
+$spamapp = slave_get_driver('spam');
+
+if ($spamapp === 'spamassassin') { $spamapp === 'spamassassin-toaster'; }
+
 exec("rpm -q $spamapp", $out);
 
 if ($out[0] !== null) {
@@ -246,6 +259,12 @@ if ($out[0] !== null) {
 }
 
 $out = null;
+
+if (file_exists("/etc/httpd/conf.d/suphp2.conf")) {
+	$secondary_php = 'on';
+} else {
+	$secondary_php = 'off';
+}
 
 exec("free -m", $meminfo);
 
@@ -266,32 +285,34 @@ echo "   - Hostname: " . gethostname() . "\n";
 echo "C. Services:\n";
 echo "   1. MySQL: " .  $appmysql . "\n";
 echo "   2. PHP: \n";
-echo "      - 'Branch' installed: " .  $appphp . "\n";
+echo "      - Installed:\n";
+echo "        - Branch: " .  $appphp . "\n";
 if ($phpmdirs) {
-	echo "      - 'Multiple' installed: \n";
+	echo "        - Multiple: \n";
 	foreach ($phpmdirs as $k => $v) {
 		$v1 = str_replace("/", "", str_replace("/opt/", "", $v));
 		$v2  = file_get_contents($v . "/version");
-		echo "        * " . $v1 . "-" . str_replace("\n", "", $v2) . "\n";
+		echo "          * " . $v1 . "-" . str_replace("\n", "", $v2) . "\n";
 	}
 }
-echo "      - 'Used' selected: " . $phpused . "\n";
+echo "      - Used: " . $phpused . "\n";
 
 $out = null;
 exec("chkconfig --list 'phpm-fpm'|grep ':on'", $out);
 
 if ($out[0] !== null) {
-	echo "      - 'Multiple' status: enable\n";
+	echo "      - Multiple: enable\n";
 } else {
-	echo "      - 'Multiple' status: disable\n";
+	echo "      - Multiple: disable\n";
 }
 
 echo "   3. Web Used: " . slave_get_driver('web') . "\n";
 echo "     - Hiawatha: " .  $apphiawatha . "\n";
 echo "     - Lighttpd: " .  $applighttpd . "\n";
 echo "     - Nginx: " .  $appnginx . "\n";
-echo "     - Httpd: " .  $apphttpd . "\n";
+echo "     - Apache: " .  $apphttpd . "\n";
 echo "       - PHP Type: " . $phptype . "\n";
+echo "       - Secondary PHP: " . $secondary_php . "\n";
 echo "   4. WebCache: " .  slave_get_driver('webcache') . "\n";
 echo "     - ATS: " .  $appats . "\n";
 echo "     - Squid: " .  $appsquid . "\n";
@@ -307,10 +328,9 @@ echo "   6. Mail: " .  $appqmail . "\n";
 if ($appdovecot !== '--uninstalled--') {
 	echo "      - with: " . $appdovecot  . "\n";
 }
-if ($appcourierimap !== '--uninstalled--') {
-	echo "      - pop3/imap4: " . $appcourierimap  . "\n";
-}
 
+echo "      - pop3/imap4: " . $pop3app  . "\n";
+echo "      - smtp: " . $smtpapp  . "\n";
 echo "      - spam: " . $spamapp  . "\n";
 
 //echo "\n";

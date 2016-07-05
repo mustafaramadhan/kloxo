@@ -1117,6 +1117,12 @@ function do_updateform($object, $subaction)
 			return;
 		}
 
+		if (isset($vlist['file_ownership_f'])) {
+			$ghtml->print_file_ownership($object);
+
+			return;
+		}
+
 		$string[] = $ghtml->object_variable_startblock($object, null, $title);
 		$string[] = $ghtml->object_inherit_classpath();
 		$ret['variable'] = $vlist;
@@ -1546,6 +1552,12 @@ function create_xml($object, $stuff, $ret)
 
 				continue;
 			}
+
+			if (csa($v[0], 'W')) {
+				$string[] = $ghtml->object_variable_warning($stuff, $k, $v[1]);
+
+				continue;
+			}
 		}
 
 		if (csa($descr[0], 'F')) {
@@ -1625,9 +1637,9 @@ function create_xml($object, $stuff, $ret)
 		$gbl->c_session->write();
 	}
 */
-	$token = getCSRFToken();
+//	$token = getCSRFToken();
 
-	$string[] = $ghtml->object_variable_hidden("frm_token", $token);
+//	$string[] = $ghtml->object_variable_hidden("frm_token", $token);
 
 	$string[] = $ghtml->object_variable_hidden("frm_action", $action);
 
@@ -1920,7 +1932,7 @@ function print_navigation($navig)
 ?>
 	</div>
 </td>
-<td align="right"><div style="padding: 2px"><span style='font-weight: bold; color: #3498db'>::&nbsp;<?php echo $login->getKeywordUc('click_help'); ?><span>&nbsp;::&nbsp;</div></td>
+<td align="right"><div style="padding: 2px"><span style='font-weight: bold; color: #3498db'><?php echo $login->getKeywordUc('login_as'); ?>&nbsp;'<?php echo $login->nname; ?>'&nbsp;&mdash;&nbsp;<?php echo $login->getKeywordUc('click_help'); ?><span>&nbsp;</div></td>
 </tr></table>
 
 <?php

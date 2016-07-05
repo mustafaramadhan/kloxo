@@ -60,7 +60,7 @@ function count_fail($v)
 	$count = 0;
 
 	foreach($v as $vv) {
-		if ($vv['access'] === 'fail') {
+		if ($vv['access'] !== 'success') {
 			$count++;
 		}
 	}
@@ -68,23 +68,23 @@ function count_fail($v)
 	return $count;
 }
 
-function parse_sshd_and_ftpd($fp, &$list)
+function getTimeFromSysLogString($line)
 {
-	$count = 0;
+	$line = trimSpaces($line);
+	$year = @ date('Y');
 
-	while(!feof($fp)) {
-		$count++;
+	list($month, $day, $time) = explode(" ", $line);
 
-	//	if ($count > 10000) { break; }
+	$month = get_num_for_month($month);
 
-		$string = fgets($fp);
+	list($hour, $min, $sec) = explode(':' , $time);
+//	$s = mktime($hour, $min, $sec, monthToInt($month), str_pad($day, 2, 0, STR_PAD_LEFT), $year);
+	$s = @mktime($hour, $min, $sec, $month, $day, $year);
 
-		if (strpos($string, 'sshd') !== false) {
-			sshLogString($string, $list);
-		} elseif (strpos($string, 'pure-ftpd') !== false) {
-			ftpLogString($string, $list);
-		}
-	}
+//	dprint(" $date $time $hour, $min $sec $month, $day , $year, Time: $s\n");
+
+	// Return date and size. The size param is not important. Our aim is to find the right position.
+	return $s;
 }
 
 function parse_ssh_log($fp, &$list)
@@ -105,28 +105,10 @@ function parse_ssh_log($fp, &$list)
 	}
 }
 
-function parse_ftp_log($fp, &$list)
-{
-	$count = 0;
-	$string = '';
-
-	while(!feof($fp)) {
-		$count++;
-
-	//	if ($count > 10000) { break; }
-
-		$string = fgets($fp);
-
-		if (strpos($string, 'pure-ftpd') !== false) {
-			ftpLogString($string, $list);
-		}
-	}
-}
-
 function sshLogString($string, &$list)
 {
 	//'refuse' => "refused connection",
-	$str = array('success' => "Accepted password",  'fail' => "Failed password");
+	$str = array('fail' => "Failed password", 'success' => "Accepted password");
 	$match = false;
 
 	foreach($str as $k => $v) {
@@ -164,9 +146,27 @@ function sshLogString($string, &$list)
 		$ip = strfrom($ip, "::ffff:");
 	}
 
-	if (csb($ip, "127")) { return; }
+	if ((csb($ip, "127")) || ($ip === '[::1]')) { return; }
 
 	$list[$ip][$time] = array('service' => 'ssh', 'user' => $user, 'access' => $access);
+}
+
+function parse_ftp_log($fp, &$list)
+{
+	$count = 0;
+	$string = '';
+
+	while(!feof($fp)) {
+		$count++;
+
+	//	if ($count > 10000) { break; }
+
+		$string = fgets($fp);
+
+		if (strpos($string, 'pure-ftpd') !== false) {
+			ftpLogString($string, $list);
+		}
+	}
 }
 
 function ftpLogString($string, &$list)
@@ -198,26 +198,77 @@ function ftpLogString($string, &$list)
 	$ip = $match[1];
 	$user = $match[2];
 
-	if (csb($ip, "127")) { return; }
+	if ((csb($ip, "127")) || ($ip === '[::1]')) { return; }
 
 	$list[$ip][$time] = array('service' => 'ftp', 'user' => $user, 'access' => $access);
 }
 
-function getTimeFromSysLogString($line)
+function parse_smtp_log($fp, &$list)
 {
-	$line = trimSpaces($line);
-	$year = @ date('Y');
+	$count = 0;
+	$string = '';
 
-	list($month, $day, $time) = explode(" ", $line);
+	while(!feof($fp)) {
+		$count++;
 
-	$month = get_num_for_month($month);
+	//	if ($count > 10000) { break; }
 
-	list($hour, $min, $sec) = explode(':' , $time);
-//	$s = mktime($hour, $min, $sec, monthToInt($month), str_pad($day, 2, 0, STR_PAD_LEFT), $year);
-	$s = @mktime($hour, $min, $sec, $month, $day, $year);
+		$string = fgets($fp);
 
-//	dprint(" $date $time $hour, $min $sec $month, $day , $year, Time: $s\n");
-
-	// Return date and size. The size param is not important. Our aim is to find the right position.
-	return $s;
+		if (strpos($string, 'vchkpw-smtp') !== false) {
+			smtpLogString($string, $list);
+		}
+	}
 }
+
+// MR -- REF: http://ossec-docs.readthedocs.io/en/latest/log_samples/email/vpopmail.html
+function smtpLogString($string, &$list)
+{
+	$str = array('invaliduser' => "vpopmail user not found", 'nopassword' => "null password given", 
+		'fail' => "password fail", 'success' => "login success");
+	$match = false;
+
+	foreach($str as $k => $v) {
+		if (strpos($string, $v) !== false) {
+			$match = true;
+			$access = $k;
+
+			break;
+		}
+	}
+
+	if (!$match) { return; }
+
+	$time = getTimeFromSysLogString($string);
+
+	switch ($access) {
+		case 'invaliduser':
+			preg_match("/.* vpopmail user not found ([^ ]*):([^ ]*)/", $string, $match);
+			$state = 'fail';
+			break;
+		case 'nopassword':
+			preg_match("/.* null password given ([^ ]*):([^ ]*)/", $string, $match);
+			$state = 'fail';
+			break;
+		case 'fail':
+			preg_match("/.* password fail \(.*\) ([^ ]*):([^ ]*)/", $string, $match);
+			$state = 'fail';
+			break;
+		default:
+			preg_match("/.* login success ([^ ]*):([^ ]*)/", $string, $match);
+			$state = 'success';
+			break;
+	}
+
+	if (!$match) { return; }
+
+	$ip = ($match[2]) ? $match[2] : '127.0.0.1' ;
+	$user = $match[1];
+
+	if ((csb($ip, "127")) || ($ip === '[::1]')) { return; }
+
+	// MR -- use 'state' instead 'access' because only 1 success between 4 options
+	$list[$ip][$time] = array('service' => 'smtp', 'user' => $user, 'access' => $state);
+}
+
+

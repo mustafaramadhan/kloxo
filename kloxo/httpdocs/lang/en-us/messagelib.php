@@ -357,11 +357,10 @@ $__information['rubyrails_addform__pre'] = "<p>The application would be normally
 	"<p>The path would be /home/client/ror/domain.com/applicationname. If you specify the <b>accessible directly</b> flag, ".
 	"then the application would be accessible at http://domain.com itself.</p>";
 
-$__information['installapp_addform__pre'] = "<p>To install an application in the document root, please leave the <b>Location</b> blank.</p>".
+$__information['easyinstaller_addform__pre'] = "<p>To install an application in the document root, please leave the <b>Location</b> blank.</p>".
 	"<p>To install the same application for another domain, please use the select box on the top, and change the domain to another, ".
 	"and you will be able to get same form with the new domain as the parent.</p>".
-	"<p>A message with login and url information will be sent to the contact email address you provide here.</p>".
-	"<p><b><span style='color: red;'>WARNING:</span></b> InstallApp is deprecated. Use Installatron or SpectrApps instead.</p>";
+	"<p>A message with login and url information will be sent to the contact email address you provide here.</p>";
 
 $__information['mysqldb_updateform_restore_pre'] = "<p>You can use this only to restore the backups that were explicitly taken in Kloxo-MR ".
 	"itself using the <b>Get Backup</b> tab.</p>".
@@ -445,8 +444,7 @@ $__information['updateform_switchprogram_pre'] = "<p>Switching Programs will tak
 	"<p>You will need to wait one minute before the new service properly restarts.</p>".
 	"<p>Add '<b>&lt;?php header(\"X-Hiawatha-Cache: 10\"); ?&gt;</b>' in top of index.php to boosting Hiawatha performance. ".
 	"Only Nginx and Hiawatha able to use 'microcache' at this moment.</p>".
-	"<p>Enable '<b>No fix config</b>' will perform no action to fix configuration where important for huge amount for domains; ".
-	"you must run '<b>sh /script/fix-all; sh /script/restart-all</b>' from ssh manually.</p>";
+	"<p>All web servers already installed and it's make faster switch between them. If select/unselect 'Use Apache 2.4' and or 'Use Pagespeed' better choose other webserver (other than Apache or Proxy) and then select back to previous.</p>";
 
 $__information['updateform_permalink_pre'] = "<p>Kloxo-MR comes with default permalink configuration for many apps.</p>".
 	"<p>Please select the application and the directory where you have installed it, ".
@@ -487,7 +485,7 @@ $__information['spam_updateform_update_pre'] = "<p>The 'score'--which can be 1-1
 
 $__information['web_updateform_enable_frontpage_flag_pre'] = "<p>The front page password will be the same as that of the system user (main ftp user).</p>";
 
-$__information['installappsnapshot_list__pre'] = "<p>Snapshots are the exact copy of the database and the files of your application at a particular time.</p>".
+$__information['easyinstallersnapshot_list__pre'] = "<p>Snapshots are the exact copy of the database and the files of your application at a particular time.</p>".
 	"<p>You can restore your application to a particular snapshot by clicking on the <b>restore</b> button.</p>";
 
 $__information['sshclient_updateform_disabled_pre'] = "<p>Your admin hasn't enabled shell access for you.</p>".
@@ -782,6 +780,16 @@ $__information['sslcert_addform_letsencrypt_pre'] = "<p>You can use <b>Let's Enc
 			"<li>Use 'Add SSL Link' to parent SSL (domain SSL) for activate subdomain SSL</li>" .
 			"<li>Possible 100 SANs (Subject Alternative Names) for each domain</li>" .
 			"<li>If using 'Remote Mail' for domain, remove 'webmail.domain.com' from 'Subject Alternative Name (SAN)'</li>" .			
+		"</ul>";
+
+$__information['sslcert_addform_startapi_pre'] = "<p>You can use <b>StartSSL API</b> free SSL here. </p>" . 
+	"Subdomain must be part of domain SSL and always create for domain only and add subdomain in SAN entry. " .
+	"</p>" .
+	"<p><b>Note</b>:" .
+		"<ul>" .
+			"<li>Expire in 365 days and then need renew (update) before expire</li>" .
+			"<li>Max 5 SANs per-domain</li>" .	
+			"<li>Need setting Key and token via 'sh /script/startapi.sh-account'</li>" .	
 		"</ul>";
 
 $__information['sslcert_addform_link_pre'] = "<p>For wildcards ('*') or 'Let's Encrypt' SSL, SSL for subdomain just link to their parent SSL";

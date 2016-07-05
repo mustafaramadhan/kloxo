@@ -1,0 +1,4 @@
+#!/bin/sh
+
+. /script/directory
+## lxphp.exe ../bin/easyinstaller-update.php

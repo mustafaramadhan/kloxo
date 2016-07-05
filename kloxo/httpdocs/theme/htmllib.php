@@ -20,11 +20,13 @@ class HtmlLib
 
 		if (csa($value, "<") || csa($value, ">") || csa($value, "(") || csa($value, ")")) {
 			log_security("XSS attempt: $value");
+
 			exit;
 		}
 
 		if (csa($value, "'")) {
 			log_security("SQL injection attempt: $value");
+
 			exit;
 		}
 	}
@@ -42,9 +44,11 @@ class HtmlLib
 				if (isset($k)) {
 					self::checkForScript($k);
 				}
+
 				if (isset($v['class'])) {
 					self::checkForScript($v['class']);
 				}
+
 				if (isset($v['nname'])) {
 					self::checkForScript($v['nname']);
 				}
@@ -97,6 +101,7 @@ class HtmlLib
 				$arvar = substr($key, 0, strpos($key, "_aaa_"));
 				$arkey = substr($key, strpos($key, "_aaa_") + 5);
 				$arval = $value;
+
 				if (!csa($arvar, "password") && !csa($arvar, "text")) {
 					$hvar[$arvar][$arkey] = $arval;
 				} else {
@@ -179,7 +184,9 @@ class HtmlLib
 			if (is_array($value)) {
 				foreach ($value as $k => &$v) {
 					if (is_array($v)) {
-						foreach ($v as $nk => &$nv) $nv = urldecode($nv);
+						foreach ($v as $nk => &$nv) {
+							$nv = urldecode($nv);
+						}
 					} else {
 						$v = urldecode($v);
 					}
@@ -271,7 +278,9 @@ class HtmlLib
 		$v = $this->__http_vars[$newkey];
 
 		if (is_array($v)) {
-			foreach ($v as $kk => $vv) $nv[$kk] = $vv;
+			foreach ($v as $kk => $vv) {
+				$nv[$kk] = $vv;
+			}
 		} else {
 			$nv = $v;
 		}
@@ -1905,7 +1914,7 @@ class HtmlLib
 		$realv = $variable;
 
 		//hack hack...
-		if ($class === 'installapp') {
+		if ($class === 'easyinstaller') {
 			if (strstr($variable, "addform")) {
 				$variable = strfrom($variable, "_");
 			}
@@ -2142,7 +2151,6 @@ class HtmlLib
 
 		<script>
 			function sendchmod(a, b) {
-				b.frm_ffile_c_select_f.value = 'perm';
 				b.frm_ffile_c_file_permission_f.value = a.user.value + a.group.value + a.other.value;
 
 				if (typeof a.frm_ffile_c_target_f != 'undefined') {
@@ -2164,25 +2172,6 @@ class HtmlLib
 
 				b.submit();
 			}
-
-			function sendchown(a, b) {
-				b.frm_ffile_c_select_f.value = 'own';
-				b.frm_ffile_c_user_f.value = a.frm_ffile_c_user_f.value;
-				b.frm_ffile_c_group_f.value = a.frm_ffile_c_group_f.value;
-
-				if (typeof a.frm_ffile_c_recursive_f != 'undefined') {
-			//	if (a.frm_ffile_c_recursive_f.checked) {
-					if (confirm("<?=$login->getKeywordUC('ownership_confirm');?>")) {
-						b.frm_ffile_c_recursive_f.value = 'on';
-					} else {
-						b.frm_ffile_c_recursive_f.value = 'off';
-					}
-				} else {
-					b.frm_ffile_c_recursive_f.value = 'off';
-				}
-
-				b.submit();
-			}
 		</script>
 
 		<form name="frmsend" method="post" action="/display.php" accept-charset="utf-8">
@@ -2192,93 +2181,11 @@ class HtmlLib
 		$post['frm_o_o'] = $this->__http_vars['frm_o_o'];
 		$this->print_input_vars($post);
 ?>
-			<input type="hidden" id="frm_ffile_c_select_f" name="frm_ffile_c_select_f" value="perm">
-
-			<input type="hidden" id="frm_ffile_c_user_f" name="frm_ffile_c_user_f" value="">
-			<input type="hidden" id="frm_ffile_c_group_f" name="frm_ffile_c_group_f" value="">
-
-			<input type="hidden" id="frm_ffile_c_target_f" name="frm_ffile_c_target_f" value="all">
 			<input type="hidden" id="frm_ffile_c_recursive_f" name="frm_ffile_c_recursive_f" value="Off">
-
-
+			<input type="hidden" id="frm_ffile_c_target_f" name="frm_ffile_c_target_f" value="all">
 			<input type="hidden" id="frm_action" name="frm_action" value="update">
 			<input type="hidden" id="frm_subaction" name="frm_subaction" value="perm">
 		</form>
-
-<div style="padding:0px; border:1px solid #eee; background-color: #def; width: 330px; margin: 0 auto;">
-	<table cellpadding="10" cellspacing="5" border="0" width="100%" style="background-color:#efead8;">
-		<tr>
-			<td nowrap width="100%" align="center"><?=$login->getKeywordUC('ownership_change');?></td>
-		</tr>
-	</table>
-	<form name="chown" method="get" action="/display.php" accept-charset="utf-8">
-		<table cellpadding="0" cellspacing="0" border="0" width="100%">
-			<tr>
-				<td colspan="4" height="4">&nbsp;</td>
-			</tr>
-			<tr>
-				<td colspan="1">&nbsp;&nbsp;<?=$login->getKeywordUC('ownership_current');?>:</td>
-				<td colspan="3"><?=$ffile->other_username;?></td>
-			</tr>
-			<tr>
-				<td colspan="4" height="4">&nbsp;</td>
-			</tr>
-			<tr>
-				<td colspan="1">&nbsp;&nbsp;<?=$login->getKeywordUC('ownership_user');?>:</td>
-				<td colspan="3"><select name="frm_ffile_c_user_f">
-						<option SELECTED value="<?=$ffile->__username_o;?>"><?=$ffile->__username_o;?></option>
-						<option value="apache">apache</option>
-<?php
-	if ($login->isAdmin()) {
-?>
-						<option value="root">root</option>
-<?php
-	}
-?>
-					</select>
-				</td>
-			</tr>
-			<tr>
-				<td colspan="4" height="4">&nbsp;</td>
-			</tr>
-			<tr>
-				<td colspan="1">&nbsp;&nbsp;<?=$login->getKeywordUC('ownership_group');?>:</td>
-				<td colspan="3"><select name="frm_ffile_c_group_f">
-						<option SELECTED value="<?=$ffile->__username_o;?>"><?=$ffile->__username_o;?></option>
-						<option value="apache">apache</option>
-<?php
-	if ($login->isAdmin()) {
-?>
-						<option value="root">root</option>
-<?php
-	}
-?>
-					</select>
-				</td>
-			</tr>
-<?php
-	if ($ffile->ttype === 'directory') {
-?>
-			<tr>
-				<td colspan="4" height="4">&nbsp;</td>
-			</tr>
-			<tr>
-				<td colspan="4">&nbsp;&nbsp;<input type="checkbox" name="frm_ffile_c_recursive_f">&nbsp;<?=$login->getKeywordUC('ownership_recursively');?></td>
-			</tr>
-<?php
-	}
-?>
-			<tr>
-				<td colspan="4" height="4">&nbsp;</td>
-			</tr>
-			<tr>
-				<td colspan="4" align="right"><input style="margin:5px" type="button" onclick="sendchown(document.chown,document.frmsend)" class="submitbutton" name="change" value="&nbsp;&nbsp;Change&nbsp;&nbsp;"></td>
-			</tr>
-		</table>
-	</form>
-</div>
-
-<br/>
 
 <div style="padding:0px; border:1px solid #eee; background-color: #def; width: 330px; margin: 0 auto;">
 	<table cellpadding="10" cellspacing="5" border="0" width="100%" style="background-color:#efead8;">
@@ -2375,6 +2282,129 @@ class HtmlLib
 	</script>
 
 </div>
+<?php
+	}
+
+	function print_file_ownership($ffile)
+	{
+		global $gbl, $sgbl, $login;
+
+		$imgheadleft = $login->getSkinDir() . '/images/top_lt.gif';
+		$imgheadright = $login->getSkinDir() . '/images/top_rt.gif';
+		$imgheadbg = $login->getSkinDir() . 'top_bg.gif';
+		$imgtopline = $login->getSkinDir() . '/images/top_line.gif';
+		$tablerow_head = $login->getSkinDir() . '/images/tablerow_head.gif';
+
+		$img_url = $this->get_expand_url();
+?>
+
+		<script>
+			function sendchown(a, b) {
+				b.frm_ffile_c_user_f.value = a.frm_ffile_c_user_f.value;
+				b.frm_ffile_c_group_f.value = a.frm_ffile_c_group_f.value;
+
+				if (typeof a.frm_ffile_c_recursive_f != 'undefined') {
+			//	if (a.frm_ffile_c_recursive_f.checked) {
+					if (confirm("<?=$login->getKeywordUC('ownership_confirm');?>")) {
+						b.frm_ffile_c_recursive_f.value = 'on';
+					} else {
+						b.frm_ffile_c_recursive_f.value = 'off';
+					}
+				} else {
+					b.frm_ffile_c_recursive_f.value = 'off';
+				}
+
+				b.submit();
+			}
+		</script>
+
+		<form name="frmsend" method="post" action="/display.php" accept-charset="utf-8">
+			<input type='hidden' name='frm_token' value='<?= getCSRFToken(); ?>'>
+			<input type="hidden" name="frm_ffile_c_file_ownership_f">
+<?php
+		$post['frm_o_o'] = $this->__http_vars['frm_o_o'];
+		$this->print_input_vars($post);
+?>
+			<input type="hidden" id="frm_ffile_c_user_f" name="frm_ffile_c_user_f" value="">
+			<input type="hidden" id="frm_ffile_c_group_f" name="frm_ffile_c_group_f" value="">
+			<input type="hidden" id="frm_ffile_c_recursive_f" name="frm_ffile_c_recursive_f" value="Off">
+			<input type="hidden" id="frm_action" name="frm_action" value="update">
+			<input type="hidden" id="frm_subaction" name="frm_subaction" value="own">
+		</form>
+
+<div style="padding:0px; border:1px solid #eee; background-color: #def; width: 330px; margin: 0 auto;">
+	<table cellpadding="10" cellspacing="5" border="0" width="100%" style="background-color:#efead8;">
+		<tr>
+			<td nowrap width="100%" align="center"><?=$login->getKeywordUC('ownership_change');?></td>
+		</tr>
+	</table>
+	<form name="chown" method="get" action="/display.php" accept-charset="utf-8">
+		<table cellpadding="0" cellspacing="0" border="0" width="100%">
+			<tr>
+				<td colspan="4" height="4">&nbsp;</td>
+			</tr>
+			<tr>
+				<td colspan="1">&nbsp;&nbsp;<?=$login->getKeywordUC('ownership_current');?>:</td>
+				<td colspan="3"><?=$ffile->other_username;?></td>
+			</tr>
+			<tr>
+				<td colspan="4" height="4">&nbsp;</td>
+			</tr>
+			<tr>
+				<td colspan="1">&nbsp;&nbsp;<?=$login->getKeywordUC('ownership_user');?>:</td>
+				<td colspan="3"><select name="frm_ffile_c_user_f">
+						<option SELECTED value="<?=$ffile->__username_o;?>"><?=$ffile->__username_o;?></option>
+						<option value="apache">apache</option>
+<?php
+	if ($login->isAdmin()) {
+?>
+						<option value="root">root</option>
+<?php
+	}
+?>
+					</select>
+				</td>
+			</tr>
+			<tr>
+				<td colspan="4" height="4">&nbsp;</td>
+			</tr>
+			<tr>
+				<td colspan="1">&nbsp;&nbsp;<?=$login->getKeywordUC('ownership_group');?>:</td>
+				<td colspan="3"><select name="frm_ffile_c_group_f">
+						<option SELECTED value="<?=$ffile->__username_o;?>"><?=$ffile->__username_o;?></option>
+						<option value="apache">apache</option>
+<?php
+	if ($login->isAdmin()) {
+?>
+						<option value="root">root</option>
+<?php
+	}
+?>
+					</select>
+				</td>
+			</tr>
+<?php
+	if ($ffile->ttype === 'directory') {
+?>
+			<tr>
+				<td colspan="4" height="4">&nbsp;</td>
+			</tr>
+			<tr>
+				<td colspan="4">&nbsp;&nbsp;<input type="checkbox" name="frm_ffile_c_recursive_f">&nbsp;<?=$login->getKeywordUC('ownership_recursively');?></td>
+			</tr>
+<?php
+	}
+?>
+			<tr>
+				<td colspan="4" height="4">&nbsp;</td>
+			</tr>
+			<tr>
+				<td colspan="4" align="right"><input style="margin:5px" type="button" onclick="sendchown(document.chown,document.frmsend)" class="submitbutton" name="change" value="&nbsp;&nbsp;Change&nbsp;&nbsp;"></td>
+			</tr>
+		</table>
+	</form>
+</div>
+
 <?php
 	}
 
@@ -2626,6 +2656,36 @@ class HtmlLib
 		return $rvr;
 	}
 
+	function object_variable_warning($stuff, $variable, $value = null)
+	{
+		$this->fix_stuff_or_class($stuff, $variable, $class, $svalue);
+
+		if ($value === null) {
+			$value = $svalue;
+		}
+
+		if ($this->is_special_variable($value)) {
+			$descr = $value->descr;
+			$value = $value->value;
+		} else {
+			$descr = $this->get_classvar_description_after_overload($class, $variable);
+		}
+
+		$desc = $descr[2];
+
+		if (is_array($value)) {
+			$value = implode('\n', $value);
+		}
+
+		$rvr = new FormVar();
+		$rvr->name = "frm_{$class}_c_$variable";
+		$rvr->desc = $desc;
+		$rvr->type = 'warning';
+		$rvr->value = $value;
+
+		return $rvr;
+	}
+
 	function xml_variable_endblock()
 	{
 		return ' </block> </start>';
@@ -2724,7 +2784,7 @@ class HtmlLib
 	{
 		$this->fix_stuff_or_class($stuff, $variable, $class, $nvalue);
 		$name = "frm_{$class}_c_{$variable}";
-
+/*
 		if (!$value) {
 			$value = $nvalue;
 		}
@@ -2732,7 +2792,7 @@ class HtmlLib
 		if ($nonameflag) {
 			$name = null;
 		}
-
+*/
 		$descr = $this->get_classvar_description_after_overload($class, $variable);
 		$val = exec_class_method($class, 'getTextAreaProperties', $variable);
 
@@ -3449,7 +3509,7 @@ class HtmlLib
 			}
 		}
 
-		// Ka has to come AFTER n. Otherwise it won't work in the getshowalist, especially for web/installapp combo.
+		// Ka has to come AFTER n. Otherwise it won't work in the getshowalist, especially for web/easyinstaller combo.
 		if (isset($post['k'])) {
 			$desc = get_classvar_description($post['k']['class']);
 
@@ -5233,16 +5293,14 @@ class HtmlLib
 		$noselect = (isset($button[1]) && $button[1]) ? 1 : 0;
 		$doconfirm = (isset($button[3]) && $button[3]) ? 1 : 0;
 		$imgbtnsep = $login->getSkinDir() . "/images/btn_sep.gif";
-
 ?>
 
 		<td width=10></td>
 		<td align="center" valign=bottom>
 
-			<form name="form<?= $form_name ?>" method="post" action="<?= $path ?>">
+			<form name="form<?= $form_name ?>" method="post" action="<?= $url ?>">
 				<input type='hidden' name='frm_token' value='<?= getCSRFToken(); ?>'>
 <?php
-
 		$this->print_input_vars($post);
 
 		if (!$noselect) {
@@ -6881,7 +6939,7 @@ class HtmlLib
 			if (strpos($varname, '_num') !== false) {
 				$maxval_view = $maxval;
 			} else {
-				$maxval_view = number_format($maxval, 0, '', ',');
+				$maxval_view = number_format((int)$maxval, 0, '', ',');
 			}
 		}
 
@@ -6893,7 +6951,7 @@ class HtmlLib
 			}
 		} else {
 			if ($val) {
-				$val_view = number_format($val, 2, '.', ',');
+				$val_view = number_format((int)$val, 2, '.', ',');
 			} else {
 				$val_view = '0.00';
 			}
@@ -7871,6 +7929,30 @@ class HtmlLib
 
 					<?= $variable_description ?>
 					<div style='border: 1px solid #aaa; background-color: #dfe; padding: 2px'><?= $value ?></div>
+
+<?php
+				break;
+			case "warning" :
+				$value = $variable->value;
+				$value = self::fix_lt_gt($value);
+
+			//	if ($sgbl->isLxlabsClient()) {
+					$value = preg_replace("+(https://[^ \n]*)+", "<a href='$1' target='_blank' style='text-decoration:underline'> " . $login->getKeywordUc('click_here') . " </a>", $value);
+			//	}
+
+				if ($value !== "") {
+					$value = str_replace("\n", "\n<br />", trim($value, "\n"));
+				} else {
+					$value = "&nbsp;";
+				}
+
+				$ttname = $variable->name;
+
+				// Don't ever make this hidden. It is absolutely not necessary. The value is available directly itself.
+?>
+
+					<span style="color:#f11;font-weight:bold"><?= $variable_description ?></span>
+					<div style='border: 1px solid #aaa; background-color: #fcc; padding: 2px'><?= $value ?></div>
 
 <?php
 				break;

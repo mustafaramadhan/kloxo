@@ -430,14 +430,14 @@ function changeDriverFunc($server, $class, $pgm)
 
 	if (is_array($driver[$class])) {
 		if (!array_search_bool($pgm, $driver[$class])) {
-			$str = implode(" ", $driver[$class]);
-			print("The driver name isn't correct: Available drivers for $class: $str\n");
+			$str = "'" . implode("', '", $driver[$class]) . "'";
+			print("\nAvailable drivers for $class: $str\n");
 
 			return;
 		}
 	} else {
 		if ($driver[$class] !== $pgm) {
-			print("The driver name isn't correct: Available driver for $class: {$driver[$class]}\n");
+			print("\nAvailable driver for '$class': '{$driver[$class]}'\n");
 
 			return;
 		}
@@ -452,7 +452,7 @@ function changeDriverFunc($server, $class, $pgm)
 
 	$dr->write();
 
-	print("Successfully changed Driver for $class on $server->nname to $pgm\n");
+	print("Successfully changed driver for '$class' on '$server->nname' to '$pgm'\n");
 }
 
 function slave_get_db_pass()
@@ -688,7 +688,7 @@ function check_if_port_on($port)
 	return false;
 }
 
-function installAppPHP($var, $cmd)
+function EasyinstallerPHP($var, $cmd)
 {
 	// TODO LxCenter: The created dir and file should be owned by the user
 	global $gbl, $sgbl, $login, $ghtml;
@@ -696,11 +696,11 @@ function installAppPHP($var, $cmd)
 	$domain = $var['domain'];
 	$appname = $var['appname'];
 
-	lxfile_mkdir("/home/httpd/$domain/httpdocs/__installapplog");
+	lxfile_mkdir("/home/httpd/$domain/httpdocs/__easyinstallerlog");
 	$i = 0;
 
 	while (1) {
-		$file = "/home/httpd/$domain/httpdocs/__installapplog/$appname$i.html";
+		$file = "/home/httpd/$domain/httpdocs/__easyinstallerlog/$appname$i.html";
 		if (!lxfile_exists($file)) {
 			break;
 		}
@@ -900,16 +900,16 @@ function validate_filename($filename)
 
 }
 
-function execinstallappPhp($domain, $appname, $cmd)
+function execEasyinstallerPhp($domain, $appname, $cmd)
 {
 	// TODO LxCenter: The created dir and file should be owned by the user
 	global $gbl, $sgbl, $login, $ghtml;
 
-	lxfile_mkdir("/home/httpd/$domain/httpdocs/__installapplog");
+	lxfile_mkdir("/home/httpd/$domain/httpdocs/__easyinstallerlog");
 	$i = 0;
 
 	while (1) {
-		$file = "/home/httpd/$domain/httpdocs/__installapplog/$appname$i.html";
+		$file = "/home/httpd/$domain/httpdocs/__easyinstallerlog/$appname$i.html";
 
 		if (!lxfile_exists($file)) {
 			break;
@@ -2359,7 +2359,8 @@ function exit_if_another_instance_running()
 
 function lx_core_lock($file = null)
 {
-	global $argv;
+	global $argv, $sgbl;
+
 	$prog = basename($argv[0]);
 
 	// This is a hack.. If we can't get the arg, then that means we are in the cgi mode,
@@ -2376,17 +2377,19 @@ function lx_core_lock($file = null)
 		$file = basename($file);
 	}
 
-	$pidfile = "__path_program_root/pid/$file";
+	$pidfile = "$sgbl->__path_program_root/pid/$file";
 	$pid = null;
 
 	if (lxfile_exists($pidfile)) {
 		$pid = lfile_get_contents($pidfile);
 	}
 
-	dprint("PID#:  " . $pid . "\n");
+	$str  = "-----------------------------\n";
+	
+	$str .= "PID#:  " . $pid . "\n";
 
 	if (!$pid) {
-		dprint("\n$prog:$file\nNo pid file $pidfile detected..\n");
+		$str .= "$prog:$file\nNo pid file $pidfile detected..\n";
 		lfile_put_contents($pidfile, os_getpid());
 
 		return false;
@@ -2401,18 +2404,24 @@ function lx_core_lock($file = null)
 
 	if (!$name || $name !== $prog) {
 		if (!$name) {
-			dprint("\n$prog:$file\nStale Lock file detected.\n$pidfile\nRemoving it...\n ");
+			$str .= "$prog:$file\nStale Lock file detected.\n$pidfile\nRemoving it...\n";
 		} else {
-			dprint("\n$prog:$file\nStale lock file found.\nAnother program $name is running on it..\n");
+			$str .= "$prog:$file\nStale lock file found.\nAnother program $name is running on it..\n";
 		}
 
 		lxfile_rm($pidfile);
 		lfile_put_contents($pidfile, os_getpid());
-
-		return false;
+		
+		$ret = false;
+	} else {
+		$ret = true;
 	}
 
-	return true;
+	$str .= "-----------------------------\n";
+
+	dprint($str);
+		
+	return $ret;
 }
 
 function lx_core_lock_check_only($prog, $file = null)
@@ -4172,16 +4181,6 @@ function addLineIfNotExistPattern($filename, $searchpattern, $pattern)
 
 }
 
-function fix_self_ssl($nolog = null)
-{
-	global $gbl, $sgbl, $login, $ghtml;
-
-	log_cleanup("Fix Self SSL", $nolog);
-	log_cleanup("- Fix process", $nolog);
-
-	lxfile_cp("theme/filecore/program.pem", "../etc/program.pem");
-}
-
 function remove_line($filename, $pattern)
 {
 	$list = lfile($filename);
@@ -4764,7 +4763,8 @@ function lxguard_main($clearflag = false, $since = false)
 
 	$list = lfile_get_unserialize("$lxgpath/access.info");
 
-	$type = array('sshd' => '/var/log/secure', 'pure-ftpd' => '/var/log/messages');
+	$type = array('sshd' => '/var/log/secure', 'pure-ftpd' => '/var/log/messages',
+		'vpopmail' => '/var/log/maillog');
 
 	foreach ($type as $key => $file) {
 		if (file_exists($file)) {
@@ -4778,6 +4778,8 @@ function lxguard_main($clearflag = false, $since = false)
 					parse_ssh_log($fp, $list);
 				} elseif ($key === 'pure-ftpd') {
 					parse_ftp_log($fp, $list);
+				} elseif ($key === 'vpopmail') {
+					parse_smtp_log($fp, $list);
 				}
 
 				lfile_put_serialize("$lxgpath/access.info", $list);
@@ -4795,33 +4797,42 @@ function lxguard_main($clearflag = false, $since = false)
 	$hdn = lfile_get_unserialize("$lxgpath/hostdeny.info");
 	$deny = lx_array_merge(array($deny, $hdn));
 
-	$string = null;
+	$str_host = null;
+	$str_tcprules = null;
+	$str_spamdyke = null;
 
 	foreach ($deny as $k => $v) {
 		if (csb($k, "127")) {
 			continue;
 		}
 
-		$string .= "ALL : $k\n";
+		// MR -- make sure no LF
+		$k = str_replace("\n", "", $k);
+
+		$str_host .= "ALL : $k\n";
+		$str_tcprules .= "$k:deny\n";
+	//	$str_tcprules .= "$k:allow,RBLSMTP=\"Your Are Blocked. Go away!\"\n";
+		$str_spamdyke .= "$k\n";
 	}
 
-//	if (!$string) { return; }
+	dprint("Debug: \str_host is:\n$str_host\n");
 
-	dprint("Debug: \$string is:\n" . $string . "\n");
+	$start_host[] = "###Start Program Hostdeny config Area";
+	$start_str_host = $start_host[0];
+	$end_host[] = "###End Program HostDeny config Area";
+	$end_str_host = $end_host[0];
 
-	$stlist[] = "###Start Program Hostdeny config Area";
-	$stlist[] = "###Start Lxdmin Area";
-	$stlist[] = "###Start Kloxo Area";
-	$stlist[] = "###Start Lxadmin Area";
+	file_put_between_comments("root", $start_host, $end_host, $start_str_host, $end_str_host, "/etc/hosts.deny", $str_host);
 
-	$endlist[] = "###End Program HostDeny config Area";
-	$endlist[] = "###End Kloxo Area";
-	$endlist[] = "###End Lxadmin Area";
+	$start_tcprules[] = "###Start Program tcp.smtp config Area";
+	$start_str_tcprules = $start_tcprules[0];
+	$end_tcprules[] = "###End Program tcp.smtp config Area";
+	$end_str_tcprules = $end_smtp[0];
 
-	$startstring = $stlist[0];
-	$endstring = $endlist[0];
+	file_put_between_comments("root", $start_tcprules, $end_tcprules, $start_str_tcprules, $end_str_tcprules, "/etc/tcprules.d/tcp.smtp", $str_tcprules);
+	exec("/usr/bin/qmailctl cdb");
 
-	file_put_between_comments("root", $stlist, $endlist, $startstring, $endstring, "/etc/hosts.deny", $string);
+	file_put_contents('/var/qmail/spamdyke/blacklist_ip', $str_spamdyke);
 
 	if ($clearflag) {
 		lxfile_rm("$lxgpath/access.info");
@@ -5006,17 +5017,6 @@ function setWatchdogDefaults($nolog = null)
 	log_cleanup("- Set process", $nolog);
 
 	watchdog::addDefaultWatchdog('localhost');
-	$a = null;
-	$driverapp = $gbl->getSyncClass(null, 'localhost', 'web');
-	$a['web'] = $driverapp;
-	$driverapp = $gbl->getSyncClass(null, 'localhost', 'spam');
-	$a['spam'] = $driverapp;
-	$driverapp = $gbl->getSyncClass(null, 'localhost', 'dns');
-	$a['dns'] = $driverapp;
-	$driverapp = $gbl->getSyncClass(null, 'localhost', 'webcache');
-	$a['webcache'] = $driverapp;
-
-	slave_save_db("driver", $a);
 }
 
 function fixMySQLRootPassword($nolog = null)
@@ -5171,67 +5171,68 @@ function fixupDnsRec($l)
 	$l->write();
 }
 
-function installinstallapp($nolog = null)
+function installEasyinstaller($nolog = null)
 {
 	global $gbl, $sgbl, $login, $ghtml;
 
-	// Install/Update installapp if needed or remove installapp when installapp is disabled.
+	// Install/Update easyinstaller if needed or remove easyinstaller when easyinstaller is disabled.
 	// Added in Kloxo 6.1.4
 
-	log_cleanup("Initialize InstallApp", $nolog);
+	log_cleanup("Initialize 'Easy Installer'", $nolog);
 
 	//--- trick for no install on kloxo install process
-	if (lxfile_exists("/var/cache/kloxo/kloxo-install-disableinstallapp.flg")) {
-		log_cleanup("- InstallApp is disabled by InstallApp Flag", $nolog);
-		exec("echo 1 > ../etc/flag/disableinstallapp.flg");
+	if (lxfile_exists("/var/cache/kloxo/kloxo-install-disableeasyinstaller.flg")) {
+		log_cleanup("- 'Easy Installer' is disabled by Flag", $nolog);
+		exec("echo 1 > ../etc/flag/disableeasyinstaller.flg");
 
 		return;
 	}
-	/*
-		 if ($sgbl->is_this_master()) {
-			 $gen = $login->getObject('general')->generalmisc_b;
-			 $diflag = $gen->isOn('disableinstallapp');
-			 log_cleanup("- InstallApp is disabled by InstallApp Flag", $nolog);
-			 exec("echo 1 > ../etc/flag/disableinstallapp.flg");
-		 } else {
-			 $diflag = false;
-			 log_cleanup("- InstallApp is not disabled by InstallApp Flag", $nolog);
-			 lxfile_rm("../etc/flag/disableinstallapp.flg");
-		 }
-	 */
-	if (lxfile_exists("../etc/flag/disableinstallapp.flg")) {
-		log_cleanup("- InstallApp is disabled, removing InstallApp", $nolog);
-		lxfile_rm_rec("/home/kloxo/httpd/installapp/");
-		lxfile_rm_rec("/home/kloxo/httpd/installappdata/");
-		exec("cd /var/cache/kloxo/ ; rm -f installapp*.tar.gz;");
+
+	if ($sgbl->is_this_master()) {
+		$gen = $login->getObject('general')->generalmisc_b;
+		$diflag = $gen->isOn('disableeasyinstaller');
+		log_cleanup("- 'Easy Installer' is disabled by Flag", $nolog);
+		exec("echo 1 > ../etc/flag/disableeasyinstaller.flg");
+	} else {
+		$diflag = false;
+		log_cleanup("- 'Easy Installer' is not disabled by Flag", $nolog);
+		lxfile_rm("../etc/flag/disableeasyinstaller.flg");
+	}
+
+	if (lxfile_exists("../etc/flag/disableeasyinstaller.flg")) {
+		log_cleanup("- 'Easy Installer' is disabled, removing 'Easy Installer'", $nolog);
+		lxfile_rm_rec("/home/kloxo/httpd/easyinstaller/");
+		lxfile_rm_rec("/home/kloxo/httpd/easyinstallerdata/");
+		exec("cd /var/cache/kloxo/ ; rm -f easyinstaller*.tar.gz;");
 
 		return;
 	} else {
-		if (!lxfile_exists("__path_kloxo_httpd_root/installappdata")) {
-			log_cleanup("- Update InstallApp data", $nolog);
-			installapp_data_update();
+		if (!lxfile_exists("__path_kloxo_httpd_root/easyinstallerdata")) {
+			log_cleanup("- Update 'Easy Installer' data", $nolog);
+			easyinstaller_data_update();
 		}
 
-		if (lfile_exists("../etc/remote_installapp")) {
-			log_cleanup("- Remote InstallApp detected, removing InstallApp", $nolog);
-			lxfile_rm_rec("/home/kloxo/httpd/installapp/");
-			exec("cd /var/cache/kloxo/ ; rm -f installapp*.tar.gz;");
+		if (lfile_exists("../etc/remote_easyinstaller")) {
+			log_cleanup("- Remote 'Easy Installer' detected, removing 'Easy Installer'", $nolog);
+			lxfile_rm_rec("/home/kloxo/httpd/easyinstaller/");
+			exec("cd /var/cache/kloxo/ ; rm -f easyinstaller*.tar.gz;");
 
 			return;
 		}
 
 		// Line below Removed in Kloxo 6.1.4
 		return;
-		/*
-			 log_cleanup("- Creating installapp dir", $nolog);
-			 lxfile_mkdir("__path_kloxo_httpd_root/installapp");
+	/*
+		log_cleanup("- Creating easyinstaller dir", $nolog);
+		lxfile_mkdir("__path_kloxo_httpd_root/easyinstaller");
 
-			 if (!lxfile_exists("__path_kloxo_httpd_root/installapp/wordpress")) {
-				 log_cleanup("- Install/Update InstallApp", $nolog);
-				 lxshell_php("../bin/installapp-update.php");
-			 }
-			 return;
-		 */
+		if (!lxfile_exists("__path_kloxo_httpd_root/easyinstaller/wordpress")) {
+			log_cleanup("- Install/Update easyinstaller", $nolog);
+			lxshell_php("../bin/easyinstaller-update.php");
+		}
+
+		 return;
+	 */
 	}
 }
 
@@ -5503,22 +5504,9 @@ function setRpmReplaced($rpmname, $replacewith)
 
 function isRpmInstalled($rpmname)
 {
-	/*
-		// MR -- exec not work and must '-q' instead '-qa' to know true/false
-		$ret = lxshell_return("rpm", "-q", $rpmname);
+	exec("rpm -qa {$rpmname}", $out);
 
-		if ($ret) {
-			return false;
-		} else {
-			return true;
-		}
-	*/
-	exec("rpm -q {$rpmname}", $out);
-
-	$ret = strpos($out[0], "{$rpmname}-");
-
-	// MR -- must be '!== 0' because no exist sometimes with value > 0; 0 because position in 0
-	if ($ret !== 0) {
+	if (count($out) < 1) {
 		return false;
 	} else {
 		return true;
@@ -6043,7 +6031,7 @@ function setFixChownChmodMailPerUser($select, $user, $nolog = null)
 	$list = $login->getList('client');
 
 	foreach ($list as $c) {
-		if ($c->nname = $user) {
+		if ($c->nname === $user) {
 			$clname = $c->getPathFromName('nname');
 
 			$cdir = "/home/{$clname}";
@@ -6417,7 +6405,7 @@ function setCheckPackages($nolog = null)
 	$phpbranch = getRpmBranchInstalled('php');
 
 	log_cleanup("Checking for rpm packages", $nolog);
-
+/*
 	if (isRpmInstalled("dovecot-toaster")) {
 		$imap_rpm = "";
 		$authlib_rpm = "";
@@ -6425,7 +6413,7 @@ function setCheckPackages($nolog = null)
 		$imap_rpm = "courier-imap-toaster";
 		$authlib_rpm = "courier-authlib-toaster";
 	}
-	
+*/
 	if ((strpos($phpbranch, '52') !== false) || (strpos($phpbranch, '53') !== false)) {
 		$phpbranchmysql = "{$phpbranch}-mysql";
 	} else {
@@ -6443,7 +6431,7 @@ function setCheckPackages($nolog = null)
 		"{$phpbranch}-mcrypt", "{$phpbranch}-xml", "{$phpbranch}-bcmath", "{$phpbranch}-pgsql",
 		"webalizer", "dos2unix", "rrdtool", "xinetd", "lxjailshell");
 */
-	$list = array("autorespond-toaster", $authlib_rpm, $imap_rpm,
+	$list = array("autorespond-toaster", "courier-imap-toaster", "dovecot-toaster",
 		"daemontools-toaster", "ezmlm-toaster", "libdomainkeys-toaster",
 		"libsrs2-toaster", "maildrop-toaster", "qmail-pop3d-toaster", "qmail-toaster",
 		"ripmime", "ucspi-tcp-toaster", "vpopmail-toaster", "fetchmail", "bogofilter",
@@ -7086,7 +7074,8 @@ function updatecleanup($nolog = null)
 
 	setPrepareKloxo($nolog);
 
-	install_bogofilter($nolog);
+	// MR -- disable (from 'old' Kloxo style)
+//	install_bogofilter($nolog);
 
 	setRemoveOldDirs($nolog);
 
@@ -7180,7 +7169,7 @@ function updatecleanup($nolog = null)
 	log_cleanup("- Remove process", $nolog);
 	remove_ssh_self_host_key();
 
-//	installInstallApp($nolog);
+//	installEasyinstaller($nolog);
 }
 
 function setInitialServices($nolog = null)
@@ -7206,9 +7195,13 @@ function setInitialServices($nolog = null)
 
 	setInitialAdminAccount($nolog);
 
+	setAllWebserverInstall($nolog);
+
 	setInitialAllDnsConfigs($nolog);
 	setInitialAllWebConfigs($nolog);
 	setInitialAllWebCacheConfigs($nolog);
+
+	setPhpUpdate();
 
 	setInitialPhpIniConfig($nolog);
 	getInitialPhpFpmConfig($nolog);
@@ -7540,10 +7533,8 @@ function setCopyWebConfFiles($webdriver, $nolog = null)
 	}
 }
 
-function setCopyOpenSSLConfFiles()
+function setCopyOpenSSLConfFiles($nolog = null)
 {
-	$nolog = null;
-
 	$pathsrc = "../file/openssl";
 	$pathdrv = "/opt/configs/openssl";
 
@@ -7557,10 +7548,8 @@ function setCopyOpenSSLConfFiles()
 	}
 }
 
-function setCopyLetsEncryptConfFiles()
+function setCopyLetsEncryptConfFiles($nolog = null)
 {
-	$nolog = null;
-
 	$pathsrc = "../file/letsencrypt";
 	$pathdrv = "/opt/configs/letsencrypt";
 
@@ -7574,10 +7563,8 @@ function setCopyLetsEncryptConfFiles()
 	}
 }
 
-function setCopyAcmeshConfFiles()
+function setCopyAcmeshConfFiles($nolog = null)
 {
-	$nolog = null;
-
 	$pathsrc = "../file/acme.sh";
 	$pathdrv = "/opt/configs/acme.sh";
 
@@ -7588,6 +7575,21 @@ function setCopyAcmeshConfFiles()
 
 	if (file_exists("/home/acme.sh")) {
 		lxfile_rm_rec("/home/acme.sh");
+	}
+}
+
+function setCopyStartapishConfFiles($nolog = null)
+{
+	$pathsrc = "../file/startapi.sh";
+	$pathdrv = "/opt/configs/startapi.sh";
+
+	log_cleanup("Copy all contents from {$pathsrc}", $nolog);
+
+	log_cleanup("- Copy to {$pathdrv}", $nolog);
+	exec("'cp' -rf {$pathsrc} /opt/configs");
+
+	if (file_exists("/home/startapi.sh")) {
+		lxfile_rm_rec("/home/startapi.sh");
 	}
 }
 
@@ -8171,7 +8173,11 @@ function setSyncDrivers($nolog = null)
 
 //	include "../file/driver/rhel.inc";
 
-	$classlist = array('web' => 'apache', 'webcache' => 'none', 'dns' => 'bind', 'spam' => 'bogofilter');
+//	$classlist = array('web' => 'apache', 'webcache' => 'none', 'dns' => 'bind', 
+//		'pop3' => 'courier', 'imap4' => 'courier', 'smtp' => 'qmail', 'spam' => 'bogofilter');
+
+	$classlist = array('web' => 'apache', 'webcache' => 'none', 'dns' => 'bind', 
+		'pop3' => 'courier', 'smtp' => 'qmail', 'spam' => 'bogofilter');
 
 //	$server = $login->getFromList('pserver', 'localhost');
 //	$driverobject = $server->getObject('driver');
@@ -8185,24 +8191,35 @@ function setSyncDrivers($nolog = null)
 
 	foreach ($classlist as $key => $val) {
 		if ($nodriver) {
-			$driver_from_slavedb = $classlist[$key];
+			$driver_from_slavedb = $val;
 		} else {
 			$driver_from_slavedb = slave_get_driver($key);
-		}
 
+			if (!$driver_from_slavedb) {
+				$driver_from_slavedb = $val;
+			}
+		}
 
 		$driver_from_table = $gbl->getSyncClass(null, 'localhost', $key);
 
 		if ($driver_from_table !== $driver_from_slavedb) {
-			$driver_from_table = $driver_from_slavedb;
+			if (!$driver_from_table) {
+				$realval[$key] = $val;
+			} else {
+				$realval[$key] = $driver_from_table;
+			}
 
-			log_cleanup("- Synchronize for '{$key}' to '{$driver_from_table}'", $nolog);
-			exec("sh /script/setdriver --server=localhost --class={$key} --driver={$driver_from_table}");
+			log_cleanup("- Synchronize for '{$key}' to '{$realval[$key]}'", $nolog);
 		} else {
-			log_cleanup("- No need synchronize for '{$key}' - already using '{$driver_from_table}'", $nolog);
+			$realval[$key] = $driver_from_table;
+
+			log_cleanup("- No need synchronize for '{$key}' - already using '{$realval[$key]}'", $nolog);
 		}
-		
+
+		exec("sh /script/setdriver --server=localhost --class={$key} --driver={$realval[$key]}");
 	}
+
+	slave_save_db('driver', $realval);
 }
 
 function setEnableQuota($nolog = null)
@@ -8377,6 +8394,23 @@ function setInstallAcmesh($nolog = null)
 	}
 }
 
+function setRemoveAcmesh($nolog = null)
+{
+	exec("sh /script/acme.sh-remover");
+}
+
+function setInstallStartapish($nolog = null)
+{
+	if (!file_exists("/root/.startapi.sh/startapi.sh/startapi.sh")) {
+		exec("sh /script/startapi.sh-installer");
+	}
+}
+
+function setRemoveStartapish($nolog = null)
+{
+	exec("sh /script/startapi.sh-remover");
+}
+
 function setAllSSLPortions($nolog = null)
 {
 	log_cleanup("Setting All SSL Portions", $nolog);
@@ -8390,6 +8424,9 @@ function setAllSSLPortions($nolog = null)
 //	log_cleanup("- Installing acme.sh", $nolog);
 //	setInstallAcmesh($nolog);
 
+	log_cleanup("- Installing startapi.sh", $nolog);
+	setInstallStartapish($nolog);
+
 	log_cleanup("- Fixing SSL path", $nolog);
 	setFixSSLPath($nolog);
 
@@ -8401,6 +8438,9 @@ function setAllSSLPortions($nolog = null)
 
 	log_cleanup("- Copying 'acme.sh' config Files", $nolog);
 	setCopyAcmeshConfFiles();
+
+	log_cleanup("- Copying 'startapi.sh' config Files", $nolog);
+	setCopyStartapishConfFiles();
 }
 
 function getListOnList($pname)
@@ -8436,4 +8476,97 @@ function callWithSudo($res, $username=null)
 	$rmt = unserialize(base64_decode($var));
 
 	return $rmt;
+}
+
+function setAllWebserverInstall($nolog = null)
+{
+	log_cleanup("Installing All Web servers", $nolog);
+
+//	$list = array('httpd', 'lighttpd' , 'nginx', 'hiawatha');
+
+	$list = getAllWebDriverList();
+
+	$ws = array('nginx' => 'nginx nginx-module* GeoIP spawn-fcgi fcgiwrap', 'lighttpd' => 'lighttpd lighttpd-fastcgi',
+		'hiawatha' => 'hiawatha hiawatha-addons', 'httpd' => 'httpd httpd-tools',
+		'httpd24u' => 'httpd24u httpd24u-tools httpd24u-filesystem');
+
+	$hm = array('httpd' => 'mod_ssl mod_rpaf mod_ruid2 mod_suphp mod_fastcgi mod_fcgid mod_define',
+		'httpd24u' => 'mod24u_ssl mod24u_session mod24u_suphp mod24u_ruid2 mod24u_fcgid mod24u_fastcgi');
+
+	if (file_exists("../etc/flag/use_apache24.flg")) {
+		$use_apache24 = true;
+	} else {
+		$use_apache24 = false;
+	}
+
+	foreach ($list as $k => $v) {
+		$out = null;
+
+		if ($v === 'apache') {
+			exec("rpm -qa httpd", $out);
+
+			if ($use_apache24) {
+				if (count($out) > 0) {
+					exec("yum -y replace httpd --replace-with=httpd24u;" .
+						"yum -y remove {$hm['httpd']};" .
+						"yum -y install {$hm['httpd24u']}");
+
+					log_cleanup("- Replacing 'httpd' to 'httpd24u'", $nolog);
+				} else {
+					exec("yum -y install {$ws['httpd24u']} {$hm['httpd24u']}");
+					log_cleanup("- Installing 'httpd24u'", $nolog);
+				}
+			} else {
+				$out2 = null;
+
+				exec("rpm -qa httpd24u", $out2);
+
+				if (count($out2) > 0) {
+					exec("yum -y replace httpd24u --replace-with=httpd;" .
+						"yum -y remove {$hm['httpd24u']};" .
+						"yum -y install {$hm['httpd']}");
+
+					log_cleanup("- Replacing 'httpd24' to 'httpd'", $nolog);
+				} else {
+					exec("yum -y install {$ws['httpd']} {$hm['httpd']}");
+
+					log_cleanup("- Installing 'httpd24u'", $nolog);
+				}
+
+				log_cleanup("- Installing 'httpd'", $nolog);
+			}
+
+			log_cleanup("- Inactivating 'httpd'", $nolog);
+			exec("chkconfig httpd off");
+		} else {
+			$t = $ws[$v];
+
+			exec("yum -y install {$t}; chkconfig {$v} off");
+
+			log_cleanup("- Installing '{$v}'", $nolog);
+
+			log_cleanup("- Inactivating '{$v}'", $nolog);
+			exec("chkconfig {$v} off");
+		}
+	}
+
+	$webs = getWebDriverList();
+
+	foreach ($webs as $k => $v) {
+		if ($v === 'apache') { $v = 'httpd'; }
+
+		log_cleanup("- Activating '{$v}' as Web server", $nolog);
+		exec("chkconfig {$v} on");
+
+		if ($v === 'nginx') {
+			exec("chkconfig spawn-fcgi on");
+		}
+	}
+}
+
+function setPhpUpdate($nolog = null)
+{
+	log_cleanup("Updating All Php (branch and multiple)", $nolog);
+
+	exec("yum -y update php*; sh /script/phpm-updater");
 }

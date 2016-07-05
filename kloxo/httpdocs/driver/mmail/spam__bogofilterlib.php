@@ -1,6 +1,6 @@
 <?php
 
-class spam__bogofilter extends lxDriverClass 
+class Spam__bogofilter extends lxDriverClass 
 {
 	static function installMe()
 	{

@@ -1,0 +1,31 @@
+#!/bin/sh
+
+kloxopath='/usr/local/lxlabs/kloxo'
+startapipath='/root/.startapi.sh'
+cronfile='/var/spool/cron/root'
+startapishfile='/usr/bin/startapi.sh'
+logpath='/var/log/startapi.sh'
+
+if [ -f ${startapipath}/startapi.sh ] ; then
+	${startapipath}/startapi.sh --uninstall >/dev/null 2>&1
+fi
+
+if [ -L ${startapishfile} ] ; then
+	'rm' -f ${startapishfile} >/dev/null 2>&1
+fi
+
+if [ ! -d ${kloxopath}/startapi.sh ] ; then
+	'rm' -f ${logpath} >/dev/null 2>&1
+fi
+
+if [ ! -d ${logpath} ] ; then
+	'rm' -f ${logpath} >/dev/null 2>&1
+fi
+
+if [ -f ${cronfile} ] ; then
+	if [ "$(cat ${cronfile}|grep 'startapi-cron.sh')" != "" ] ; then
+		## MR -- remove old cron
+		sed -i '/startapi\-cron\.sh/d' ${cronfile} >/dev/null 2>&1
+	fi
+fi
+

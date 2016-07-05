@@ -297,7 +297,6 @@ function reinstall_hiawatha() {
 
 	yum ${YUM_ACTION} hiawatha -y
 	chkconfig hiawatha off
-	rm -f /etc/init.d/hiawatha
 }
 
 ### 4. SELECT portion

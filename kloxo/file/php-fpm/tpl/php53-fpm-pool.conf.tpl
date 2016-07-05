@@ -27,9 +27,9 @@
 	}
 
 	if ($maxchildren) {
-		$startservers = (($sts = (int)($maxchildren / 3 * 2)) < 2) ? 2 : $sts;
-		$minspareservers = (($mis = (int)($maxchildren / 3)) < 2) ? 2 : $mis;
-		$maxspareservers = (($mas = (int)($maxchildren / 3 * 2)) < 2) ? 2 : $mas;
+		$startservers = (($sts = (int)($maxchildren / 3)) < 2) ? 2 : $sts;
+		$minspareservers = (($mis = (int)($maxchildren / 6)) < 2) ? 2 : $mis;
+		$maxspareservers = (($mas = (int)($maxchildren / 3)) < 2) ? 2 : $mas;
 		$maxchildren = (($mac = (int)($maxchildren)) < 2) ? 2 : $mac;
 	} else {
 		$startservers = '4';
@@ -72,6 +72,10 @@
 		$date_timezone_flag = 'Europe/London';
 	}
 
+	if (!$phpfpm_type_flag) {
+		$phpfpm_type_flag = 'ondemand';
+	}
+
 	if ($user === 'apache') {
 		$chroot_dir = "/home/kloxo/httpd";
 		$enable_chroot = ";";
@@ -98,8 +102,8 @@ user = <?php echo $user; ?>
 
 group = <?php echo $user; ?>
 
-;pm = dynamic
-pm = ondemand
+pm = <?php echo $phpfpm_type_flag; ?>
+
 pm.max_children = <?php echo $maxchildren; ?>
 
 pm.start_servers = <?php echo $startservers; ?>
@@ -109,7 +113,6 @@ pm.min_spare_servers = <?php echo $minspareservers; ?>
 pm.max_spare_servers = <?php echo $maxspareservers; ?>
 
 pm.max_requests = 1000
-
 pm.process_idle_timeout = 20s
 
 ;pm.status_path = /status

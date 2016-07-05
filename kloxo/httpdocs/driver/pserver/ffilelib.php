@@ -48,7 +48,7 @@ class Ffile extends Lxclass
 	static $__desc_content = array("t", "", "file");
 	static $__desc___username_o = array("", "", "user_name");
 //	static $__desc_other_username = array("", "", "owner");
-	static $__desc_other_username = array("", "", "owner", "a=updateform&sa=perm");
+	static $__desc_other_username = array("", "", "owner", "a=updateform&sa=own");
 	static $__desc_pvrename = array("b", "", "ren", "a=updateform&sa=rename");
 	static $__desc_pvrename_v_rename = array("", "", "rename");
 	static $__desc_pvdownload = array("b", "", "dn", "a=update&sa=download");
@@ -69,6 +69,7 @@ class Ffile extends Lxclass
 	static $__desc_download_url_f = array("n", "", "upload_from_url");
 	static $__desc_download_overwrite_f = array("f", "", "overwrite_file");
 	static $__desc_file_permission_f = array("", "", "size_(k)");
+	static $__desc_file_ownership_f = array("", "", "size_(k)");
 	static $__desc_new_name_f = array("", "", "new_name");
 	static $__desc_newfolder_f = array("", "", "folder_name");
 	static $__desc_newfile_f = array("", "", "file_name");
@@ -101,6 +102,7 @@ class Ffile extends Lxclass
 	static $__acdesc_update_fancyedit = array("", "", "html_edit");
 	static $__acdesc_update_cut = array("", "", "cut");
 	static $__acdesc_update_perm = array("", "", "change_permissions");
+	static $__acdesc_update_own = array("", "", "change_ownership");
 	static $__acdesc_update_newdir = array("", "", "newdir");
 	static $__acdesc_update_newfile = array("", "", "newfile");
 	static $__acdesc_update_filedelete = array("", "", "trash");
@@ -666,15 +668,27 @@ class Ffile extends Lxclass
 		// Hack Hack.. This should be done by display.php itself. But permissions are now handled separately..
 		$this->setUpdateSubaction('perm');
 
-		$this->select_f = $param['select_f'];
+		$this->recursive_f = $param['recursive_f'];
+		$this->target_f = $param['target_f'];
+		$this->newperm = $param['file_permission_f'];
 
-		$this->user_f = $param['user_f'];
-		$this->group_f = $param['group_f'];
+		$gbl->__this_redirect = $this->getParentDirUrl();
 
-		$this->target_f = $param['user_f'];
+		return null;
+	}
+
+	function updateOwn($param)
+	{
+		global $gbl, $sgbl, $login, $ghtml;
+
+		// Hack Hack.. This should be done by display.php itself. But permissions are now handled separately..
+		$this->setUpdateSubaction('own');
 
 		$this->recursive_f = $param['recursive_f'];
-		$this->newperm = $param['file_permission_f'];
+		$this->user_f = $param['user_f'];
+		$this->group_f = $param['group_f'];
+		$this->newown = $param['file_ownership_f'];
+
 		$gbl->__this_redirect = $this->getParentDirUrl();
 
 		return null;
@@ -835,14 +849,16 @@ class Ffile extends Lxclass
 				break;
 
 			case "perm":
-				$vlist['select_f'] = array();
-
 				$vlist['file_permission_f'] = array();
+				$vlist['target_f'] = array();
+				$vlist['recursive_f'] = array();
 
+				break;
+
+			case "own":
+				$vlist['file_ownership_f'] = array();
 				$vlist['user_f'] = array();
 				$vlist['group_f'] = array();
-				$vlist['target_f'] = array();
-
 				$vlist['recursive_f'] = array();
 
 				break;
@@ -993,7 +1009,14 @@ class Ffile extends Lxclass
 		}
 
 		$alist['property'][] = 'a=show';
-		
+
+		$alist['property'][] = "a=updateform&sa=perm";
+		$alist['property'][] = "a=updateform&sa=own";
+
+		if ($this->nname !== '/') {
+			$alist['property'][] = "a=updateform&sa=rename";
+		}
+
 		if ($this->isOn('readonly')) {
 			if (!$this->is_dir()) {
 				$alist['property'][] = "a=update&sa=download";
@@ -1106,28 +1129,6 @@ class Ffile extends Lxclass
 		}
 
 		return false;
-	}
-
-	function get_permissions($mode)
-	{
-	/*
-		$S_ISVTX    0001000; //  sticky bit (see below)
-		$S_IRWXU    00700 ;   // mask for file owner permissions
-		$S_IRUSR    00400 ;   // owner has read permission
-		$S_IWUSR    00200 ;   // owner has write permission
-		$S_IXUSR    00100 ;   // owner has execute permission
-		$S_IRWXG    00070 ;   // mask for group permissions
-		$S_IRGRP    00040 ;  //  group has read permission
-		$S_IWGRP    00020 ;   // group has write permission
-		$S_IXGRP    00010 ;  //  group has execute permission
-		$S_IRWXO    00007 ;   // mask for permissions for others (not in group)
-		$S_IROTH    00004 ;   // others have read permission
-		$S_IWOTH    00002 ;  //  others have write permisson
-		$S_IXOTH    00001 ;  //  others have execute permission
-	*/
-
-	//	if (mode & $S_IRUSR) {
-	//	}
 	}
 
 	function getPermissions(&$perm_number)

@@ -73,7 +73,9 @@ function check_for_debug($file)
 {
 	global $gbl, $sgbl, $login, $ghtml;
 	if (file_exists(getreal($file))) {
-		$sgbl->dbg = file_get_contents(getreal($file));
+		// MR -- fix if file have LF
+		$content = file_get_contents(getreal($file));
+		$sgbl->dbg = $content[0];
 		if ($sgbl->dbg != "1" && $sgbl->dbg != "2" && $sgbl->dbg != "3" && $sgbl->dbg != "4" && $sgbl->dbg != "5") {
 			$sgbl->dbg = -1;
 		}
@@ -2129,10 +2131,7 @@ function lx_exception_handler($e)
 {
 	global $gbl, $sgbl, $login, $ghtml;
 
-	print("Notice : The resource you have requested doesn't exist. The server returned the error message: <br> ");
-
-	print(" {$e->getMessage()} $e->variable $e->value ");
-	print("<br>\n\n");
+	print("Error message: {$e->getMessage()} {$e->variable} {$e->value}\n");
 
 	if ($sgbl->dbg <= 0) {
 		return;

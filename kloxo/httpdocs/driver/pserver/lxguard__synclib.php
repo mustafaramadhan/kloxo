@@ -2,7 +2,6 @@
 
 class lxguard__sync extends lxDriverClass
 {
-
 	function dbactionUpdate($subaction)
 	{
 		$rmt = new Remote();

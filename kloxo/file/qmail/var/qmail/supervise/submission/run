@@ -1,5 +1,10 @@
 #!/bin/sh
 
+if [ -f ./custom.run ] ; then
+	. ./custom.run
+	return $?
+fi
+
 QMAILDUID=$(id -u qmaild)
 NOFILESGID=$(id -g qmaild)
 MAXSMTPD=$(cat /var/qmail/control/concurrencyincoming)

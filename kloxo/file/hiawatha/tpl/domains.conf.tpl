@@ -6,11 +6,14 @@
 
 <?php
 
-$custom_header="#CustomHeader = Strict-Transport-Security:max-age=31536000
-\tCustomHeader = X-Content-Type-Options:nosniff
+$header_base="CustomHeader = X-Content-Type-Options:nosniff
 \tCustomHeader = X-XSS-Protection:1;mode=block
 \tCustomHeader = X-Frame-Options:SAMEORIGIN
-\tCustomHeader = Access-Control-Allow-Origin:*";
+\tCustomHeader = Access-Control-Allow-Origin:*
+\t#CustomHeader = Content-Security-Policy:script-src 'self'
+\tCustomHeader = X-Supported-By:Kloxo-MR 7.0";
+
+$header_ssl="CustomHeader = Strict-Transport-Security:max-age=2592000;preload";
 
 $error_handler="Alias = /error:/home/kloxo/httpd/error
 \tErrorHandler = 401:/error/401.html
@@ -131,6 +134,16 @@ $disabledocroot = "/home/kloxo/httpd/disable";
 $domcleaner = str_replace('-', '_', str_replace('.', '_', $domainname));
 
 //if (!$reverseproxy) {
+?>
+
+Directory {
+    DirectoryID = cache_expire
+    Path = <?php echo $rootpath; ?>
+
+    Extensions = jpeg, jpg, gif, png, ico, css, js
+    ExpirePeriod 1 week
+}
+<?php
 	if ($statsapp === 'awstats') {
 ?>
 
@@ -148,13 +161,12 @@ Directory {
 }
 <?php
 	} elseif ($statsapp === 'webalizer') {
-		if ($statsprotect) {
 ?>
 
 Directory {
 	DirectoryId = stats_dir_for_<?php echo $domclean; ?>
 
-	Path = /webstats
+	Path = /stats
 <?php
 		if ($statsprotect) {
 ?>
@@ -163,9 +175,7 @@ Directory {
 		}
 ?>
 }
-
 <?php
-		}
 	}
 
 	if ($dirprotect) {
@@ -275,7 +285,9 @@ VirtualHost {
 
 
 	Alias = /.well-known:/var/run/letsencrypt/.well-known
-	UseDirectory = well_known
+
+	<?php echo $header_base; ?>
+
 <?php
 			if ($count !== 0) {
 ?>
@@ -286,7 +298,7 @@ VirtualHost {
 ?>
 	#RequiredCA = <?php echo $certname; ?>.ca
 
-	<?php echo $custom_header; ?>
+	<?php echo $header_ssl; ?>
 
 <?php
 				}
@@ -312,13 +324,13 @@ VirtualHost {
 
 
 	EnablePathInfo = yes
+
+	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
+	UseLocalConfig = yes
 <?php
 			if ($reverseproxy) {
 ?>
 
-	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
-	UseLocalConfig = yes
-	#IgnoreDotHiawatha = yes
 	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
 	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
@@ -342,7 +354,9 @@ VirtualHost {
 
 
 	Alias = /.well-known:/var/run/letsencrypt/.well-known
-	UseDirectory = well_known
+
+	<?php echo $header_base; ?>
+
 <?php
 			if ($count !== 0) {
 ?>
@@ -353,7 +367,7 @@ VirtualHost {
 ?>
 	#RequiredCA = <?php echo $certname; ?>.ca
 
-	<?php echo $custom_header; ?>
+	<?php echo $header_ssl; ?>
 
 <?php
 				}
@@ -379,13 +393,13 @@ VirtualHost {
 
 
 	EnablePathInfo = yes
+
+	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
+	UseLocalConfig = yes
 <?php
 			if ($reverseproxy) {
 ?>
 
-	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
-	UseLocalConfig = yes
-	#IgnoreDotHiawatha = yes
 	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
 	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
@@ -412,7 +426,9 @@ VirtualHost {
 
 
 	Alias = /.well-known:/var/run/letsencrypt/.well-known
-	UseDirectory = well_known
+
+	<?php echo $header_base; ?>
+
 <?php
 			if ($count !== 0) {
 ?>
@@ -423,7 +439,7 @@ VirtualHost {
 ?>
 	#RequiredCA = <?php echo $certname; ?>.ca
 
-	<?php echo $custom_header; ?>
+	<?php echo $header_ssl; ?>
 
 <?php
 				}
@@ -457,13 +473,13 @@ VirtualHost {
 
 
 	ExecuteCGI = yes
+
+	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
+	UseLocalConfig = yes
 <?php
 			if ($reverseproxy) {
 ?>
 
-	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
-	UseLocalConfig = yes
-	#IgnoreDotHiawatha = yes
 	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
 	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
@@ -490,7 +506,9 @@ VirtualHost {
 
 
 	Alias = /.well-known:/var/run/letsencrypt/.well-known
-	UseDirectory = well_known
+
+	<?php echo $header_base; ?>
+
 <?php
 				if ($count !== 0) {
 ?>
@@ -501,7 +519,7 @@ VirtualHost {
 ?>
 	#RequiredCA = <?php echo $certname; ?>.ca
 
-	<?php echo $custom_header; ?>
+	<?php echo $header_ssl; ?>
 
 <?php
 					}
@@ -540,7 +558,9 @@ VirtualHost {
 
 
 	Alias = /.well-known:/var/run/letsencrypt/.well-known
-	UseDirectory = well_known
+
+	<?php echo $header_base; ?>
+
 <?php
 				if ($count !== 0) {
 ?>
@@ -551,7 +571,7 @@ VirtualHost {
 ?>
 	#RequiredCA = <?php echo $certname; ?>.ca
 
-	<?php echo $custom_header; ?>
+	<?php echo $header_ssl; ?>
 
 <?php
 					}
@@ -585,13 +605,13 @@ VirtualHost {
 
 
 	ExecuteCGI = yes
+
+	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
+	UseLocalConfig = yes
 <?php
 			if ($reverseproxy) {
 ?>
 
-	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
-	UseLocalConfig = yes
-	#IgnoreDotHiawatha = yes
 	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
 	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
@@ -619,7 +639,9 @@ VirtualHost {
 
 
 	Alias = /.well-known:/var/run/letsencrypt/.well-known
-	UseDirectory = well_known
+
+	<?php echo $header_base; ?>
+
 <?php
 		if ($count !== 0) {
 			if ($enablessl) {
@@ -631,7 +653,7 @@ VirtualHost {
 ?>
 	#RequiredCA = <?php echo $certname; ?>.ca
 
-	<?php echo $custom_header; ?>
+	<?php echo $header_ssl; ?>
 
 <?php
 				}
@@ -681,6 +703,8 @@ VirtualHost {
 	WebsiteRoot = <?php echo $rootpath; ?>
 
 
+	UseDirectory = cache_expire
+
 	EnablePathInfo = yes
 
 	Alias = /__kloxo:/home/<?php echo $user; ?>/kloxoscript
@@ -709,9 +733,6 @@ VirtualHost {
 
 	AccessLogfile = /home/httpd/<?php echo $domainname ?>/stats/<?php echo $domainname ?>-custom_log
 	ErrorLogfile = /home/httpd/<?php echo $domainname ?>/stats/<?php echo $domainname ?>-error_log
-
-	UseDirectory = stats_dir_for_<?php echo $domclean; ?>
-
 <?php
 				if ($statsapp === 'awstats') {
 ?>
@@ -727,6 +748,11 @@ VirtualHost {
 	Alias = /stats:/home/httpd/<?php echo $domainname; ?>/webstats
 <?php
 				}
+?>
+
+	UseDirectory = stats_dir_for_<?php echo $domclean; ?>
+
+<?php
 			}
 		}
 
@@ -757,14 +783,14 @@ VirtualHost {
 	UseFastCGI = php_for_<?php echo $domclean; ?>
 
 	UseToolkit = block_shellshock, redirect_<?php echo $domcleaner; ?>, findindexfile, permalink
+
+	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
+	UseLocalConfig = yes
 <?php
 		} else {
 			if ($enablephp) {
 ?>
 
-	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
-	UseLocalConfig = yes
-	#IgnoreDotHiawatha = yes
 	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
 	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
@@ -813,7 +839,9 @@ VirtualHost {
 
 
 	Alias = /.well-known:/var/run/letsencrypt/.well-known
-	UseDirectory = well_known
+
+	<?php echo $header_base; ?>
+
 <?php
 					if ($count !== 0) {
 						if ($enablessl) {
@@ -825,7 +853,7 @@ VirtualHost {
 ?>
 	#RequiredCA = <?php echo $certname; ?>.ca
 
-	<?php echo $custom_header; ?>
+	<?php echo $header_ssl; ?>
 
 <?php
 							}
@@ -863,13 +891,13 @@ VirtualHost {
 
 
 	ExecuteCGI = yes
+
+	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
+	UseLocalConfig = yes
 <?php
 					if (($reverseproxy) && ($webselected === 'back-end')) {
 ?>
 
-	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
-	UseLocalConfig = yes
-	#IgnoreDotHiawatha = yes
 	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
 	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
@@ -902,7 +930,9 @@ VirtualHost {
 
 
 	Alias = /.well-known:/var/run/letsencrypt/.well-known
-	UseDirectory = well_known
+
+	<?php echo $header_base; ?>
+
 <?php
 					if ($count !== 0) {
 						if ($enablessl) {
@@ -914,7 +944,7 @@ VirtualHost {
 ?>
 	#RequiredCA = <?php echo $certname; ?>.ca
 
-	<?php echo $custom_header; ?>
+	<?php echo $header_ssl; ?>
 
 <?php
 							}
@@ -952,13 +982,13 @@ VirtualHost {
 
 
 	ExecuteCGI = yes
+
+	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
+	UseLocalConfig = yes
 <?php
 					if (($reverseproxy) && ($webselected === 'back-end')) {
 ?>
 
-	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
-	UseLocalConfig = yes
-	#IgnoreDotHiawatha = yes
 	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
 	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
@@ -995,7 +1025,9 @@ VirtualHost {
 
 
 	Alias = /.well-known:/var/run/letsencrypt/.well-known
-	UseDirectory = well_known
+
+	<?php echo $header_base; ?>
+
 <?php
 					if ($count !== 0) {
 ?>
@@ -1006,7 +1038,7 @@ VirtualHost {
 ?>
 	#RequiredCA = <?php echo $certname; ?>.ca
 
-	<?php echo $custom_header; ?>
+	<?php echo $header_ssl; ?>
 
 <?php
 						}
@@ -1032,13 +1064,13 @@ VirtualHost {
 
 
 	EnablePathInfo = yes
+
+	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
+	UseLocalConfig = yes
 <?php
 					if ($reverseproxy) {
 ?>
 
-	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
-	UseLocalConfig = yes
-	#IgnoreDotHiawatha = yes
 	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
 	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
@@ -1066,7 +1098,9 @@ VirtualHost {
 
 
 	Alias = /.well-known:/var/run/letsencrypt/.well-known
-	UseDirectory = well_known
+
+	<?php echo $header_base; ?>
+
 <?php
 						if ($count !== 0) {
 ?>
@@ -1077,7 +1111,7 @@ VirtualHost {
 ?>
 	#RequiredCA = <?php echo $certname; ?>.ca
 
-	<?php echo $custom_header; ?>
+	<?php echo $header_ssl; ?>
 
 <?php
 							}
@@ -1109,13 +1143,13 @@ VirtualHost {
 
 
 	ExecuteCGI = yes
+
+	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
+	UseLocalConfig = yes
 <?php
 						if ($reverseproxy) {
 ?>
 
-	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
-	UseLocalConfig = yes
-	#IgnoreDotHiawatha = yes
 	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
 	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
@@ -1142,7 +1176,9 @@ VirtualHost {
 
 
 	Alias = /.well-known:/var/run/letsencrypt/.well-known
-	UseDirectory = well_known
+
+	<?php echo $header_base; ?>
+
 <?php
 						if ($count !== 0) {
 ?>
@@ -1153,7 +1189,7 @@ VirtualHost {
 ?>
 	#RequiredCA = <?php echo $certname; ?>.ca
 
-	<?php echo $custom_header; ?>
+	<?php echo $header_ssl; ?>
 
 <?php
 							}
@@ -1187,13 +1223,13 @@ VirtualHost {
 
 
 	ExecuteCGI = yes
+
+	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
+	UseLocalConfig = yes
 <?php
 						if ($reverseproxy) {
 ?>
 
-	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
-	UseLocalConfig = yes
-	#IgnoreDotHiawatha = yes
 	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
 	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
@@ -1236,7 +1272,9 @@ VirtualHost {
 
 
 	Alias = /.well-known:/var/run/letsencrypt/.well-known
-	UseDirectory = well_known
+
+	<?php echo $header_base; ?>
+
 <?php
 					if ($count !== 0) {
 ?>
@@ -1247,7 +1285,7 @@ VirtualHost {
 ?>
 	#RequiredCA = <?php echo $certname; ?>.ca
 
-	<?php echo $custom_header; ?>
+	<?php echo $header_ssl; ?>
 
 <?php
 						}
@@ -1281,13 +1319,13 @@ VirtualHost {
 
 
 	ExecuteCGI = yes
+
+	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
+	UseLocalConfig = yes
 <?php
 					if ($reverseproxy) {
 ?>
 
-	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
-	UseLocalConfig = yes
-	#IgnoreDotHiawatha = yes
 	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
 	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
@@ -1315,7 +1353,9 @@ VirtualHost {
 
 
 	Alias = /.well-known:/var/run/letsencrypt/.well-known
-	UseDirectory = well_known
+
+	<?php echo $header_base; ?>
+
 <?php
 						if ($count !== 0) {
 ?>
@@ -1326,7 +1366,7 @@ VirtualHost {
 ?>
 	#RequiredCA = <?php echo $certname; ?>.ca
 
-	<?php echo $custom_header; ?>
+	<?php echo $header_ssl; ?>
 
 <?php
 							}
@@ -1360,13 +1400,13 @@ VirtualHost {
 
 
 	ExecuteCGI = yes
+
+	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
+	UseLocalConfig = yes
 <?php
 						if ($reverseproxy) {
 ?>
 
-	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
-	UseLocalConfig = yes
-	#IgnoreDotHiawatha = yes
 	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
 	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
@@ -1393,7 +1433,9 @@ VirtualHost {
 
 
 	Alias = /.well-known:/var/run/letsencrypt/.well-known
-	UseDirectory = well_known
+
+	<?php echo $header_base; ?>
+
 <?php
 						if ($count !== 0) {
 ?>
@@ -1404,7 +1446,7 @@ VirtualHost {
 ?>
 	#RequiredCA = <?php echo $certname; ?>.ca
 
-	<?php echo $custom_header; ?>
+	<?php echo $header_ssl; ?>
 
 <?php
 							}
@@ -1438,13 +1480,13 @@ VirtualHost {
 
 
 	ExecuteCGI = yes
+
+	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
+	UseLocalConfig = yes
 <?php
 						if ($reverseproxy) {
 ?>
 
-	## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
-	UseLocalConfig = yes
-	#IgnoreDotHiawatha = yes
 	#ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
 	#ReverseProxy !\.(pl|cgi|py|rb|shmtl) <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive
 	ReverseProxy ^/.* <?php echo $protocols[$count]; ?>://127.0.0.1:<?php echo $reverseports[$count]; ?>/ <?php echo $timeout; ?> keep-alive

@@ -32,7 +32,8 @@ class lxguard extends lxdb
 	{
 		$sq = new Sqlite(null, "lxguardhit");
 		$ddate = time();
-		$ddate -= 24 * 3600 * 30 * 3;
+		// $ddate -= 24 * 3600 * 30 * 3;
+		$ddate -= 60 * 60 * 24 * 30 * 3;
 		$sq->rawQuery("delete from lxguardhit where (ddate + 0) < $ddate");
 		$list = get_all_pserver();
 

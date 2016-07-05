@@ -18,6 +18,8 @@ class web__ extends lxDriverClass
 
 		lxshell_return("service", $a, "stop");
 
+	/*	// MR -- no neeed 'yum remove' because all installed
+
 		$blist = array();
 
 		// MR -- for fixed an issue version conflict!
@@ -46,7 +48,7 @@ class web__ extends lxDriverClass
 		if ($a !== 'hiawatha') {
 			exec("yum remove {$p} -y");
 		}
-
+	*/
 		exec("chkconfig {$a} off");
 
 		if (file_exists("/etc/init.d/{$a}")) {
@@ -60,13 +62,15 @@ class web__ extends lxDriverClass
 
 		$list = getWebDriverList($drivertype);
 
+		setAllWebserverInstall();
+
 		if (!isWebProxyOrApache($drivertype)) {
 			self::uninstallMeTrue('apache');
 		}
 
 		foreach ($list as &$l) {
 			$a = ($l === 'apache') ? 'httpd' : $l;
-
+		/*
 			$blist = array();
 
 			if ($a === 'httpd') {
@@ -107,11 +111,10 @@ class web__ extends lxDriverClass
 			$p = implode(" ", $blist);
 
 			exec("yum install {$p} -y");
-
+		*/
 			self::setWebserverInstall($a);
 			self::setBaseWebConfig($a);
 
-		//	lxshell_return("chkconfig", $a, "on");
 			exec("chkconfig {$a} on");
 
 			setCopyWebConfFiles($l);
@@ -133,19 +136,30 @@ class web__ extends lxDriverClass
 
 		$altname = ($webserver === 'httpd') ? 'apache' : $webserver;
 
-		lxfile_cp(getLinkCustomfile("/opt/configs/{$altname}/etc/init.d", "{$webserver}.init"),
-			"/etc/rc.d/init.d/{$webserver}");
-	/*	
-		if ($webserver === 'httpd') {
-			exec("httpd -V|grep 'version'|grep '/2.4'", $out, $ret);
+		if (($altname === 'apache') && (file_exists("../etc/flag/use_apache24.flg"))) {
+			$src = 'httpd24';
+		} else {
+			$src = $webserver;
+		}
 
-			if ($ret === 0) {
-				exec("echo 'pidfile=\${PIDFILE-/var/run/httpd/httpd.pid}' > /etc/sysconfig/httpd24");
+		if ($webserver === 'httpd') {
+			if (file_exists("../etc/flag/use_pagespeed.flg")) {
+				exec("rpm -qa|grep pagespeed", $out);
+
+				if (count($out) < 1) {
+					exec("yum -y install mod-pagespeed-stable");
+				}
+
+				lxfile_cp(getLinkCustomfile("/opt/configs/apache/etc/conf.d", "pagespeed.conf"),
+					"/etc/httpd/conf.d/pagespeed.conf");
 			} else {
-				exec("rm -f /etc/sysconfig/httpd24");
+					lxfile_rm("/etc/httpd/conf.d/pagespeed.conf");
 			}
 		}
-	*/
+
+		lxfile_cp(getLinkCustomfile("/opt/configs/{$altname}/etc/init.d", "{$src}.init"),
+			"/etc/rc.d/init.d/{$webserver}");
+
 		exec("chmod 755 /etc/rc.d/init.d/{$webserver}");
 	}
 

@@ -46,11 +46,10 @@ class Servermail__Qmail  extends lxDriverClass
 		//
 	}
 
-	function save_xinetd_qmail()
+	function save_control_qmail()
 	{
 		global $login;
 
-		$bcont = lfile_get_contents("../file/template/xinetd.smtp_lxa");
 		$maps = null;
 
 		if ($this->main->isOn("enable_maps")) { $maps = "/usr/bin/rblsmtpd -r bl.spamcop.net"; }
@@ -91,7 +90,9 @@ class Servermail__Qmail  extends lxDriverClass
 
 		lfile_put_contents("/var/qmail/control/concurrencyincoming", $instance);
 
-		lfile_put_contents("/var/qmail/control/smtproutes", $this->main->smtp_relay);
+		if (isset($this->main->smtp_relay)) {
+			lfile_put_contents("/var/qmail/control/smtproutes", $this->main->smtp_relay);
+		}
 
 		if ($this->main->isOn('virus_scan_flag')) {
 			$ret = lxshell_return("rpm", "-q", "simscan-toaster");
@@ -135,13 +136,6 @@ class Servermail__Qmail  extends lxDriverClass
 		if ($this->main->max_size) {
 			lfile_put_contents("/var/qmail/control/databytes", $this->main->max_size);
 		}
-
-		$bcont = str_replace("%maps%", $maps, $bcont);
-		$bcont = str_replace("%domainkey%", $domkey, $bcont);
-		$bcont = str_replace("%virusscan%", $virus, $bcont);
-		$bcont = str_replace("%instance%", $instance, $bcont);
-
-		exec_with_all_closed("/etc/init.d/xinetd restart");
 	}
 
 	function dbactionUpdate($subaction)
@@ -154,7 +148,7 @@ class Servermail__Qmail  extends lxDriverClass
 			case "update":
 				$this->queue_lifetime();
 				$this->save_myname();
-				$this->save_xinetd_qmail();
+				$this->save_control_qmail();
 				createRestartFile("qmail");
 				break;
 			case "spamdyke":

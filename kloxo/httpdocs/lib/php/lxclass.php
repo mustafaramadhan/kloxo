@@ -4127,7 +4127,7 @@ abstract class Lxclass
 		$ret = null;
 
 		foreach ($list as $k => $ob) {
-			// Big big hack... this is to prevent the installapp titles from cropping up here. NEed a better system though.
+			// Big big hack... this is to prevent the easyinstaller titles from cropping up here. NEed a better system though.
 			if (csb($k, "__title_")) {
 				continue;
 			}

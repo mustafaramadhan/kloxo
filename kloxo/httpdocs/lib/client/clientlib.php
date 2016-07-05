@@ -309,14 +309,14 @@ class Client extends ClientBase
 
 	function createDefaultApplication($dname, $appname)
 	{
-		$p['class'] = 'installapp';
+		$p['class'] = 'easyinstaller';
 		$p['parent-class'] = "web";
 		$p['parent-name'] = $dname;
 		$p['v-appname'] = $appname;
 		$p['v-installdir'] = null;
-		$p['v-installappmisc_b_s_admin_email'] = $this->contactemail;
-		$p['v-installappmisc_b_s_admin_name'] = 'admin';
-		$p['v-installappmisc_b_s_admin_password'] = 'admin';
+		$p['v-easyinstallermisc_b_s_admin_email'] = $this->contactemail;
+		$p['v-easyinstallermisc_b_s_admin_name'] = 'admin';
+		$p['v-easyinstallermisc_b_s_admin_password'] = 'admin';
 		
 		try {
 			__cmd_desc_add($p, null);

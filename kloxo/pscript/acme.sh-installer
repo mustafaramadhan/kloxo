@@ -8,58 +8,71 @@ logpath='/var/log/acme.sh'
 
 cd /
 
-# install let
-yum -y install git nc >/dev/null 2>&1
+newinstall=1
 
-cd ${kloxopath}
-
-if [ -d ${kloxopath}/acme.sh} ] ; then
-	'rm' -rf ${kloxopath}/acme.sh >/dev/null 2>&1
-fi
-
-if [ -d ${acmepath} ] ; then
-	'rm' -rf ${acmepath} >/dev/null 2>&1
-fi
-
-wget https://github.com/Neilpang/acme.sh/archive/master.zip -O master.zip \
-	--no-check-certificate >/dev/null 2>&1
-
-unzip -oq master.zip >/dev/null 2>&1
-'rm' -rf acme.sh
-'mv' -f acme.sh-master acme.sh >/dev/null 2>&1
-'rm' -f master.zip >/dev/null 2>&1
-
-if [ -L ${acmeshfile} ] ; then
-	'rm' -f ${acmeshfile} >/dev/null 2>&1
-fi
-
-cd ${kloxopath}/acme.sh
-chmod 755 ${kloxopath}/acme.sh/acme.sh >/dev/null 2>&1
-${kloxopath}/acme.sh/acme.sh --install >/dev/null 2>&1
-#exec bash >/dev/null 2>&1
-
-if [ ! -d ${logpath} ] ; then
-	mkdir -p ${logpath} >/dev/null 2>&1
-fi
-
-'cp' -f ${kloxopath}/file/acme.sh/acme-cron.sh ${kloxopath}/acme.sh/acme-cron.sh >/dev/null 2>&1
-
-if [ -f ${cronfile} ] ; then
-	if [ "$(cat ${cronfile}|grep 'acme-cron.sh')" != "" ] ; then
-		## MR -- remove old cron
-		sed -i '/acme\-cron\.sh/d' ${cronfile} >/dev/null 2>&1
-		## MR -- remove cron created by 'acme.sh --install'
-		sed -i '/acme\.sh \-\-cron/d' ${cronfile} >/dev/null 2>&1
-		## MR -- remove letsencrypt-auto cron because priority for acme.sh
-		sed -i '/letsencrypt\-cron\.sh/d' ${cronfile}
+if [ -f ${acmepath}/acme.sh ] ; then
+	if [ "$(${acmepath}/acme.sh --help|grep '\-\-upgrade')" != "" ] ; then
+		${acmepath}/acme.sh --upgrade >/dev/null 2>&1
+		'cp' -f ${acmepath}/acme.sh ${kloxopath}/acme.sh/acme.sh
+		newinstall=0
 	fi
 fi
 
-cmd="sh ${kloxopath}/acme.sh/acme-cron.sh"
-crontab -l | { cat; echo "0 0 * * * ${cmd} >/dev/null 2>&1"; } | crontab -
+if [ "$newinstall" == "1" ] ; then
+	yum -y install git nc >/dev/null 2>&1
 
-cd /
+	cd ${kloxopath}
 
+	if [ -d ${kloxopath}/acme.sh ] ; then
+		'rm' -rf ${kloxopath}/acme.sh >/dev/null 2>&1
+	fi
+
+	if [ -d ${acmepath} ] ; then
+		'rm' -rf ${acmepath} >/dev/null 2>&1
+	fi
+
+	wget https://github.com/Neilpang/acme.sh/archive/master.zip -O master.zip \
+		--no-check-certificate >/dev/null 2>&1
+
+	unzip -oq master.zip >/dev/null 2>&1
+	'mv' -f acme.sh-master acme.sh >/dev/null 2>&1
+	'rm' -f master.zip >/dev/null 2>&1
+
+	if [ -L ${acmeshfile} ] ; then
+		'rm' -f ${acmeshfile} >/dev/null 2>&1
+	fi
+
+	cd ${kloxopath}/acme.sh
+	chmod 755 ${kloxopath}/acme.sh/acme.sh >/dev/null 2>&1
+	${kloxopath}/acme.sh/acme.sh --install --nocron >/dev/null 2>&1
+	#exec bash >/dev/null 2>&1
+
+	if [ ! -d ${logpath} ] ; then
+		mkdir -p ${logpath} >/dev/null 2>&1
+	fi
+
+	'cp' -f ${kloxopath}/file/acme.sh/acme-cron.sh ${kloxopath}/acme.sh/acme-cron.sh >/dev/null 2>&1
+
+	if [ -f ${cronfile} ] ; then
+		if [ "$(cat ${cronfile}|grep 'acme-cron.sh')" != "" ] ; then
+			## MR -- remove old cron
+			sed -i '/acme\-cron\.sh/d' ${cronfile} >/dev/null 2>&1
+			## MR -- remove cron created by 'acme.sh --install'; still execute whatever exist '--nocron'
+			sed -i '/acme\.sh \-\-cron/d' ${cronfile} >/dev/null 2>&1
+			## MR -- remove letsencrypt-auto cron because priority for acme.sh
+			sed -i '/letsencrypt\-cron\.sh/d' ${cronfile}
+		fi
+	fi
+
+	cmd="sh ${kloxopath}/acme.sh/acme-cron.sh"
+	crontab -l | { cat; echo "0 0 * * * ${cmd} >/dev/null 2>&1"; } | crontab -
+
+	cd /
+fi
+
+echo
+${acmepath}/acme.sh --version
 echo
 echo "*** 'acme.sh' installed (need run 'exec bash' or 'reboot') ***"
 echo
+

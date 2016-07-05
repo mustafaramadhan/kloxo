@@ -57,8 +57,8 @@ function scavenge_main() {
 */
 	log_shell("Scavenge: Fix log dir");
 	passthru("$sgbl->__path_php_path ../bin/common/fixlogdir.php");
-	log_shell("Scavenge: InstallApp update");
-//	passthru("$sgbl->__path_php_path ../bin/installapp-update.php");
+	log_shell("Scavenge: 'Easy Installer' update");
+//	passthru("$sgbl->__path_php_path ../bin/easyinstaller-update.php");
 
 	log_shell("Scavenge: Watchdog checks");
 	$rs = get_all_pserver();

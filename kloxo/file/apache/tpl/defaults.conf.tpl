@@ -28,6 +28,9 @@ $trgtcpath = "/etc/httpd/conf";
 $trgtcdpath = "/etc/httpd/conf.d";
 $trgtcmdpath = "/etc/httpd/conf.modules.d";
 
+$sslpath = "/home/kloxo/ssl";
+$kloxopath = "/usr/local/lxlabs/kloxo";
+
 // MR -- fix error 'Directory / is not owned by admin' for suphp
 exec("chown root.root /");
 
@@ -49,10 +52,10 @@ $mpmlist = array('prefork', 'itk', 'event', 'worker');
 // @exec("rpm -qa|grep -E '^httpd24-2.4', $out);
 
 
-if (file_exists("/usr/local/lxlabs/kloxo/etc/flag/use_apache24.flg")) {
-	$httptype="httpd24";
+if (file_exists("{$kloxopath}/etc/flag/use_apache24.flg")) {
+	$use_httpd24 = true;
 
-	exec("'cp' -f /opt/configs/apache/etc/conf/httpd24.conf /etc/httpd/conf/httpd.conf");
+	exec("'cp' -f {$srccpath}/httpd24.conf /{$trgtcpath}/httpd.conf");
 
 	if (file_exists("{$trgtcmdpath}/00-base.conf")) {
 		exec("sed -i 's/^LoadModule deflate_module/#LoadModule deflate_module/' {$trgtcmdpath}/00-base.conf");
@@ -75,9 +78,9 @@ if (file_exists("/usr/local/lxlabs/kloxo/etc/flag/use_apache24.flg")) {
 	// MR -- make blank content
 	exec("echo '' > /etc/sysconfig/httpd");
 } else {
-	$httptype="httpd";
+	$use_httpd24 = false;
 
-	exec("'cp' -f /opt/configs/apache/etc/conf/httpd.conf /etc/httpd/conf/httpd.conf");
+	exec("'cp' -f {$srccpath}/httpd.conf {$trgtcpath}/httpd.conf");
 
 	// as 'httpd' as default mpm
 	exec("echo 'HTTPD=/usr/sbin/httpd' > /etc/sysconfig/httpd");
@@ -93,10 +96,18 @@ if (file_exists("/usr/local/lxlabs/kloxo/etc/flag/use_apache24.flg")) {
 	exec("sed -i 's/^LoadModule cgi_module/#LoadModule cgi_module/' {$trgtcpath}/httpd.conf");
 }
 
-if (file_exists("{$srccpath}/custom.{$httptype}.conf")) {
-	copy("{$srccpath}/custom.{$httptype}.conf", "{$trgtcpath}/httpd.conf");
+if ($use_httpd24) {
+	if (file_exists("{$srccpath}/custom.httpd24.conf")) {
+		copy("{$srccpath}/custom.httpd24.conf", "{$trgtcpath}/httpd.conf");
+	} else if (file_exists("{$srccpath}/httpd24.conf")) {
+		copy("{$srccpath}/httpd24.conf", "{$trgtcpath}/httpd.conf");
+	}
 } else {
-	copy("{$srccpath}/{$httptype}.conf", "{$trgtcpath}/httpd.conf");
+	if (file_exists("{$srccpath}/custom.httpd.conf")) {
+		copy("{$srccpath}/custom.httpd.conf", "{$trgtcpath}/httpd.conf");
+	} else if (file_exists("{$srccpath}/httpd.conf")) {
+		copy("{$srccpath}/httpd.conf", "{$trgtcpath}/httpd.conf");
+	}
 }
 
 $modlist = array("~lxcenter", "ssl", "__version", "perl", "rpaf", "define", "_inactive_");
@@ -104,7 +115,7 @@ $modlist = array("~lxcenter", "ssl", "__version", "perl", "rpaf", "define", "_in
 foreach ($modlist as $k => $v) {
 	if (file_exists("{$srccdpath}/custom.{$v}.conf")) {
 		copy("{$srccdpath}/custom.{$v}.conf", "{$trgtcdpath}/{$v}.conf");
-	} else {
+	} else if (file_exists("{$srccdpath}/{$v}.conf")) {
 		if ($v !== '~lxcenter') {
 			copy("{$srccdpath}/{$v}.conf", "{$trgtcdpath}/{$v}.conf");
 		}
@@ -130,23 +141,25 @@ foreach ($typelist as $k => $v) {
 	if (strpos($phptype, "{$w}") !== false) {
 		if (file_exists("{$srccdpath}/custom.{$v}.conf")) {
 			copy("{$srccdpath}/custom.{$v}.conf", "{$trgtcdpath}/{$v}.conf");
-		} else {
+		} else if (file_exists("{$srccdpath}/{$v}.conf")) {
 			copy("{$srccdpath}/{$v}.conf", "{$trgtcdpath}/{$v}.conf");
 		}
 	} else {
 		if ($v === 'proxy_fcgi') {
 			if (file_exists("{$srccmdpath}/custom._inactive_.conf")) {
 				copy("{$srccmdpath}/custom._inactive_.conf", "{$trgtcmdpath}/00-proxy.conf");
-			} else {
+			} else if (file_exists("{$srccmdpath}/_inactive_.conf")) {
 				copy("{$srccmdpath}/_inactive_.conf", "{$trgtcmdpath}/00-proxy.conf");
 			}
 
-			unlink("{$trgtcdpath}/{$v}.conf");
-			unlink("{$trgtcdpath}/{$v}.nonconf");
+			if (file_exists("{$trgtcdpath}/{$v}.conf")) {
+				unlink("{$trgtcdpath}/{$v}.conf");
+				unlink("{$trgtcdpath}/{$v}.nonconf");
+			}
 		} else {
 			if (file_exists("{$srccdpath}/custom._inactive_.conf")) {
 				copy("{$srccdpath}/custom._inactive_.conf", "{$trgtcdpath}/{$v}.conf");
-			} else {
+			} else if (file_exists("{$srccdpath}/_inactive_.conf")) {
 				copy("{$srccdpath}/_inactive_.conf", "{$trgtcdpath}/{$v}.conf");
 			}
 		}
@@ -155,12 +168,12 @@ foreach ($typelist as $k => $v) {
 
 if (file_exists("{$srcpath}/custom.suphp.conf")) {
 	copy("{$srcpath}/custom.suphp.conf", "{$trgtpath}/suphp.conf");
-} else {
+} else if (file_exists("{$srcpath}/suphp.conf")) {
 	copy("{$srcpath}/suphp.conf", "{$trgtpath}/suphp.conf");
 }
 
 foreach ($certnamelist as $ip => $certname) {
-	$certnamelist[$ip] = "/home/kloxo/ssl/{$certname}";
+	$certnamelist[$ip] = "{$sslpath}/{$certname}";
 }
 
 if ($reverseproxy) {
@@ -207,14 +220,34 @@ if ($indexorder) {
 
 if (file_exists("{$globalspath}/custom.acme-challenge.conf")) {
 	$acmechallenge = "custom.acme-challenge";
-} else {
+} else if (file_exists("{$globalspath}/acme-challenge.conf")) {
 	$acmechallenge = "acme-challenge";
 }
 
 if (file_exists("{$globalspath}/custom.header_base.conf")) {
 	$header_base = "custom.header_base";
-} else {
+} else if (file_exists("{$globalspath}/header_base.conf")) {
 	$header_base = "header_base";
+}
+
+if (file_exists("{$globalspath}/custom.header_ssl.conf")) {
+	$header_ssl = "custom.header_ssl";
+} else if (file_exists("{$globalspath}/header_ssl.conf")) {
+	$header_ssl = "header_ssl";
+}
+
+if ($use_httpd24) {
+	if (file_exists("{$globalspath}/custom.ssl_base24.conf")) {
+		$ssl_base = "custom.ssl_base24";
+	} else if (file_exists("{$globalspath}/ssl_base24.conf")) {
+		$ssl_base = "ssl_base24";
+	}
+} else {
+	if (file_exists("{$globalspath}/custom.ssl_base.conf")) {
+		$ssl_base = "custom.ssl_base";
+	} else if (file_exists("{$globalspath}/ssl_base.conf")) {
+		$ssl_base = "ssl_base";
+	}
 }
 
 // MR -- for future purpose, apache user have uid 50000
@@ -307,11 +340,8 @@ foreach ($certnamelist as $ip => $certname) {
 	</IfModule>
 
 	<IfModule mod_ssl.c>
-		SSLEngine On
-		SSLProtocol ALL -SSLv2 -SSLv3
-		SSLHonorCipherOrder On
-		#SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
-		SSLCipherSuite "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL 
+		Include <?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf
+
 		SSLCertificateFile <?php echo $certname; ?>.pem
 		SSLCertificateKeyFile <?php echo $certname; ?>.key
 <?php

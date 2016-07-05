@@ -11,14 +11,12 @@
 	$requesturi = $_SERVER["REQUEST_URI"];
 	$scheme = $_SERVER["HTTP_SCHEME"];
 
-//	if (file_exists("{$loginpath}/redirect-to-hostname")) {
-		$domain_pure = preg_replace('/(cp\.|webmail\.|www\.|mail\.)(.*)/i', "$2", $domain);
+	$domain_pure = preg_replace('/(cp\.|webmail\.|www\.|mail\.)(.*)/i', "$2", $domain);
 
-		if ($domain_pure !== $domain) {
-			$state += 1;
-			$domain = $domain_pure;
-		}
-//	}
+	if ($domain_pure !== $domain) {
+		$state += 1;
+		$domain = $domain_pure;
+	}
 
 	if (file_exists("{$loginpath}/redirect-to-ssl")) {
 		if ($_SERVER["HTTPS"] !== "on") {
@@ -38,9 +36,10 @@
 	}
 
 	if ($state !== 0) {
-	//	header("HTTP/1.1 301 Moved Permanently");
-	//	header("Location: {$scheme}://{$domain}:{$port}{$requesturi}");
-	//	exit();
-
+	/*
+		header("HTTP/1.1 301 Moved Permanently");
+		header("Location: {$scheme}://{$domain}:{$port}{$requesturi}");
+		exit();
+	*/
 		echo "<script> location.replace('{$scheme}://{$domain}:{$port}{$requesturi}'); </script>";
 	}

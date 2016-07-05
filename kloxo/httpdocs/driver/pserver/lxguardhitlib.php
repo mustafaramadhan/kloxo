@@ -228,11 +228,12 @@ class lxguardhitdisplay extends lxclass
 
 	static function createListNlist($parent, $view)
 	{
-		$nlist['blocked'] = '10%';
-		$nlist['currentip_flag'] = '10%';
+		$nlist['currentip_flag'] = '5%';
+		$nlist['ipaddress'] = '25%';
+
 		$nlist['failcount'] = '10%';
 		$nlist['successcount'] = '10%';
-		$nlist['ipaddress'] = '60%';
+		$nlist['blocked'] = '50%';
 
 		return $nlist;
 	}

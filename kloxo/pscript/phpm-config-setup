@@ -110,17 +110,34 @@ kipath="/usr/local/lxlabs/kloxo/init"
 
 if [ -f ${kipath}/custom.php.ini.base ] ; then
 	'cp' -rf ${kipath}/custom.php.ini.base /opt/${base_name}/custom/php.ini >/dev/null 2>&1
+
+	if [ "$(echo ${base_name}|grep 'php'|grep 's')" == "" ] ; then
+		'cp' -rf ${kipath}/custom.php.ini.base /opt/${base_name}/custom/php-fpm.ini >/dev/null 2>&1
+	fi
 else
 	'cp' -rf ${kipath}/php.ini.base /opt/${base_name}/custom/php.ini >/dev/null 2>&1
+
+	if [ "$(echo ${base_name}|grep 'php'|grep 's')" == "" ] ; then
+		'cp' -rf ${kipath}/php.ini.base /opt/${base_name}/custom/php-fpm.ini >/dev/null 2>&1
+	fi
 fi
 
 sed -i 's:__extension_dir__:/opt/'${base_name}'/usr/lib/php/modules:' /opt/${base_name}/custom/php.ini
+
+if [ "$(echo ${base_name}|grep 'php'|grep 's')" == "" ] ; then
+	sed -i 's:__extension_dir__:/opt/'${base_name}'/usr/lib/php/modules:' /opt/${base_name}/custom/php-fpm.ini
+fi
 
 if [ "$(echo ${base_name}|grep 'php'|grep 's')" == "" ] ; then
 	sed -i 's:__disable_functions__::' /opt/${base_name}/custom/php.ini
 	sed -i 's:__for_phpm__::' /opt/${base_name}/custom/php.ini
 	sed -i 's:__for_phps__:;:' /opt/${base_name}/custom/php.ini
 	sed -i 's:__session_save_path__:/var/lib/php/session:' /opt/${base_name}/custom/php.ini
+
+	sed -i 's:__disable_functions__:;:' /opt/${base_name}/custom/php-fpm.ini
+	sed -i 's:__for_phpm__::' /opt/${base_name}/custom/php-fpm.ini
+	sed -i 's:__for_phps__:;:' /opt/${base_name}/custom/php-fpm.ini
+	sed -i 's:__session_save_path__:/var/lib/php/session:' /opt/${base_name}/custom/php-fpm.ini
 else
 	sed -i 's:__disable_functions__:;:' /opt/${base_name}/custom/php.ini
 	sed -i 's:__for_phpm__:;:' /opt/${base_name}/custom/php.ini

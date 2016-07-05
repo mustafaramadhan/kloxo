@@ -1,25 +1,24 @@
 <?php
 
-class Component extends Lxdb 
+class Component extends Lxclass
 {
-	// Core
-
 	// Data
-	static $__desc=  Array("", "",  "Component Info");
-	static $__desc_nname =  Array("S","",  "component_name");
-	static $__desc_componentname =  Array("S","",  "component_name");
-	static $__desc_version =  Array("S", "",  "component_version");
-	static $__desc_full_version =  Array("tS", "",  "detailed_component_info");
-	static $__desc_status =  Array("eS", "",  "s:status");
-	static $__desc_status_v_on =  Array("eS", "",  "is_installed");
-	static $__desc_status_v_off =  Array("eS", "",  "is_not_installed");
-	static $__rewrite_nname_const =    Array("componentname", "syncserver");
+	static $__desc =  array("", "",  "component");
+	static $__desc_nname =  array("","",  "component_name");
+	static $__desc_type =  array("","",  "component_type");
+	static $__desc_componentname =  array("","",  "component_name");
+	static $__desc_version =  array("", "",  "component_version");
+	static $__desc_full_version =  array("tS", "",  "detailed_component_info");
+	static $__desc_status =  array("eS", "",  "s:status");
+	static $__desc_status_v_on =  array("eS", "",  "is_installed");
+	static $__desc_status_v_off =  array("eS", "",  "is_not_installed");
+	static $__rewrite_nname_const =    array("componentname", "syncserver");
 
 	static $__acdesc_list = array("", "",  "component_info");
 
-	// Objects
+	function get() { }
 
-	// Lists
+	function write() { }
 
 	function createShowAlist(&$alist, $subaction = null)
 	{
@@ -67,8 +66,9 @@ class Component extends Lxdb
 	static function createListNlist($parent, $view)
 	{
 		$nlist['status'] = '5%';
-		$nlist['componentname'] = '30%';
-		$nlist['version'] = '65%';
+		$nlist['componentname'] = '20%';
+		$nlist['type'] = '10%';
+		$nlist['version'] = '100%';
 
 		return $nlist;
 	}

@@ -1,5 +1,10 @@
 #!/bin/sh
 
+if [ -f ./custom.run ] ; then
+	. ./custom.run
+	return $?
+fi
+
 PATH="/usr/bin:/bin"
 
-exec /usr/local/sbin/dovecot -F 2>&1
+exec /usr/sbin/dovecot -F 2>&1

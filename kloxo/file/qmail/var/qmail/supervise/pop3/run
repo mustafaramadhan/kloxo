@@ -1,7 +1,14 @@
 #!/bin/sh
 
-PASSPROG="/home/vpopmail/bin/vchkpw"
+if [ -f ./custom.run ] ; then
+	. ./custom.run
+	return $?
+fi
+
 HOSTNAME=`hostname --fqdn`
+
+rm -rf "./env/*";
+cat /etc/courier/pop3d | /usr/bin/envconv
 
 if [ -f /var/qmail/control/softlimit ] ; then
 	### MR -- softlimit file must content with '/usr/bin/softlimit -m SOFTLIMITVAR'
@@ -15,7 +22,9 @@ fi
 IP=0
 PORT=110
 
-exec $SOFTLIMIT \
-	/usr/bin/tcpserver -v -R -c 200 $IP $PORT \
-	/var/qmail/bin/qmail-popup $HOSTNAME \
-	$PASSPROG /var/qmail/bin/qmail-pop3d Maildir 2>&1
+
+exec /usr/bin/envdir ./env/ \
+	$SOFTLIMIT \
+	/usr/bin/tcpserver -v -R -H -l $HOSTNAME $IP $PORT \
+	/usr/sbin/pop3login \
+	/usr/bin/pop3d Maildir 2>&1

@@ -20,7 +20,7 @@ abstract class DomainCore extends Lxclient
 
 	static $__desc_traffic_last_usage = array("D", "", "LTraffic:traffic_usage_for_last_month_(MB)");
 
-//	static $__desc_installapp_flag = array("q", "", "enable_installapp");
+	static $__desc_easyinstaller_flag = array("q", "", "enable_easyinstaller");
 //	static $__desc_php_manage_flag = array("q", "", "php_manage_flag");
 //	static $__desc_autoresponder_num = array("q", "", "autores:number_of_autoresponders");
 	static $__desc_traffic_usage = array("DS", "", "Traffic:Traffic_(MB/month)");

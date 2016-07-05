@@ -8,21 +8,7 @@ if [ ! -f /var/run/nsd/nsd.pid ] ; then
 	fi
 fi
 
-if [ -f /usr/sbin/nsd-control ] ; then
-	echo "  - Process with 'nsd-control': transfer + write + reload + notify"
-	for i in transfer write reload notify ; do
-		echo -n "    - ${i}: "
-		nsd-control ${i}
-	done
-else
-	echo "  - Process with 'nsdc': update + rebuild + reload + notify"
-	for i in transfer rebuild reload notify ; do
-		echo -n "    - ${i}: "
-		nsdc ${i}
-	done
-	echo "  - Process 'nsd': restart"
-	/etc/rc.d/init.d/nsd stop
-	pkill -9 nsd
-	/etc/rc.d/init.d/nsd start
-fi
+echo "  - Process 'nsd': restart"
+/etc/rc.d/init.d/nsd restart
+
 

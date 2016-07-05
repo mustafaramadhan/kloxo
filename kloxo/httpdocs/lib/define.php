@@ -21,8 +21,6 @@ $gl_class_array["all_cron"] = "driver/pserver/ddatabaselib.php";
 
 $gl_class_array["mailaccountd"] = "driver/mmail/mailaccountlib.php";
 
-$gl_class_array["installappsnapshot"] = "driver/web/installappsnapshotlib.php";
-
 $gl_class_array["domaintemplate"] = "lib/domain/domaintemplatelib.php";
 $gl_class_array["domaintraffic"] = "lib/domain/domaintrafficlib.php";
 
@@ -38,8 +36,9 @@ $gl_class_array["all_mailinglist"] = "driver/mmail/mailinglistlib.php";
 
 $gl_class_array["autoresponder"] = "driver/mmail/autoresponderlib.php";
 
-$gl_class_array["installapp"] = "driver/web/installapplib.php";
-$gl_class_array["allinstallapp"] = "driver/web/allinstallapplib.php";
+$gl_class_array["easyinstallersnapshot"] = "driver/web/easyinstallersnapshotlib.php";
+$gl_class_array["easyinstaller"] = "driver/web/easyinstallerlib.php";
+$gl_class_array["all_easyinstaller"] = "driver/web/all_easyinstallerlib.php";
 
 $gl_class_array["domaintraffichistory"] = "lib/domain/domaintraffichistorylib.php";
 
@@ -90,4 +89,6 @@ $gl_class_array["rubyrails"] = "driver/web/rubyrailslib.php";
 
 $gl_class_array["dnsslave"] = "lib/php/dnsslavelib.php";
 
-
+$gl_class_array["pop3"] = "driver/mmail/pop3lib.php";
+//$gl_class_array["imap4"] = "driver/mmail/imaplib.php";
+$gl_class_array["smtp"] = "driver/mmail/smtplib.php";

@@ -150,6 +150,7 @@ if (strpos($loginas, "@") !== false) {
 <?php
 	if ($clientquery === "") {
 ?>
+						&#x00bb;&nbsp;<a href="/display.php?<?= $consumedlogin ?>frm_action=list&frm_o_cname=all_client"><?= $ghtml->getTitleOnly("a=list&c=all_client") ?></a><br/>
 						&#x00bb;&nbsp;<a href="/display.php?<?= $consumedlogin ?>frm_action=list&frm_o_cname=all_domain"><?= $ghtml->getTitleOnly("a=list&c=all_domain") ?></a><br/>
 						&#x00bb;&nbsp;<a href="/display.php?<?= $consumedlogin ?>frm_action=list&frm_o_cname=all_addondomain"><?= $ghtml->getTitleOnly("a=list&c=all_addondomain") ?></a><br/>
 						&#x00bb;&nbsp;<a href="/display.php?<?= $consumedlogin ?>frm_action=list&frm_o_cname=all_mailaccount"><?= $ghtml->getTitleOnly("a=list&c=all_mailaccount") ?></a><br/>
@@ -162,6 +163,10 @@ if (strpos($loginas, "@") !== false) {
 <?php
 	} else {
 ?>
+						&#x00bb;&nbsp;<?= $ghtml->getTitleOnly("a=list&c=all_client") ?>
+
+							&#x00bb;&nbsp;<a href="/display.php?<?= $consumedlogin ?>frm_action=list&frm_o_cname=all_client"><?= $loginas ?></a><br/>
+
 						&#x00bb;&nbsp;<?= $ghtml->getTitleOnly("a=list&c=all_domain") ?>
 
 							&#x00bb;&nbsp;<a href="/display.php?<?= $consumedlogin ?>frm_action=list&frm_o_cname=all_domain"><?= $loginas ?></a><br/>
@@ -1105,6 +1110,12 @@ if (strpos($loginas, "@") !== false) {
 					<b><?= $login->getKeywordUc('client') ?></b>
 					<div class="dropmenu">
 <?php
+		if ($login->isAdmin()) {
+?>
+						&#x00bb;&nbsp;<a href="/display.php?<?= $consumedlogin ?>frm_action=list&frm_o_cname=all_client"><?= $ghtml->getTitleOnly("a=list&c=all_client") ?></a><br/>
+<?php
+		}
+
 		if ($clientquery === "") {
 ?>
 						&#x00bb;&nbsp;<a href="/display.php?<?= $consumedlogin ?>frm_action=list&frm_o_cname=client"><?= $ghtml->getTitleOnly("a=list&c=client") ?></a><br/>
@@ -1120,9 +1131,6 @@ if (strpos($loginas, "@") !== false) {
 		}
 
 		if ($login->isAdmin()) {
-?>
-						&#x00bb;&nbsp;<a href="/display.php?<?= $consumedlogin ?>frm_action=list&frm_o_cname=all_client"><?= $ghtml->getTitleOnly("a=list&c=all_client") ?></a><br/>
-<?php
 			if (check_if_many_server()) {
 ?>
 						&#x00bb;&nbsp;<a href="/display.php?<?= $consumedlogin ?>frm_action=addform&frm_dttype[var]=cttype&frm_dttype[val]=wholesale&frm_o_cname=client"><?= $ghtml->getTitleOnly("a=addform&dta[var]=cttype&dta[val]=wholesale&c=client") ?></a><br/>

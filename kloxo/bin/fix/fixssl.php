@@ -70,7 +70,8 @@ foreach($slist as $b) {
 		} else {
 			$keyc = $b->text_key_content;
 			$crtc = $b->text_crt_content;
-			$cac = $b->text_ca_content;
+			$cac = ($b->text_ca_content) ? $b->text_ca_content : '';
+			$pemc = "{$keyc}\n{$crtc}\n{$cac}";
 
 			$list = array('key' => $keyc, 'crt' => $crtc, 'ca' => $cac);
 
@@ -80,7 +81,8 @@ foreach($slist as $b) {
 				}
 			}
 
-			exec("echo '{$keyc}\n{$crtc}\n{$cac}' >{$sslpath}/{$dom}.pem");
+		//	exec("echo '{$keyc}\n{$crtc}\n{$cac}' >{$sslpath}/{$dom}.pem");
+			file_put_contents("{$sslpath}/{$dom}.pem", $pemc);
 		}
 	}
 }

@@ -1,0 +1,67 @@
+#!/bin/sh
+
+kloxopath='/usr/local/lxlabs/kloxo'
+startapipath='/root/.startapi.sh'
+cronfile='/var/spool/cron/root'
+startapishfile='/usr/bin/startapi.sh'
+logpath='/var/log/startapi.sh'
+
+cd /
+
+if [ -f ${startapipath}/startapi.sh ] ; then
+	${startapipath}/startapi.sh --upgrade >/dev/null 2>&1
+	'cp' -f ${startapipath}/startapi.sh ${kloxopath}/startapi.sh/startapi.sh
+else
+	yum -y install git nc >/dev/null 2>&1
+
+	cd ${kloxopath}
+
+	wget https://github.com/Neilpang/startapi.sh/archive/master.zip -O master.zip \
+		--no-check-certificate >/dev/null 2>&1
+
+	unzip -oq master.zip >/dev/null 2>&1
+	'mv' -f startapi.sh-master startapi.sh >/dev/null 2>&1
+	'rm' -f master.zip >/dev/null 2>&1
+
+	if [ -L ${startapishfile} ] ; then
+		'rm' -f ${startapishfile} >/dev/null 2>&1
+	fi
+
+	cd ${kloxopath}/startapi.sh
+	chmod 755 ${kloxopath}/startapi.sh/startapi.sh >/dev/null 2>&1
+	${kloxopath}/startapi.sh/startapi.sh --install --nocron >/dev/null 2>&1
+	#exec bash >/dev/null 2>&1
+
+	if [ ! -d ${logpath} ] ; then
+		mkdir -p ${logpath} >/dev/null 2>&1
+	fi
+
+	'cp' -f ${kloxopath}/file/startapi.sh/startapi-cron.sh ${kloxopath}/startapi.sh/startapi-cron.sh >/dev/null 2>&1
+
+	if [ -f ${cronfile} ] ; then
+		if [ "$(cat ${cronfile}|grep 'startapi-cron.sh')" != "" ] ; then
+			## MR -- remove old cron
+			sed -i '/startapi\-cron\.sh/d' ${cronfile} >/dev/null 2>&1
+			## MR -- remove cron created by 'startapi.sh --install'; still execute whatever exist '--nocron'
+			sed -i '/startapi\.sh \-\-cron/d' ${cronfile} >/dev/null 2>&1
+		fi
+	fi
+
+	cmd="sh ${kloxopath}/startapi.sh/startapi-cron.sh"
+	crontab -l | { cat; echo "0 0 * * * ${cmd} >/dev/null 2>&1"; } | crontab -
+
+	cd /
+fi
+
+echo
+${startapipath}/startapi.sh --version
+echo
+echo "*** 'startapi.sh' installed (need run 'exec bash' or 'reboot') ***"
+echo
+echo "NOTE:"
+echo "- Register account to https://startssl.com/"
+echo "- get Key and Token for StartAPI - read https://"
+echo "  github.com/Neilpang/startapi.sh/wiki/Create-startssl-api-token-and-api-key"
+echo "- run 'sh /script/startapi.sh-account <key-link> <key-password> <token>'"
+
+echo

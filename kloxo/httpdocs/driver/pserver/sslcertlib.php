@@ -18,7 +18,6 @@ class Ssl_data_b extends LxaClass
 	static $__desc_emailAddress_r = array("n", "", "email_address");
 	static $__desc_subjectAltName_r = array("n", "", "subject_alt_name");
 	static $__desc_key_bits_r = array("", "", "ssl_key_bits");
-
 }
 
 class SslCert extends Lxdb
@@ -48,7 +47,11 @@ class SslCert extends Lxdb
 	static $__desc_upload_v_file = array("", "", "ssl_file");
 	static $__desc_upload_v_text = array("", "", "ssl_text");
 	static $__desc_upload_v_letsencrypt = array("", "", "ssl_letsencrypt");
+	static $__desc_upload_v_startapi = array("", "", "ssl_startapi");
 	static $__desc_upload_v_link = array("", "", "ssl_link");
+
+	static $__desc_warning = array("", "", "ssl_warning");
+
 
 	static $__acdesc_update_update = array("", "", "certificate_info");
 	static $__acdesc_update_ssl_kloxo = array("", "", "set_ssl_for_kloxo");
@@ -87,7 +90,7 @@ class SslCert extends Lxdb
 		//	if ($this->isOn('upload_status')) {
 			if (($this->add_type === 'text') || ($this->add_type === 'file')
 					|| ($this->add_type === 'on')) {
-			} elseif ($this->add_type === 'letsencrypt') {
+			} elseif (($this->add_type === 'letsencrypt') || ($this->add_type === 'startapi')) {
 				$vlist['ssl_data_b_s_key_bits_r'] = array("s", array("2048", "4096", "ec-256", "ec-384"));
 				$vlist["ssl_data_b_s_subjectAltName_r"] = array("t", null);
 			} elseif ($this->add_type === 'link') {
@@ -108,7 +111,6 @@ class SslCert extends Lxdb
 			$vlist["ssl_data_b_s_organizationalUnitName_r"] = null;
 			$vlist["ssl_data_b_s_emailAddress_r"] = null;
 		//	$vlist["ssl_data_b_s_subjectAltName_r"] = null;
-
 		}
 
 		if ($this->add_type !== 'link') {
@@ -239,6 +241,7 @@ class SslCert extends Lxdb
 			$alist[] = "a=addform&c=$class&dta[var]=upload&dta[val]=file";
 			$alist[] = "a=addform&c=$class&dta[var]=upload&dta[val]=text";
 			$alist[] = "a=addform&c=$class&dta[var]=upload&dta[val]=letsencrypt";
+			$alist[] = "a=addform&c=$class&dta[var]=upload&dta[val]=startapi";
 			$alist[] = "a=addform&c=$class&dta[var]=upload&dta[val]=link";
 		} else {
 			$alist[] = "a=addform&c=$class";
@@ -334,11 +337,14 @@ class SslCert extends Lxdb
 		//	$path = "/home/{$user}/ssl";
 		//	$path = "/home/kloxo/client/{$user}/ssl";
 			$spath = "/home/kloxo/ssl";
-			$cpath = "/root/.acme.sh";
-			$lpath = "/etc/letsencrypt";
 
-			exec("'rm' -rf {$cpath}/{$name}*");
-			exec("'rm' -rf {$lpath}/{live,archive,renewal}/{$name}* {$spath}/{$name}*");
+			$acpath = "/root/.acme.sh";
+			$lepath = "/etc/letsencrypt";
+			$stpath = "/root/.startapi.sh";
+
+			exec("'rm' -rf {$acpath}/{$name}*");
+			exec("'rm' -rf {$lepath}/{live,archive,renewal}/{$name}* {$spath}/{$name}*");
+			exec("'rm' -rf {$stpath}/{$name}*");
 
 			lxshell_return("sh", "/script/fixweb", "--domain={$name}");
 			createRestartFile("restart-web");
@@ -385,6 +391,10 @@ class SslCert extends Lxdb
 				$param['add_type'] = 'letsencrypt';
 
 				$param['ssl_data_b_s_subjectAltName_r'] = replace_to_space($param['ssl_data_b_s_subjectAltName_r']);
+			} elseif ($param['upload'] === 'startapi') {
+				$param['add_type'] = 'startapi';
+
+				$param['ssl_data_b_s_subjectAltName_r'] = replace_to_space($param['ssl_data_b_s_subjectAltName_r']);
 			} elseif ($param['upload'] === 'link') {
 				$param['add_type'] = 'link';
 			}
@@ -407,6 +417,9 @@ class SslCert extends Lxdb
 				break;
 			case 'letsencrypt':
 				$this->createLetsencrypt();
+				break;
+			case 'startapi':
+				$this->createStartapi();
 				break;
 			case 'link':
 				$this->createLink();
@@ -485,6 +498,10 @@ class SslCert extends Lxdb
 
 		if ($parent->getClass() === 'web') {
 			$nname = array('M', $parent->nname);
+			$action = array("s", array("test", "add", "renew", "revoke"));
+			$keybits = array("s", array("2048", "4096", "ec-256", "ec-384"));
+			$warning = array('W', $login->getKeywordUc('startapi_warning'));
+
 			$vlist['username'] = array("h", $parent->getParentO()->__parent_o->nname);
 
 			if ($typetd['val'] === 'file') {
@@ -500,11 +517,18 @@ class SslCert extends Lxdb
 				$vlist['text_ca_content'] = null;
 			} else if ($typetd['val'] === 'letsencrypt') {
 				$vlist['nname'] = $nname;
-			//	$vlist['ssl_action'] = array("s", array("test", "add", "renew", "revoke"));
-				$vlist['ssl_data_b_s_key_bits_r'] = array("s", array("2048", "4096", "ec-256", "ec-384"));
+			//	$vlist['ssl_action'] = $action;
+				$vlist['ssl_data_b_s_key_bits_r'] = $keybits;
 				$vlist["ssl_data_b_s_subjectAltName_r"] =
 					array('t', "{$parent->nname} www.{$parent->nname} cp.{$parent->nname} webmail.{$parent->nname}");
 				$vlist["ssl_data_b_s_emailAddress_r"] = array("m", "admin@{$parent->nname}");
+			} else if ($typetd['val'] === 'startapi') {
+				$vlist['warning'] = $warning;
+				$vlist['nname'] = $nname;
+			//	$vlist['ssl_action'] = $action;;
+				$vlist['ssl_data_b_s_key_bits_r'] = $keybits;
+				$vlist["ssl_data_b_s_subjectAltName_r"] =
+					array('t', "{$parent->nname} www.{$parent->nname} cp.{$parent->nname} webmail.{$parent->nname}");
 			} else if ($typetd['val'] === 'link') {
 				$vlist['nname'] = $nname;
 
@@ -667,8 +691,7 @@ class SslCert extends Lxdb
 
 		if ($parent->getClass() === 'web') {
 			$this->createDomainSSL();
-		} 
-
+		}
 	}
 
 	function createLetsencrypt()
@@ -755,10 +778,71 @@ class SslCert extends Lxdb
 			$this->text_ca_content = lfile_get_contents("{$lepath}/chain.pem");
 		}
 
-		// MR -- no need because include in [domain]_letsencrypt.sh
-	//	exec("sh /script/fixweb --domain={$name}");
+		exec("sh /script/fixweb --domain={$name}");
 	//	createRestartFile($gbl->getSyncClass(null, $this->syncserver, 'web'));
-	//	createRestartFile("restart-web");
+		createRestartFile("restart-web");
+	}
+
+	function createStartapi()
+	{
+		global $gbl, $sgbl, $login, $ghtml;
+
+		foreach ($this->ssl_data_b as $key => $value) {
+			if (!cse($key, "_r")) {
+				continue;
+			}
+
+			$nk = strtil($key, "_r");
+			$temp[$nk] = $value;
+		}
+
+		$parent = $this->getParentO();
+
+		$name = $temp['name'] = $parent->nname;
+
+		$shpath = "/home/kloxo/ssl";
+
+		foreach ($temp as $key => $t) {
+			if ($key === 'subjectAltName') {
+				$val = replace_to_space($t);
+			} else {
+				$val = $t;
+			}
+
+			$input[$key] = $val;
+		}
+
+		$input['docroot'] = $parent->getFullDocRoot();
+
+		$tplsource = getLinkCustomfile("/opt/configs/startapi.sh/tpl", "startapi.sh.tpl");
+		$tpltarget = "{$shpath}/{$name}_startapi.sh";
+
+		$tpl = lfile_get_contents($tplsource);
+
+		$tplparse = getParseInlinePhp($tpl, $input);
+
+		if (!file_exists($shpath)) {
+			mkdir($shpath);
+		}
+
+		if ($tplparse) {
+			lfile_put_contents($tpltarget, $tplparse);
+		}
+
+		exec("cd {$shpath}; sh {$name}_startapi.sh", $out, $ret);
+
+		if ($ret !== 0) {
+			throw new lxException($login->getThrow("create_certificate_failed"), '', $parent->nname);
+		}
+
+		$stpath = "/root/.startapi.sh/{$name}";
+
+		$this->text_key_content = lfile_get_contents("{$stpath}/{$name}.key");
+		$this->text_crt_content = lfile_get_contents("{$stpath}/{$name}.cer");
+		$this->text_ca_content = lfile_get_contents("{$stpath}/ca.cer");
+
+		exec("sh /script/fixweb --domain={$name}");
+		createRestartFile("restart-web");
 	}
 
 	function createLink()
@@ -787,6 +871,10 @@ class SslCert extends Lxdb
 				exec("ln -sf {$sslparent}.{$v} {$targetpath}/{$parent->nname}.{$v}");
 			}
 		}
+	
+		exec("sh /script/fixweb --domain={$this->parent_domain}");
+	//	createRestartFile($gbl->getSyncClass(null, $this->syncserver, 'web'));
+		createRestartFile("restart-web");
 	}
 
 	static function getSslCertnameFromIP($ipname)

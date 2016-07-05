@@ -34,14 +34,11 @@ fi
 ## MR -- remove last char (default m or s)
 src_name="${base_name%?}"
 
-if [ "${base_name}" == "php52s" ] ;  then
-	yum remove php52s* -y
-elif [ "${base_name}" == "php53s" ] ;  then
-	yum remove php53s* -y
-	'rpm' -e php53s-fpm --noscripts
-elif [ "${base_name}" == "php54s" ] ;  then
-	yum remove php54s* -y
-	'rpm' -e php54s-fpm --noscripts
+if [ "${base_name}" == "php52s" ] || [ "${base_name}" == "php53s" ] || [ "${base_name}" == "php54s" ] ;  then
+	if [ "$(rpm -qa ${base_name}-cli)" != "" ] ; then
+		yum remove ${base_name}* -y -q >/dev/null 2>&1
+		'rpm' -e ${base_name}-fpm --noscripts >/dev/null 2>&1
+	fi
 fi
 
 mkdir -p /opt/${base_name} >/dev/null 2>&1
@@ -130,7 +127,7 @@ echo $x
 echo $x >>/opt/${base_name}/install.log
 yum -y install $(cat /opt/${base_name}/dependencies) >>/opt/${base_name}/install.log
 
-x="- Download all rpms (debug and devel will be deleted)... Please wait!"
+x="- Download all rpms (debug will be deleted)... Please wait!"
 echo $x
 echo $x >>/opt/${base_name}/install.log
 
@@ -140,7 +137,7 @@ fi
 
 yumdownloader ${pack_name}-* >>/opt/${base_name}/install.log
 'rm' -rf *-debug*
-'rm' -rf *-devel*
+#'rm' -rf *-devel*
 
 x="- Extract all rpms to '/opt/${base_name}'"
 echo $x

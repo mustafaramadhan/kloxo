@@ -32,7 +32,7 @@ abstract class Resourcecore extends Lxclient
 //	static $__desc_mssqldb_num = array("q", "",  "mssqldb:mssql_databases");
 
 //	static $__desc_php_manage_flag =  array("q", "",  "enable_php_management");
-	static $__desc_installapp_flag = array("q", "", "enable_installapp");
+	static $__desc_easyinstaller_flag = array("q", "", "enable_easyinstaller");
 	static $__desc_ssl_flag = array("q", "", "enable_ssl");
 	static $__desc_can_change_limit_flag = array("q", "", "can_change_limit");
 	static $__desc_webhosting_flag = array("q", "", "enable_web_hosting");

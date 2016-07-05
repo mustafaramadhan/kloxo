@@ -31,13 +31,13 @@ $trgtconfpath = "/etc/hiawatha";
 if ($reverseproxy) {
 	if (file_exists("{$srcconfpath}/custom.hiawatha_proxy.conf")) {
 		copy("{$srcconfpath}/custom.hiawatha_proxy.conf", "{$trgtconfpath}/hiawatha.conf");
-	} else {
+	} else if (file_exists("{$srcconfpath}/hiawatha_proxy.conf")) {
 		copy("{$srcconfpath}/hiawatha_proxy.conf", "{$trgtconfpath}/hiawatha.conf");
 	}
 } else {
 	if (file_exists("{$srcconfpath}/custom.hiawatha_standard.conf")) {
 		copy("{$srcconfpath}/custom.hiawatha_standard.conf", "{$trgtconfpath}/hiawatha.conf");
-	} else {
+	} else if (file_exists("{$srcconfpath}/hiawatha_standard.conf")) {
 		copy("{$srcconfpath}/hiawatha_standard.conf", "{$trgtconfpath}/hiawatha.conf");
 	}
 }
@@ -101,9 +101,10 @@ UrlToolkit {
 	ToolkitID = permalink
 	RequestURI exists Return
 	## process for 'special dirs' of Kloxo-MR
-	Match ^/(stats|awstats|cp|error|webmail|__kloxo|kloxo|kloxononssl|cgi-bin)(/|$) Return
+	Match ^/(stats|cp|error|webmail|__kloxo|kloxo|kloxononssl|cgi-bin)(/|$) Return
 	Match ^/(css|files|images|js)(/|$) Return
 	Match ^/(favicon.ico|robots.txt|sitemap.xml)$ Return
+	Match ^/.well-known/(.*) Return
 	Match /(.*)\?(.*) Rewrite /index.php?path=$1&$2
 	Match .*\?(.*) Rewrite /index.php?$1
 	Match .* Rewrite /index.php
@@ -125,12 +126,6 @@ FastCGIserver {
 	Extension = pl,cgi
 	SessionTimeout = <?php echo $timeout; ?>
 
-}
-
-Directory {
-	DirectoryID = well_known
-	Path = /.well-known
-	AccessList = allow all
 }
 
 CGIhandler = /usr/bin/perl:pl
@@ -179,7 +174,6 @@ Binding {
 
 
 Alias = /.well-known:/var/run/letsencrypt/.well-known
-UseDirectory = well_known
 
 ### 'default' config
 set var_user = apache
@@ -196,15 +190,15 @@ FollowSymlinks = no
 TimeForCGI = <?php echo $timeout; ?>
 
 
+## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
+UseLocalConfig = yes
+
 <?php echo $error_handler; ?>
 
 <?php
 		if ($reverseproxy) {
 ?>
 
-## MR -- change IgnoreDotHiawatha to UseLocalConfig in Hiawatha 10+
-UseLocalConfig = yes
-#IgnoreDotHiawatha = yes
 UseToolkit = block_shellshock, findindexfile
 #ReverseProxy ^/.* http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive
 ReverseProxy !\.(pl|cgi|py|rb|shmtl) http://127.0.0.1:30080/ <?php echo $timeout; ?> keep-alive

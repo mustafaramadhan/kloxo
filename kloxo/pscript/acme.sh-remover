@@ -11,15 +11,15 @@ if [ -f ${acmepath}/acme.sh ] ; then
 fi
 
 if [ -L ${acmeshfile} ] ; then
-	rm -f ${acmeshfile} >/dev/null 2>&1
+	'rm' -f ${acmeshfile} >/dev/null 2>&1
 fi
 
 if [ ! -d ${kloxopath}/acme.sh ] ; then
-	rm -f ${logpath} >/dev/null 2>&1
+	'rm' -f ${logpath} >/dev/null 2>&1
 fi
 
 if [ ! -d ${logpath} ] ; then
-	rm -f ${logpath} >/dev/null 2>&1
+	'rm' -f ${logpath} >/dev/null 2>&1
 fi
 
 if [ -f ${cronfile} ] ; then

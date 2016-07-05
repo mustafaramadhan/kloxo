@@ -1,0 +1,161 @@
+#!/bin/bash
+#
+# nsd:         Starts the NSD Name Server Daemon
+#
+# chkconfig: - 13 87
+# description:  NSD is a complete implementation of an authoritative \
+#               DNS name server. 
+# processname: /usr/sbin/nsd
+# config: /etc/nsd/nsd.conf
+#
+### BEGIN INIT INFO
+# Provides: nsd
+# Required-Start: $local_fs $network $syslog
+# Required-Stop: $local_fs $network $syslog
+# Default-Stop: 0 11 89
+# Short-Description: start|stop|status|restart|try-restart|reload|force-reload DNS server
+# Description: control NSD implementation of DNS server
+### END INIT INFO
+
+# Init script default settings
+NSD_CONF="/etc/nsd/nsd.conf"
+NSD_DB="/var/lib/nsd/nsd.db"
+NSD_PROG="/usr/sbin/nsd"
+NSD_PIDFILE="/var/run/nsd/nsd.pid"
+NSD_XFRDFILE="/var/lib/nsd/xfrd.state"
+
+NSDC_PROG="/usr/sbin/nsd-control"
+
+NSD_PIDDIR=`dirname $NSD_PIDFILE`
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+[ -r /etc/sysconfig/nsd ] && . /etc/sysconfig/nsd
+
+# Check that networking is configured.
+[ "${NETWORKING}" = "no" ] && exit 0
+
+start() {
+	# Source networking configuration.
+	[ -r /etc/sysconfig/network ] && . /etc/sysconfig/network
+
+	# Check that networking is up
+	[ "${NETWORKING}" = "no" ] && exit 1
+
+	# Sanity checks.
+	[ -f $NSD_CONF ] || exit 5
+	[ -x $NSD_PROG ] || exit 5
+	# /var/run could (and should) be tmpfs
+	[ -d $NSD_PIDDIR ] || mkdir -p $NSD_PIDDIR
+
+	if [ -f /usr/sbin/nsd-control ] ; then
+		if [ ! -f /etc/nsd/nsd_control.key ] ; then
+			echo -n $"Generating nsd control key and certificate: "
+			/usr/sbin/nsd-control-setup -d /etc/nsd/ > /dev/null 2> /dev/null
+			chgrp nsd /etc/nsd/nsd_*key /etc/nsd/nsd_*pem
+			[ -x /usr/sbin/selinuxenabled ] && /usr/sbin/selinuxenabled && \
+			[ -x /sbin/restorecon ] && /sbin/restorecon /etc/nsd/*
+			echo
+		else
+			# old init script created these as root instead of nsd.
+			if [ -G /etc/nsd/nsd_control.key ] ; then
+				chgrp nsd /etc/nsd/nsd_*key /etc/nsd/nsd_*pem
+				[ -x /usr/sbin/selinuxenabled ] && /usr/sbin/selinuxenabled && \
+				[ -x /sbin/restorecon ] && /sbin/restorecon /etc/nsd/*
+				echo
+			fi
+		fi
+	fi
+
+	echo -n $"Starting nsd:"
+	$NSDC_PROG -c $NSD_CONF reload >/dev/null 2>&1
+	$NSD_PROG -c $NSD_CONF $OTHER_NSD_OPTS >/dev/null 2>&1
+	RETVAL=$?
+	if [ $RETVAL -eq 0 ]; then
+		touch /var/lock/subsys/nsd;
+		success
+		echo
+	else
+		failure
+		echo
+		exit 7;
+	fi
+
+	return 0;
+}
+
+stop() {
+	echo -n $"Stopping nsd: "
+	# save state to zonefiles
+	$NSDC_PROG -c $NSD_CONF stop > /dev/null 2>&1
+	RETVAL=$?
+	# was nsdc successful?
+	[ "$RETVAL" -eq 0 ] || killproc $NSD_PROG -TERM >/dev/null 2>&1
+	if [ $RETVAL -eq 0 ] ; then
+		rm -f $NSD_PIDFILE
+		rm -f /var/lock/subsys/nsd
+		# ensure notifies are sent at startup
+		rm -f $NSD_XFRDFILE
+		success
+	else
+		failure
+	fi
+
+	echo
+
+	return $RETVAL
+}
+
+restart() {
+	stop
+	sleep 2
+	start
+}
+
+control() {
+	echo -n $"Processing nsd $1: "
+	if [ "$1" == "stats" ]; then
+		$NSDC_PROG -c $NSD_CONF $1
+	else
+		$NSDC_PROG -c $NSD_CONF $1 > /dev/null 2>&1
+		RETVAL=$?
+		if [ $RETVAL -eq 0 ] ; then
+			success
+		else
+			failure
+		fi
+		echo
+		return $RETVAL
+	fi
+}
+
+RETVAL=0
+
+# See how we were called.
+case "$1" in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart)
+		restart
+		;;
+	condrestart)
+ 		[ -f /var/lock/subsys/nsd ] && restart || :
+		;;
+	status)
+		status -p $NSD_PIDFILE $NSD_PROG
+		RETVAL=$?
+		;;
+	reload|stats|write|notify|transfer|force_transfer)
+		control $1
+		;;
+	*)
+		echo $"Usage: $0 {start|stop||reload|restart|status|condrestart|stats|write|notify|transfer|force_transfer}"
+		exit 1
+esac
+
+exit $?

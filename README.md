@@ -41,6 +41,7 @@ This fork named as Kloxo-MR (meaning 'Kloxo fork by Mustafa Ramadhan').
 * FTP server: Pure-ftpd
 * DNS Server: Bind and Djbdns; add Powerdns, ~~MaraDNS~~, NSD, myDNS and Yadifa *)
 * Addons: ClamAV, Spamassassin/Bogofilter/Spamdyke, RKHunter and MalDetect
+* Free SSL: Let's Encrypt (via letsencrypt/certbot-auto and acme.sh) and StartAPI *)
 * Fixed many bugs of Kloxo Official (including security issues)
 * And many more!
 
@@ -64,11 +65,14 @@ This fork named as Kloxo-MR (meaning 'Kloxo fork by Mustafa Ramadhan').
 - Web server: Hiawatha (since 28 Sep 2013) and Httpd 2.4 (since 20 Jun 2015); Dual (since 19 Jan 2016) and Multiple Web server (in progress)
 - Webcache server: Squid, Varnish and ATS (Apache Traffic Server) (since 3 Oct 2013)
 - DNS server: Powerdns, NSD, MyDNS and Yadifa (since 16 Sep 2013)
-- Mail server: Dovecot (in progress)
+- Mail server: Dovecot (since 19 Jun 2016)
 - Php: multiple Php versions
   * suphp base since 27 Jun 2014
   * fcgid base since 5 Jul 2015
   * php-fpm/spawning base since 24 May 2016
+- Free SSL:
+  * Let's Encrypt (since 4 May 2016)
+  * StartAPI (since 29 Jun 2016)
 
 **) New features in Kloxo-MR 6.5.0 after released
 - Panel: Adminer, MyWebSql and SqlBuddy as alternative for Database management

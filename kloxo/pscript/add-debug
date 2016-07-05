@@ -1,0 +1,16 @@
+#!/bin/sh
+
+if [ "$1" != "" ] ; then
+	level="$1"
+else
+	level="2"
+fi
+
+path='/usr/local/lxlabs/kloxo/httpdocs'
+
+echo "- Format: '$0 [1|2|3|4|5]' where: '2' as default"
+echo
+echo "* Creating '${path}/commands.php' with content '2'"
+
+## MR -- use '-n' to make sure without LF
+echo -n "$level" >${path}/commands.php

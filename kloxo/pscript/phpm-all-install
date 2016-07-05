@@ -3,6 +3,7 @@
 if [ "$1" == "--help" ] ; then
 	sh /script/phpm-installer --help
 else
+	## find out php rpms -> yum list php??{,u,w}-cli|grep php|awk '{print $1}'|tr '\-cli\.' ' '|awk '{print $1}'
 	for i in $(cat /usr/local/lxlabs/kloxo/etc/list/set.php.lst|tr ',', '\n'|sed 's/[wu]//g'|uniq) ; do
 		if [ "${i}" != "php" ] ; then
 			sh /script/phpm-installer ${i}m $*

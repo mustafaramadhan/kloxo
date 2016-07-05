@@ -116,7 +116,7 @@ class Sgbl
 
 		$this->__path_program_start_vps_flag = $this->__path_program_root . "/etc/flag/start_vps.flg";
 
-		$this->__path_installapp_servervar = $this->__path_kloxo_httpd_root . "/installappdata/lx_template.servervars.phps";
+		$this->__path_easyinstaller_servervar = $this->__path_kloxo_httpd_root . "/easyinstallerdata/lx_template.servervars.phps";
 
 		// Default Values that will be overrriden in the kloxoconf file.
 	//	$this->__path_named_chroot = "/var/named/chroot/";
@@ -145,7 +145,7 @@ class Sgbl
 
 		$this->__var_connection_type = "tcp";
 
-		$this->__path_dbschema = "$this->__path_program_root/file/.db_schema";
+		$this->__path_dbschema = "$this->__path_program_root/file/sql/.db_schema";
 
 		if ($this->__var_database_type === "sqlite") {
 			$this->__var_dbf = "{$this->__path_program_etc}/conf/db.db";

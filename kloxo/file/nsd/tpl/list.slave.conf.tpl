@@ -35,6 +35,7 @@
 		$zone .= "    zonefile: slave/{$v}\n";
 		$zone .= "    allow-notify: {$c} NOKEY\n";
 		$zone .= "    request-xfr: {$c}@53 NOKEY\n";
+		$zone .= "    notify-retry: 5\n";
 
 		$str .= $zone . "\n";
 	}
@@ -44,13 +45,5 @@
 	file_put_contents($file, $str);
 
 	if (!file_exists("/etc/rc.d/init.d/nsd")) { return; }
-/*
-	if (file_exists("/usr/sbin/nsd-control")) {
-		$n = "/usr/sbin/nsd-control";
-		exec_with_all_closed("{$n} transfer; {$n} write; {$n} reload");
-	} else {
-		$n = "/usr/sbin/nsdc";
-		exec_with_all_closed("{$n} update; {$n} rebuild; {$n} reload");
-	}
-*/
+
 	createRestartFile("restart-dns");

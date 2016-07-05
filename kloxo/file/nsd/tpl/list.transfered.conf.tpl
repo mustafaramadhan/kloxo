@@ -42,4 +42,3 @@
 	// MR -- need without \\n in after {$end} 
 	exec("sed -i 's/^server:/server:\\n{$begin}\\n{$text}{$end}/g' {$file}2");
 	exec("mv -f {$file}2 {$file}");
-?>

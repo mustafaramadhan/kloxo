@@ -7,4 +7,4 @@ php_prog='/opt/__phpm__/usr/bin/php-cgi'
 #export PHPRC=$php_rc
 export PHP_INI_SCAN_DIR=$php_scan
 
-exec $php_prog -c $php_rc $*
+exec $php_prog -c $php_rc "$@"

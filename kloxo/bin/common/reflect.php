@@ -11,7 +11,7 @@ Example: How to add a customer to admin:
     /script/reflect --type=add --parent-class=client --parent-name=admin --class=client --v-var=ttype --v-val=customer
 
 Example: How to add a wordpress to a domain domain.com:
-    /script/reflect --type=add --parent-class=web --parent-name=domain.com --class=installapp --v-var=appname --v-val=wordpress
+    /script/reflect --type=add --parent-class=web --parent-name=domain.com --class=easyinstaller --v-var=appname --v-val=wordpress
 ';
 }
 

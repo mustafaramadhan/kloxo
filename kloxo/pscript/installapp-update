@@ -1,4 +1,0 @@
-#!/bin/sh
-
-. /script/directory
-## lxphp.exe ../bin/installapp-update.php

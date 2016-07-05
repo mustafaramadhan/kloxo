@@ -136,8 +136,14 @@ if (file_exists("{$globalspath}/custom.generic.conf")) {
 
 if (file_exists("{$globalspath}/custom.header_base.conf")) {
 	$header_base = "custom.header_base";
-} else {
+} else if (file_exists("{$globalspath}/header_base.conf")) {
 	$header_base = "header_base";
+}
+
+if (file_exists("{$globalspath}/custom.header_ssl.conf")) {
+	$header_ssl = "custom.header_ssl";
+} else if (file_exists("{$globalspath}/header_ssl.conf")) {
+	$header_ssl = "header_ssl";
 }
 
 if ($disabled) {
@@ -154,26 +160,7 @@ $HTTP["host"] =~ "^cp\.<?php echo str_replace(".", "\.", $domainname); ?>" {
 
 	include "<?php echo $globalspath; ?>/acme-challenge.conf"
 
-	$HTTP["scheme"] == "https" {
-
-		ssl.engine = "enable"
-
-		ssl.pemfile = "<?php echo $cert_file; ?>.pem"
-<?php
-	if (file_exists("{$cert_file}.ca")) {
-?>
-
-		ssl.ca-file = "<?php echo $cert_file; ?>.ca"
-
-		include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
-<?php
-	}
-?>
-
-		ssl.use-sslv2 = "disable"
-		ssl.use-sslv3 = "disable"
-
-	}
+	include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
 
 	var.user = "apache"
 	var.fpmport = "<?php echo $fpmportapache; ?>"
@@ -195,26 +182,7 @@ $HTTP["host"] =~ "^webmail\.<?php echo str_replace(".", "\.", $domainname); ?>" 
 
 	include "<?php echo $globalspath; ?>/acme-challenge.conf"
 
-	$HTTP["scheme"] == "https" {
-
-		ssl.engine = "enable"
-
-		ssl.pemfile = "<?php echo $cert_file; ?>.pem"
-<?php
-	if (file_exists("{$cert_file}.ca")) {
-?>
-
-		ssl.ca-file = "<?php echo $cert_file; ?>.ca"
-
-		include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
-<?php
-	}
-?>
-
-		ssl.use-sslv2 = "disable"
-		ssl.use-sslv3 = "disable"
-
-	}
+	include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
 
 	var.user = "apache"
 	var.fpmport = "<?php echo $fpmportapache; ?>"
@@ -239,26 +207,7 @@ $HTTP["host"] =~ "^cp\.<?php echo str_replace(".", "\.", $domainname); ?>" {
 
 	include "<?php echo $globalspath; ?>/acme-challenge.conf"
 
-	$HTTP["scheme"] == "https" {
-
-		ssl.engine = "enable"
-
-		ssl.pemfile = "<?php echo $cert_file; ?>.pem"
-<?php
-	if (file_exists("{$cert_file}.ca")) {
-?>
-
-		ssl.ca-file = "<?php echo $cert_file; ?>.ca"
-
-		include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
-<?php
-	}
-?>
-
-		ssl.use-sslv2 = "disable"
-		ssl.use-sslv3 = "disable"
-
-	}
+	include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
 
 	var.user = "apache"
 	var.fpmport = "<?php echo $fpmportapache; ?>"
@@ -281,30 +230,6 @@ $HTTP["host"] =~ "^cp\.<?php echo str_replace(".", "\.", $domainname); ?>" {
 ## webmail for '<?php echo $domainname; ?>'
 $HTTP["host"] =~ "^webmail\.<?php echo str_replace(".", "\.", $domainname); ?>" {
 
-	$HTTP["scheme"] == "https" {
-
-		ssl.engine = "enable"
-
-		ssl.pemfile = "<?php echo $cert_file; ?>.pem"
-<?php
-		if (file_exists("{$cert_file}.ca")) {
-?>
-
-		ssl.ca-file = "<?php echo $cert_file; ?>.ca"
-
-		include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
-<?php
-		}
-?>
-
-		ssl.use-sslv2 = "disable"
-		ssl.use-sslv3 = "disable"
-
-
-		url.redirect = ( "/" =>  "https://<?php echo $webmailremote; ?>/" )
-
-	}
-
 	url.redirect = ( "/" =>  "http://<?php echo $webmailremote; ?>/" )
 
 }
@@ -318,26 +243,7 @@ $HTTP["host"] =~ "^webmail\.<?php echo str_replace(".", "\.", $domainname); ?>" 
 
 	include "<?php echo $globalspath; ?>/acme-challenge.conf"
 
-	$HTTP["scheme"] == "https" {
-
-		ssl.engine = "enable"
-
-		ssl.pemfile = "<?php echo $cert_file; ?>.pem"
-<?php
-		if (file_exists("{$cert_file}.ca")) {
-?>
-
-		ssl.ca-file = "<?php echo $cert_file; ?>.ca"
-
-		include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
-<?php
-		}
-?>
-
-		ssl.use-sslv2 = "disable"
-		ssl.use-sslv3 = "disable"
-
-	}
+	include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
 
 	var.user = "apache"
 	var.fpmport = "<?php echo $fpmportapache; ?>"
@@ -376,25 +282,10 @@ $HTTP["host"] =~ "^<?php echo str_replace(".", "\.", $redirdomainname); ?>" {
 
 	include "<?php echo $globalspath; ?>/acme-challenge.conf"
 
+	include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
+
 	$HTTP["scheme"] == "https" {
-
-		ssl.engine = "enable"
-
-		ssl.pemfile = "<?php echo $cert_file; ?>.pem"
-<?php
-		if (file_exists("{$cert_file}.ca")) {
-?>
-
-	 	ssl.ca-file = "<?php echo $cert_file; ?>.ca"
-
-		include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
-<?php
-		}
-?>
-
-		ssl.use-sslv2 = "disable"
-		ssl.use-sslv3 = "disable"
-
+		include "/opt/configs/lighttpd/conf/globals/header_ssl.conf"
 	}
 
 	var.user = "<?php echo $sockuser; ?>"
@@ -430,29 +321,6 @@ $HTTP["host"] =~ "^<?php echo str_replace(".", "\.", $redirdomainname); ?>" {
 ## web for redirect '<?php echo $redirdomainname; ?>'
 $HTTP["host"] =~ "^<?php echo str_replace(".", "\.", $redirdomainname); ?>" {
 
-	$HTTP["scheme"] == "https" {
-
-		ssl.engine = "enable"
-
-		ssl.pemfile = "<?php echo $cert_file; ?>.pem"
-<?php
-			if (file_exists("{$cert_file}.ca")) {
-?>
-
-		ssl.ca-file = "<?php echo $cert_file; ?>.ca"
-
-		include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
-<?php
-			}
-?>
-
-		ssl.use-sslv2 = "disable"
-		ssl.use-sslv3 = "disable"
-
-		url.redirect = ( "/" =>  "https://<?php echo $domainname; ?>/" )
-
-	}
-
 	var.rootdir = "<?php echo $redirfullpath; ?>/"
 
 	server.document-root = var.rootdir
@@ -479,26 +347,7 @@ $HTTP["host"] =~ "^webmail\.<?php echo str_replace(".", "\.", $parkdomainname); 
 
 	include "<?php echo $globalspath; ?>/acme-challenge.conf"
 
-	$HTTP["scheme"] == "https" {
-
-		ssl.engine = "enable"
-
-		ssl.pemfile = "<?php echo $cert_file; ?>.pem"
-<?php
-			if (file_exists("{$cert_file}.ca")) {
-?>
-
-		ssl.ca-file = "<?php echo $cert_file; ?>.ca"
-
-		include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
-<?php
-			}
-?>
-
-		ssl.use-sslv2 = "disable"
-		ssl.use-sslv3 = "disable"
-
-	}
+	include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
 
 	var.user = "apache"
 	var.fpmport = "<?php echo $fpmportapache; ?>"
@@ -522,29 +371,6 @@ $HTTP["host"] =~ "^webmail\.<?php echo str_replace(".", "\.", $parkdomainname); 
 ## webmail for parked '<?php echo $parkdomainname; ?>'
 $HTTP["host"] =~ "^webmail\.<?php echo str_replace(".", "\.", $parkdomainname); ?>" {
 
-	$HTTP["scheme"] == "https" {
-
-		ssl.engine = "enable"
-
-		ssl.pemfile = "<?php echo $cert_file; ?>.pem"
-<?php
-				if (file_exists("{$cert_file}.ca")) {
-?>
-
-		ssl.ca-file = "<?php echo $cert_file; ?>.ca"
-
-		include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
-<?php
-				}
-?>
-
-		ssl.use-sslv2 = "disable"
-		ssl.use-sslv3 = "disable"
-
-		url.redirect = ( "/" =>  "https://<?php echo $webmailremote; ?>/" )
-
-	}
-
 	url.redirect = ( "/" =>  "http://<?php echo $webmailremote; ?>/" )
 
 }
@@ -560,26 +386,7 @@ $HTTP["host"] =~ "^webmail\.<?php echo str_replace(".", "\.", $parkdomainname); 
 
 	include "<?php echo $globalspath; ?>/acme-challenge.conf"
 
-	$HTTP["scheme"] == "https" {
-
-		ssl.engine = "enable"
-
-		ssl.pemfile = "<?php echo $cert_file; ?>.pem"
-<?php
-					if (file_exists("{$cert_file}.ca")) {
-?>
-
-		ssl.ca-file = "<?php echo $cert_file; ?>.ca"
-
-		include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
-<?php
-					}
-?>
-
-		ssl.use-sslv2 = "disable"
-		ssl.use-sslv3 = "disable"
-
-	}
+	include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
 
 	var.user = "apache"
 	var.fpmport = "<?php echo $fpmportapache; ?>"
@@ -621,26 +428,7 @@ $HTTP["host"] =~ "^webmail\.<?php echo str_replace(".", "\.", $redirdomainname);
 
 	include "<?php echo $globalspath; ?>/acme-challenge.conf"
 
-	$HTTP["scheme"] == "https" {
-
-		ssl.engine = "enable"
-
-		ssl.pemfile = "<?php echo $cert_file; ?>.pem"
-<?php
-			if (file_exists("{$cert_file}.ca")) {
-?>
-
-		ssl.ca-file = "<?php echo $cert_file; ?>.ca"
-
-		include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
-<?php
-			}
-?>
-
-		ssl.use-sslv2 = "disable"
-		ssl.use-sslv3 = "disable"
-
-	}
+	include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
 
 	var.user = "apache"
 	var.fpmport = "<?php echo $fpmportapache; ?>"
@@ -664,29 +452,6 @@ $HTTP["host"] =~ "^webmail\.<?php echo str_replace(".", "\.", $redirdomainname);
 ## webmail for redirect '<?php echo $redirdomainname; ?>'
 $HTTP["host"] =~ "^webmail\.<?php echo str_replace(".", "\.", $redirdomainname); ?>" {
 
-	$HTTP["scheme"] == "https" {
-
-		ssl.engine = "enable"
-
-		ssl.pemfile = "<?php echo $cert_file; ?>.pem"
-<?php
-				if (file_exists("{$cert_file}.ca")) {
-?>
-
-		ssl.ca-file = "<?php echo $cert_file; ?>.ca"
-
-		include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
-<?php
-				}
-?>
-
-		ssl.use-sslv2 = "disable"
-		ssl.use-sslv3 = "disable"
-
-		url.redirect = ( "/" =>  "https://<?php echo $webmailremote; ?>/" )
-
-	}
-
 	url.redirect = ( "/" =>  "http://<?php echo $webmailremote; ?>/" )
 
 }
@@ -701,26 +466,7 @@ $HTTP["host"] =~ "^webmail\.<?php echo str_replace(".", "\.", $redirdomainname);
 
 	include "<?php echo $globalspath; ?>/acme-challenge.conf"
 
-	$HTTP["scheme"] == "https" {
-
-		ssl.engine = "enable"
-
-		ssl.pemfile = "<?php echo $cert_file; ?>.pem"
-<?php
-					if (file_exists("{$cert_file}.ca")) {
-?>
-
-		ssl.ca-file = "<?php echo $cert_file; ?>.ca"
-
-		include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
-<?php
-					}
-?>
-
-		ssl.use-sslv2 = "disable"
-		ssl.use-sslv3 = "disable"
-
-	}
+	include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
 
 	var.user = "apache"
 	var.fpmport = "<?php echo $fpmportapache; ?>"
@@ -761,29 +507,6 @@ if ($wwwredirect) {
 ## web for '<?php echo $domainname; ?>'
 $HTTP["host"] =~ "<?php echo $domainname; ?><?php echo $ipssl; ?>" {
 
-	$HTTP["scheme"] == "https" {
-
-		ssl.engine = "enable"
-
-		ssl.pemfile = "<?php echo $cert_file; ?>.pem"
-<?php
-	if (file_exists("{$cert_file}.ca")) {
-?>
-
-		ssl.ca-file = "<?php echo $cert_file; ?>.ca"
-
-		include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
-<?php
-	}
-?>
-
-		ssl.use-sslv2 = "disable"
-		ssl.use-sslv3 = "disable"
-
-		url.redirect = ( "^/(.*)" => "https://www.<?php echo $domainname; ?>/$1" )
-
-	}
-
 	url.redirect = ( "^/(.*)" => "http://www.<?php echo $domainname; ?>/$1" )
 }
 
@@ -798,29 +521,15 @@ $HTTP["host"] =~ "<?php echo $serveralias; ?><?php echo $ipssl; ?>" {
 $HTTP["host"] =~ "<?php echo $serveralias; ?><?php echo $ipssl; ?>" {
 
 	include "<?php echo $globalspath; ?>/acme-challenge.conf"
-<?php
-}
-?>
+
+	include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
 
 	$HTTP["scheme"] == "https" {
-
-		ssl.engine = "enable"
-
-		ssl.pemfile = "<?php echo $cert_file; ?>.pem"
-<?php
-if (file_exists("{$cert_file}.ca")) {
-?>
-
-		ssl.ca-file = "<?php echo $cert_file; ?>.ca"
-
-		include "<?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf"
+		include "/opt/configs/lighttpd/conf/globals/header_ssl.conf"
+	}
 <?php
 }
 ?>
-		ssl.use-sslv2 = "disable"
-		ssl.use-sslv3 = "disable"
-
-	}
 
 	var.domain = "<?php echo $domainname; ?>"
 	var.user = "<?php echo $sockuser; ?>"
@@ -960,7 +669,6 @@ if ($redirectionremote) {
 	include "<?php echo $globalspath; ?>/<?php echo $generic; ?>.conf"
 
 	alias.url += ( "/" => var.rootdir )
-
 <?php
 	if ($enablecgi) {
 ?>

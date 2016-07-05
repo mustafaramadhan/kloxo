@@ -1,0 +1,11 @@
+#!/bin/sh
+
+if [ "$1" != "" ] && [ "$2" != "" ] && [ "$3" != "" ] ; then
+	/root/.startapi.sh/startapi.sh --setAPIKey $1 --password $2
+	/root/.startapi.sh/startapi.sh --setAPIToken $3
+else
+	echo
+	echo "* Format: 'sh $0 <key-link> <key-password> <token>'"
+	echo
+fi
+

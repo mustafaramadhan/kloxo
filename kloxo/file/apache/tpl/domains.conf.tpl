@@ -11,6 +11,8 @@ if (!isset($timeout)) {
 }
 
 $globalspath = "/opt/configs/apache/conf/globals";
+$sslpath = "/home/kloxo/ssl";
+$kloxopath = "/usr/local/lxlabs/kloxo";
 
 if ($reverseproxy) {
 	$ports[] = '30080';
@@ -43,8 +45,6 @@ if ($reverseproxy) {
 }
 
 foreach ($certnamelist as $ip => $certname) {
-	$sslpath = "/home/kloxo/ssl";
-
 	if (file_exists("{$sslpath}/{$domainname}.key")) {
 		$certnamelist[$ip] = "{$sslpath}/{$domainname}";
 	} else {
@@ -114,14 +114,40 @@ if ($blockips) {
 
 if (file_exists("{$globalspath}/custom.acme-challenge.conf")) {
 	$acmechallenge = "custom.acme-challenge";
-} else {
+} else if (file_exists("{$globalspath}/acme-challenge.conf")) {
 	$acmechallenge = "acme-challenge";
 }
 
 if (file_exists("{$globalspath}/custom.header_base.conf")) {
 	$header_base = "custom.header_base";
-} else {
+} else if (file_exists("{$globalspath}/header_base.conf")) {
 	$header_base = "header_base";
+}
+
+if (file_exists("{$globalspath}/custom.header_ssl.conf")) {
+	$header_ssl = "custom.header_ssl";
+} else if (file_exists("{$globalspath}/header_ssl.conf")) {
+	$header_ssl = "header_ssl";
+}
+
+if (file_exists("{$kloxopath}/etc/flag/use_apache24.flg")) {
+	$use_httpd24 = true;
+} else {
+	$use_httpd24 = false;
+}
+
+if ($use_httpd24) {
+	if (file_exists("{$globalspath}/custom.ssl_base24.conf")) {
+		$ssl_base = "custom.ssl_base24";
+	} else if (file_exists("{$globalspath}/ssl_base24.conf")) {
+		$ssl_base = "ssl_base24";
+	}
+} else {
+	if (file_exists("{$globalspath}/custom.ssl_base.conf")) {
+		$ssl_base = "custom.ssl_base";
+	} else if (file_exists("{$globalspath}/ssl_base.conf")) {
+		$ssl_base = "ssl_base";
+	}
 }
 
 $userinfo = posix_getpwnam($user);
@@ -205,12 +231,11 @@ foreach ($certnamelist as $ip => $certname) {
 		Protocols h2 http/1.1
 	</IfModule>
 
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+		
 	<IfModule mod_ssl.c>
-		SSLEngine On
-		SSLProtocol ALL -SSLv2 -SSLv3
-		SSLHonorCipherOrder On
-		#SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
-		SSLCipherSuite "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL 
+		Include <?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf
+
 		SSLCertificateFile <?php echo $certname; ?>.pem
 		SSLCertificateKeyFile <?php echo $certname; ?>.key
 <?php
@@ -218,7 +243,7 @@ foreach ($certnamelist as $ip => $certname) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
 
-		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+		Include <?php echo $globalspath; ?>/<?php echo $header_ssl; ?>.conf
 <?php
 				}
 ?>
@@ -348,12 +373,11 @@ foreach ($certnamelist as $ip => $certname) {
 		Protocols h2 http/1.1
 	</IfModule>
 
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+
 	<IfModule mod_ssl.c>
-		SSLEngine on
-		SSLProtocol ALL -SSLv2 -SSLv3
-		SSLHonorCipherOrder On
-		#SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
-		SSLCipherSuite "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL 
+		Include <?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf
+
 		SSLCertificateFile <?php echo $certname; ?>.pem
 		SSLCertificateKeyFile <?php echo $certname; ?>.key
 <?php
@@ -361,7 +385,7 @@ foreach ($certnamelist as $ip => $certname) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
 
-		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+		Include <?php echo $globalspath; ?>/<?php echo $header_ssl; ?>.conf
 <?php
 			}
 ?>
@@ -492,12 +516,11 @@ foreach ($certnamelist as $ip => $certname) {
 		Protocols h2 http/1.1
 	</IfModule>
 
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+
 	<IfModule mod_ssl.c>
-		SSLEngine On
-		SSLProtocol ALL -SSLv2 -SSLv3
-		SSLHonorCipherOrder On
-		#SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
-		SSLCipherSuite "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL 
+		Include <?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf
+
 		SSLCertificateFile <?php echo $certname; ?>.pem
 		SSLCertificateKeyFile <?php echo $certname; ?>.key
 <?php
@@ -505,7 +528,7 @@ foreach ($certnamelist as $ip => $certname) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
 
-		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+		Include <?php echo $globalspath; ?>/<?php echo $header_ssl; ?>.conf
 <?php
 				}
 ?>
@@ -549,12 +572,11 @@ foreach ($certnamelist as $ip => $certname) {
 		Protocols h2 http/1.1
 	</IfModule>
 
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+
 	<IfModule mod_ssl.c>
-		SSLEngine On
-		SSLProtocol ALL -SSLv2 -SSLv3
-		SSLHonorCipherOrder On
-		#SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
-		SSLCipherSuite "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL 
+		Include <?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf
+
 		SSLCertificateFile <?php echo $certname; ?>.pem
 		SSLCertificateKeyFile <?php echo $certname; ?>.key
 <?php
@@ -562,7 +584,7 @@ foreach ($certnamelist as $ip => $certname) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
 
-		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+		Include <?php echo $globalspath; ?>/<?php echo $header_ssl; ?>.conf
 <?php
 				}
 ?>
@@ -706,12 +728,11 @@ foreach ($certnamelist as $ip => $certname) {
 		Protocols h2 http/1.1
 	</IfModule>
 
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+
 	<IfModule mod_ssl.c>
-		SSLEngine On
-		SSLProtocol ALL -SSLv2 -SSLv3
-		SSLHonorCipherOrder On
-		#SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
-		SSLCipherSuite "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL 
+		Include <?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf
+
 		SSLCertificateFile <?php echo $certname; ?>.pem
 		SSLCertificateKeyFile <?php echo $certname; ?>.key
 <?php
@@ -719,7 +740,7 @@ foreach ($certnamelist as $ip => $certname) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
 
-		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+		Include <?php echo $globalspath; ?>/<?php echo $header_ssl; ?>.conf
 <?php
 				}
 ?>
@@ -822,7 +843,7 @@ foreach ($certnamelist as $ip => $certname) {
 		<IfModule itk.c>
 			AssignUserId <?php echo $sockuser; ?> <?php echo $sockuser; ?>
 
-			<Location "/awstats/">
+			<Location "/stats/">
 				AssignUserId apache apache
 			</Location>
 		</IfModule>
@@ -967,22 +988,22 @@ foreach ($certnamelist as $ip => $certname) {
 	Redirect "/stats" "<?php echo $protocol; ?><?php echo $domainname; ?>/awstats/awstats.pl"
 	Redirect "/stats/" "<?php echo $protocol; ?><?php echo $domainname; ?>/awstats/awstats.pl"
 
-	<Location "/stats/">
+	<Location "/awstats/">
 		Options +Indexes
-	</Location>
 <?php
-		 		if ($statsprotect) {
+				if ($statsprotect) {
 ?>
 
-	<Location "/awstats/">
 		AuthType Basic
-		AuthName "Awstats"
+		AuthName "AuthStats"
 		#AuthUserFile "/home/<?php echo $user; ?>/__dirprotect/__stats"
 		AuthUserFile "/home/httpd/<?php echo $domainname ?>/__dirprotect/__stats"
 		require valid-user
-	</Location>
 <?php
 				}
+?>
+	</Location>
+<?php
 			} elseif ($statsapp === 'webalizer') {
 ?>
 
@@ -990,20 +1011,20 @@ foreach ($certnamelist as $ip => $certname) {
 
 	<Location "/stats/">
 		Options +Indexes
-	</Location>
 <?php
 				if ($statsprotect) {
 ?>
 
-	<Location "/stats/">
 		AuthType Basic
-		AuthName "stats"
+		AuthName "AuthStats"
 		#AuthUserFile "/home/<?php echo $user; ?>/__dirprotect/__stats"
 		AuthUserFile "/home/httpd/<?php echo $domainname ?>/__dirprotect/__stats"
 		require valid-user
-	</Location>
 <?php
 				}
+?>
+	</Location>
+<?php
 			}
 		}
 
@@ -1099,12 +1120,11 @@ foreach ($certnamelist as $ip => $certname) {
 		Protocols h2 http/1.1
 	</IfModule>
 
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+
 	<IfModule mod_ssl.c>
-		SSLEngine On
-		SSLProtocol ALL -SSLv2 -SSLv3
-		SSLHonorCipherOrder On
-		#SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
-		SSLCipherSuite "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL 
+		Include <?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf
+
 		SSLCertificateFile <?php echo $certname; ?>.pem
 		SSLCertificateKeyFile <?php echo $certname; ?>.key
 <?php
@@ -1112,7 +1132,7 @@ foreach ($certnamelist as $ip => $certname) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
 
-		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+		Include <?php echo $globalspath; ?>/<?php echo $header_ssl; ?>.conf
 <?php
 							}
 ?>
@@ -1154,7 +1174,7 @@ foreach ($certnamelist as $ip => $certname) {
 		<IfModule itk.c>
 			AssignUserId <?php echo $sockuser; ?> <?php echo $sockuser; ?>
 
-			<Location "/awstats/">
+			<Location "/stats/">
 				AssignUserId apache apache
 			</Location>
 		</IfModule>
@@ -1282,12 +1302,11 @@ foreach ($certnamelist as $ip => $certname) {
 		Protocols h2 http/1.1
 	</IfModule>
 
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+
 	<IfModule mod_ssl.c>
-		SSLEngine On
-		SSLProtocol ALL -SSLv2 -SSLv3
-		SSLHonorCipherOrder On
-		#SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
-		SSLCipherSuite "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL 
+		Include <?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf
+
 		SSLCertificateFile <?php echo $certname; ?>.pem
 		SSLCertificateKeyFile <?php echo $certname; ?>.key
 <?php
@@ -1295,7 +1314,7 @@ foreach ($certnamelist as $ip => $certname) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
 
-		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+		Include <?php echo $globalspath; ?>/<?php echo $header_ssl; ?>.conf
 <?php
 							}
 ?>
@@ -1349,12 +1368,11 @@ foreach ($certnamelist as $ip => $certname) {
 		Protocols h2 http/1.1
 	</IfModule>
 
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+
 	<IfModule mod_ssl.c>
-		SSLEngine On
-		SSLProtocol ALL -SSLv2 -SSLv3
-		SSLHonorCipherOrder On
-		#SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
-		SSLCipherSuite "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL 
+		Include <?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf
+
 		SSLCertificateFile <?php echo $certname; ?>.pem
 		SSLCertificateKeyFile <?php echo $certname; ?>.key
 <?php
@@ -1362,7 +1380,7 @@ foreach ($certnamelist as $ip => $certname) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
 
-		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+		Include <?php echo $globalspath; ?>/<?php echo $header_ssl; ?>.conf
 <?php
 						}
 ?>
@@ -1493,12 +1511,11 @@ foreach ($certnamelist as $ip => $certname) {
 		Protocols h2 http/1.1
 	</IfModule>
 
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+
 	<IfModule mod_ssl.c>
-		SSLEngine On
-		SSLProtocol ALL -SSLv2 -SSLv3
-		SSLHonorCipherOrder On
-		#SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
-		SSLCipherSuite "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL 
+		Include <?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf
+
 		SSLCertificateFile <?php echo $certname; ?>.pem
 		SSLCertificateKeyFile <?php echo $certname; ?>.key
 <?php
@@ -1506,7 +1523,7 @@ foreach ($certnamelist as $ip => $certname) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
 
-		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+		Include <?php echo $globalspath; ?>/<?php echo $header_ssl; ?>.conf
 <?php
 							}
 ?>
@@ -1550,12 +1567,11 @@ foreach ($certnamelist as $ip => $certname) {
 		Protocols h2 http/1.1
 	</IfModule>
 
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+
 	<IfModule mod_ssl.c>
-		SSLEngine On
-		SSLProtocol ALL -SSLv2 -SSLv3
-		SSLHonorCipherOrder On
-		#SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
-		SSLCipherSuite "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL 
+		Include <?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf
+
 		SSLCertificateFile <?php echo $certname; ?>.pem
 		SSLCertificateKeyFile <?php echo $certname; ?>.key
 <?php
@@ -1563,7 +1579,7 @@ foreach ($certnamelist as $ip => $certname) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
 
-		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+		Include <?php echo $globalspath; ?>/<?php echo $header_ssl; ?>.conf
 <?php
 							}
 ?>
@@ -1710,12 +1726,11 @@ foreach ($certnamelist as $ip => $certname) {
 		Protocols h2 http/1.1
 	</IfModule>
 
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+
 	<IfModule mod_ssl.c>
-		SSLEngine On
-		SSLProtocol ALL -SSLv2 -SSLv3
-		SSLHonorCipherOrder On
-		#SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
-		SSLCipherSuite "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL 
+		Include <?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf
+
 		SSLCertificateFile <?php echo $certname; ?>.pem
 		SSLCertificateKeyFile <?php echo $certname; ?>.key
 <?php
@@ -1723,7 +1738,7 @@ foreach ($certnamelist as $ip => $certname) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
 
-		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+		Include <?php echo $globalspath; ?>/<?php echo $header_ssl; ?>.conf
 <?php
 						}
 ?>
@@ -1854,12 +1869,11 @@ foreach ($certnamelist as $ip => $certname) {
 		Protocols h2 http/1.1
 	</IfModule>
 
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+
 	<IfModule mod_ssl.c>
-		SSLEngine On
-		SSLProtocol ALL -SSLv2 -SSLv3
-		SSLHonorCipherOrder On
-		#SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
-		SSLCipherSuite "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL 
+		Include <?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf
+
 		SSLCertificateFile <?php echo $certname; ?>.pem
 		SSLCertificateKeyFile <?php echo $certname; ?>.key
 <?php
@@ -1867,7 +1881,7 @@ foreach ($certnamelist as $ip => $certname) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
 
-		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+		Include <?php echo $globalspath; ?>/<?php echo $header_ssl; ?>.conf
 <?php
 							}
 ?>
@@ -1911,12 +1925,11 @@ foreach ($certnamelist as $ip => $certname) {
 		Protocols h2 http/1.1
 	</IfModule>
 
+	Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+
 	<IfModule mod_ssl.c>
-		SSLEngine On
-		SSLProtocol ALL -SSLv2 -SSLv3
-		SSLHonorCipherOrder On
-		#SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
-		SSLCipherSuite "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL 
+		Include <?php echo $globalspath; ?>/<?php echo $ssl_base; ?>.conf
+
 		SSLCertificateFile <?php echo $certname; ?>.pem
 		SSLCertificateKeyFile <?php echo $certname; ?>.key
 <?php
@@ -1924,7 +1937,7 @@ foreach ($certnamelist as $ip => $certname) {
 ?>
 		SSLCACertificatefile <?php echo $certname; ?>.ca
 
-		Include <?php echo $globalspath; ?>/<?php echo $header_base; ?>.conf
+		Include <?php echo $globalspath; ?>/<?php echo $header_ssl; ?>.conf
 <?php
 							}
 ?>

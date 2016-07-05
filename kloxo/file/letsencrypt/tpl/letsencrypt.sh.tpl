@@ -76,7 +76,4 @@ if [ -f ${lepath}/${maindom}/chain.pem ] ; then
 	done
 fi
 
-sh /script/fixweb --domain=${maindom} >/dev/null 2>&1
-sh /script/add-restart-queue restart-web
-
 exit $RETVAL

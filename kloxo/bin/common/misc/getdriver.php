@@ -10,7 +10,7 @@ if (!isset($argv[1])) {
 	exit;
 } else {
 	$driverapp = $gbl->getSyncClass(null, 'localhost', $argv[1]);
-	print("Driver for {$argv[1]} is {$driverapp}\n");
+	print("Driver for '{$argv[1]}' is '{$driverapp}'\n");
 
 	exit;
 }

@@ -110,7 +110,6 @@ class pservercore extends Lxclient
 	static $__desc_ps_password = array("", "", "password");
 	static $__desc_ddate = array("", "", "date");
 
-
 	static $__desc_retype_admin_p_f = array("", "", "retype_admin_or_server_password");
 	static $__desc_button_dbpassword_f = array("b", "", "", 'a=updateform&sa=dbpassword');
 	static $__desc_button_list_process_f = array("b", "", "", 'a=list&c=process');
@@ -169,6 +168,14 @@ class pservercore extends Lxclient
 	static $__desc_pserver_o = array('d', '', '', '');
 
 	static $__desc_use_apache24 = array("f", "", "use_apache24");
+	static $__desc_use_pagespeed = array("f", "", "use_pagespeed");
+
+	function __construct($masterserver, $readserver, $name)
+	{
+		global $gbl, $sgbl, $login, $ghtml;
+
+		parent::__construct($masterserver, $name, $name);
+	}
 
 	function syncToSystem()
 	{
@@ -316,13 +323,6 @@ class pservercore extends Lxclient
 		}
 
 		return array('nameserver' => $nameserver, 'networkgateway' => $networkgateway, 'ip' => $totallist, 'networknetmask' => $netmask);
-	}
-
-	function __construct($masterserver, $readserver, $name)
-	{
-		global $gbl, $sgbl, $login, $ghtml;
-
-		parent::__construct($masterserver, $name, $name);
 	}
 
 	function getShowInfo()
@@ -959,6 +959,7 @@ class pservercore extends Lxclient
 		if ($ob->dbaction === 'clean') {
 			$ob->dbaction = 'update';
 		}
+
 		$ob->parent_clname = $this->getClName();
 
 		$ob->write();
@@ -1097,6 +1098,10 @@ STRIN;
 		if (!$parent->isAdmin() && $this->clientname !== $parent->nname) {
 			throw new lxException($login->getThrow("no_permission"), '', $parent->nname);
 		}
+
+	//	if ($subaction === 'switchprogram') {
+	//		$param['imap4_driver'] = $param['pop3_driver'];
+	//	}
 
 		return $param;
 	}
@@ -1248,13 +1253,34 @@ STRIN;
 				$this->webcache_driver = rl_exec_get('localhost', $this->syncserver, 'slave_get_driver', array('webcache'));
 				$this->dns_driver = rl_exec_get('localhost', $this->syncserver, 'slave_get_driver', array('dns'));
 				$this->spam_driver = rl_exec_get('localhost', $this->syncserver, 'slave_get_driver', array('spam'));
+				$this->pop3_driver = rl_exec_get('localhost', $this->syncserver, 'slave_get_driver', array('pop3'));
+			//	$this->imap4_driver = rl_exec_get('localhost', $this->syncserver, 'slave_get_driver', array('imap4'));
+				$this->smtp_driver = rl_exec_get('localhost', $this->syncserver, 'slave_get_driver', array('smtp'));
 
 				if (!isset($this->web_driver)) {
 					$this->web_driver = $gbl->getSyncClass($this->__masterserver, $this->syncserver, 'web');
 					$this->webcache_driver = $gbl->getSyncClass($this->__masterserver, $this->syncserver, 'webcache');
 					$this->dns_driver = $gbl->getSyncClass($this->__masterserver, $this->syncserver, 'dns');
 					$this->spam_driver = $gbl->getSyncClass($this->__masterserver, $this->syncserver, 'spam');
+					$this->pop3_driver = $gbl->getSyncClass($this->__masterserver, $this->syncserver, 'pop3');
+				//	$this->imap4_driver = $gbl->getSyncClass($this->__masterserver, $this->syncserver, 'imap4');
+					$this->smtp_driver = $gbl->getSyncClass($this->__masterserver, $this->syncserver, 'smtp');
 				}
+
+				$a['web'] = $this->web_driver;
+				$a['webcache'] = $this->webcache_driver;
+				$a['dns'] = $this->dns_driver;
+				$a['spam'] = $this->spam_driver;
+				$a['pop3'] = (isset($this->pop3_driver)) ? $this->pop3_driver : 'courier';
+				// MR -- use pop3 driver because as the same as for imap4
+			//	$a['imap4'] = (isset($this->pop3_driver)) ? $this->pop3_driver : 'courier';
+				$a['smtp'] = (isset($this->smtp_driver)) ? $this->smtp_driver : 'qmail';
+
+				$this->pop3_driver = $a['pop3'];
+			//	$this->imap4_driver = $a['pop3'];
+				$this->smtp_driver = $a['smtp'];
+
+				rl_exec_get('localhost', $this->syncserver, 'slave_save_db', array('driver', $a));
 
 				$this->was();
 
@@ -1284,12 +1310,24 @@ STRIN;
 					$vlist['use_apache24'] = array('f', 'on', 'off');
 				}
 
+				if (file_exists("../etc/flag/use_pagespeed.flg")) {
+					$this->use_pagespeed = 'on';
+				} else {
+					$this->use_pagespeed = 'off';
+				}
+
+				$vlist['use_pagespeed'] = array('f', 'on', 'off');
+
 				$vlist['webcache_driver'] = array('s', array('none', 'squid', 'trafficserver', 'varnish'));
 
 			//	$vlist['dns_driver'] = array('s', array('none', 'bind', 'djbdns', 'maradns', 'nsd', 'pdns'));
 				$vlist['dns_driver'] = array('s', array('none', 'bind', 'djbdns', 'nsd', 'pdns', 'mydns', 'yadifa'));
 
 				$vlist['spam_driver'] = array('s', array('none', 'spamassassin', 'bogofilter'));
+
+				$vlist['pop3_driver'] = array('s', array('none', 'courier', 'dovecot'));
+			//	$vlist['imap4_driver'] = array('h', null);
+				$vlist['smtp_driver'] = array('s', array('none', 'qmail'));
 
 				// MR -- no needed under Kloxo-MR 7.0 because fix 'defaults' level
 			//	$vlist['no_fix_config'] = array('f', 'on', 'off');

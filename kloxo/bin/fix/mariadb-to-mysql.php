@@ -37,7 +37,7 @@ if (strpos($mysqlbranch, "mysql") !== false) {
 		}
 
 		echo "- Install MySQL\n";
-		system("yum install mysql55 mysql55-server --disablerepo=mratwork-mariadb* -y");
+		system("yum install mysql55 mysql55-server --disablerepo=*mariadb* -y");
 
 		if (file_exists("/etc/my.cnf.d/my.cnf")) {
 			system("'cp' -f /etc/my.cnf.d/my.cnf /etc/my.cnf");

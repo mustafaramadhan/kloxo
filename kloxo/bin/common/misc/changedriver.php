@@ -16,7 +16,7 @@ if (!isset($argv[1])) {
 
 if (!isset($argv[2])) {
 	$driverapp = $gbl->getSyncClass(null, 'localhost', $class);
-	print("Driver for {$class} is {$driverapp}\n");
+	print("Driver for '{$class}' is '{$driverapp}'\n");
 
 	exit;
 }
@@ -32,8 +32,8 @@ include "../file/driver/rhel.inc";
 $dr = $server->getObject('driver');
 
 if (!array_search_bool($pgm, $driver[$class])) {
-	$str = implode(" ", $driver[$class]);
-	print("The driver name isn't correct. Available drivers for {$class}: {$str}\n");
+	$str = "'" . implode("', '", $driver[$class]) . "'";
+	print("The driver name isn't correct. Available drivers for '{$class}': {$str}\n");
 
 	exit;
 }
@@ -45,4 +45,4 @@ $dr->setUpdateSubaction();
 
 $dr->write();
 
-print("Successfully changed Driver for {$class} to {$pgm}\n");
+print("Successfully changed Driver for '{$class}' to '{$pgm}'\n");

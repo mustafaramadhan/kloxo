@@ -10,9 +10,9 @@ class databasecore extends Lxdb
 	static $__desc_dbtype = array("", "",  "database_type");
 	static $__desc_syncserver = array("", "",  "database_server");
 	static $__desc_dbpassword = array("n", "",  "password");
-//	static $__desc_installapp_flag = array("e", "",  "used");
-//	static $__desc_installapp_flag_v_dull = array("", "",  "Not Used by Application");
-//	static $__desc_installapp_flag_v_on = array("", "",  "Used By Application");
+	static $__desc_easyinstaller_flag = array("e", "",  "used");
+	static $__desc_easyinstaller_flag_v_dull = array("", "",  "Not Used by Application");
+	static $__desc_easyinstaller_flag_v_on = array("", "",  "Used By Application");
 	static $__desc_mysqldb_usage = array("q", "",  "database_disk_usage_(mb)");
 	static $__desc_mssqldb_usage = array("q", "",  "database_disk_usage_(mb)");
 	static $__desc_phpmyadmin_f  = array("b", "",  "", "__stub_phpmyadmin_url");
@@ -121,15 +121,14 @@ class databasecore extends Lxdb
 
 	Function display($var)
 	{
-	/*
-		if ($var === 'installapp_flag') {
+		if ($var === 'easyinstaller_flag') {
 			if ($this->$var === 'on') {
 				return 'on';
 			} else {
 				return "dull";
 			}
 		}
-	*/	
+	
 		return parent::display($var);
 	}
 
@@ -281,19 +280,19 @@ class databasecore extends Lxdb
 		}
 
 		return true;
-	/*
-		if ($this->isOn('installapp_flag')) {
+
+		if ($this->isOn('easyinstaller_flag')) {
 			return false;
 		}
-	*/	
+
 		return true;
 	}
 
 	static function createListNlist($parent, $view)
 	{
-	//	$nlist['installapp_flag'] = '5%';
-	//	$nlist['phpmyadmin_f'] = '5%';
-	//	$nlist['parent_clname'] = '5%';
+		$nlist['easyinstaller_flag'] = '5%';
+		$nlist['phpmyadmin_f'] = '5%';
+		$nlist['parent_clname'] = '5%';
 		$nlist['syncserver'] = '5%';
 		$nlist['username'] =  '10%';
 		$nlist['nname'] =  '70%';

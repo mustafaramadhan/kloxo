@@ -1,4 +1,10 @@
 #!/bin/sh
+
+if [ -f ./custom.run ] ; then
+	. ./custom.run
+	return $?
+fi
+
 rm -rf ./env/*;
 
 cat /etc/courier/authlib/authdaemonrc | /usr/bin/envconv

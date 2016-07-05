@@ -1469,10 +1469,10 @@ class Domaind extends DomainBase
 			}
 		}
 	*/
-		$alist['__v_dialog_comp'] = "n=web&a=list&c=component";
+	//	$alist['__v_dialog_comp'] = "n=web&a=list&c=component";
 
-		if (!$gen->isOn('disableinstallapp') && $this->getClientParentO()->priv->isOn('installapp_flag')) {
-			$alist[] = "n=web&a=show&k[class]=allinstallapp&k[nname]=installapp";
+		if (!$gen->isOn('disableeasyinstaller') && $this->getClientParentO()->priv->isOn('easyinstaller_flag')) {
+			$alist[] = "n=web&a=show&k[class]=all_easyinstaller&k[nname]=easyinstaller";
 		}
 	/*
 		$alist['action'][] = "a=update&sa=backup";
@@ -1848,6 +1848,7 @@ class all_domain extends domaind
 	//	$alist[] = "a=show";
 
 		if ($parent->isAdmin()) {
+			$alist[] = "a=list&c=all_client";
 			$alist[] = "a=list&c=all_domain";
 			$alist[] = "a=list&c=all_addondomain";
 			$alist[] = "a=list&c=all_mailaccount";
@@ -1859,6 +1860,7 @@ class all_domain extends domaind
 			$alist[] = "a=list&c=all_sslcert";
 		} else {
 			if ($parent->isLte('reseller')) {
+				$alist[] = "a=list&c=all_client";
 				$alist[] = "a=list&c=all_domain";
 			}
 		}
@@ -1881,7 +1883,7 @@ class all_domain extends domaind
 			$nlist['mmailpserver'] = array('s', $rs);
 			$nlist['dnspserver'] = array('s', $rs);
 		}
-		
+
 		return $nlist;
 	}
 

@@ -508,7 +508,7 @@ function createSslStream()
 //	stream_set_timeout($sockr, 30000000);
 	stream_context_set_option($sockr, 'ssl', 'allow_self_signed', true);
 //	stream_context_set_option($sock, 'ssl', 'cafile', "/etc/httpd/conf/ssl.crt/server.crt");
-	stream_context_set_option($sockr, 'ssl', 'local_cert', "$sgbl->__path_program_root/file/ssl/internal_program.key");
+	stream_context_set_option($sockr, 'ssl', 'local_cert', "$sgbl->__path_program_root/file/ssl/default.pem");
 
 	if (!$sockr) {
 		die("Could not bind Remote address\n");

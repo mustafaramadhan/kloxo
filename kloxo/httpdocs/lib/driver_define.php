@@ -34,7 +34,7 @@ $gl_class_array['webcache__none'] =  "driver/web/webcache__nonelib.php";
 
 $gl_class_array['mailtraffic__qmail'] = "driver/mmail/mailtraffic__qmaillib.php";
 
-$gl_class_array['installappsnapshot__sync'] = "driver/web/installappsnapshot__synclib.php";
+$gl_class_array['easyinstallersnapshot__sync'] = "driver/web/easyinstallersnapshot__synclib.php";
 $gl_class_array['davuser__lighttpd'] = "driver/web/davuser__lighttpdlib.php";
 
 $gl_class_array['dirprotect__apache'] = "driver/web/dirprotect__apachelib.php";
@@ -56,8 +56,9 @@ $gl_class_array['webhandler__apache'] = "driver/web/mimehandler__apachelib.php";
 $gl_class_array['mailaccount__qmail'] = "driver/mmail/mailaccount__qmaillib.php";
 $gl_class_array['mailforward__qmail'] = "driver/mmail/mailforward__qmaillib.php";
 
-$gl_class_array['installapp__linux'] = "driver/web/installapp__linuxlib.php";
-$gl_class_array['allinstallapp__linux'] = "driver/web/allinstallapp__linuxlib.php";
+$gl_class_array['easyinstaller__linux'] = "driver/web/easyinstaller__linuxlib.php";
+$gl_class_array['all_easyinstaller__linux'] = "driver/web/all_easyinstaller__linuxlib.php";
+
 //--// $gl_class_array['autoresponder__mailenable'] = "driver/mmail/autoresponder__mailenable.php";
 //--// $gl_class_array['mailinglist__mailenable'] = "driver/mmail/mailinglist__mailenablelib.php";
 //--// $gl_class_array['mailaccount__mailenable'] = "driver/mmail/mailaccount__mailenablelib.php";
@@ -84,4 +85,15 @@ $gl_class_array['serverweb__monkeyproxy'] = "driver/web/serverweb__monkeyproxyli
 $gl_class_array['serverweb__none'] = "driver/web/serverweb__nonelib.php";
 
 $gl_class_array['rubyrails__linux'] = "driver/web/rubyrails__linuxlib.php";
+
+$gl_class_array['pop3__courier'] = "driver/mmail/pop3__courierlib.php";
+$gl_class_array['pop3__dovecot'] = "driver/mmail/pop3__dovecotlib.php";
+$gl_class_array['pop3__none'] = "driver/mmail/pop3__nonelib.php";
+
+//$gl_class_array['imap4__courier'] = "driver/mmail/imap4__courierlib.php";
+//$gl_class_array['imap4__dovecot'] = "driver/mmail/imap4__dovecotlib.php";
+//$gl_class_array['imap4__none'] = "driver/mmail/imap4__nonelib.php";
+
+$gl_class_array['smtp__qmail'] = "driver/mmail/smtp__qmaillib.php";
+$gl_class_array['smtp__none'] = "driver/mmail/smtp__nonelib.php";
 

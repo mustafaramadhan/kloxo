@@ -41,6 +41,12 @@ else
 						if [ "${item}" == "qmail" ] ; then
 							ASQMAIL="qmail"
 							sh /script/restart-mail
+						elif [ "${item}" == "php-fpm" ] ; then
+							${ipath}/${item} stop
+							'rm' -f /opt/configs/php-fpm/sock/php-*.sock
+							${ipath}/${item} start
+						elif [ "${item}" == "nsd" ] ; then
+							${ipath}/${item} restart
 						else
 							${ipath}/${item} restart
 						fi

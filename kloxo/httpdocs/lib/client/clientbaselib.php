@@ -48,7 +48,7 @@ class ClientBase extends ClientCore
 	static $__desc_wall_subject_f = array("n", "", "subject");
 	static $__desc_resourceplan_used_f = array("n", "", "Plan");
 	static $__desc_wall_message_f = array("t", "", "message");
-//	static $__desc_installapp_app = array("", "", "install_application");
+	static $__desc_easyinstaller_app = array("", "", "install_easyinstaller");
 
 	// Objects
 	static $__acdesc_update_information = array("", "", "information");
@@ -659,13 +659,13 @@ class ClientBase extends ClientCore
 		$this->lxclientpostAdd();
 
 		$this->contactemail = trim($this->contactemail);
-	/*
-		if ($this->installapp_app && $this->installapp_app !== '--leave--') {
+
+		if ($this->easyinstaller_app && $this->easyinstaller_app !== '--leave--') {
 			if (!validate_email($this->contactemail)) {
-				throw new lxException($login->getThrow("installapp_needs_valid_contactemail"), '', $this->contactemail);
+				throw new lxException($login->getThrow("easyinstaller_needs_valid_contactemail"), '', $this->contactemail);
 			}
 		}
-	*/
+
 		if ($this->priv->mysqldb_num > 0) {
 			$this->createDefaultDatabase();
 		}
@@ -677,11 +677,10 @@ class ClientBase extends ClientCore
 		if ($sgbl->isKloxo() && $this->domain_name) {
 			$this->default_domain = $this->domain_name;
 			$this->createDefaultDomain($this->domain_name, $this->dnstemplate_name);
-		/*
-			if ($this->installapp_app && $this->installapp_app !== '--leave--') {
-				$this->createDefaultApplication($this->domain_name, $this->installapp_app);
+		
+			if ($this->easyinstaller_app && $this->easyinstaller_app !== '--leave--') {
+				$this->createDefaultApplication($this->domain_name, $this->easyinstaller_app);
 			}
-		*/
 		}
 
 		$this->notifyObjects('add');
@@ -1183,7 +1182,7 @@ class ClientBase extends ClientCore
 					$vlist['dnstemplate_name'] = make_hidden_if_one($dlist);
 				//	$list = array('wordpress', 'mambo', 'joomla', 'dolphin');
 				//	$list = lx_merge_good('--leave--', $list);
-				//	$vlist['installapp_app'] = array('s', $list);
+				//	$vlist['easyinstaller_app'] = array('s', $list);
 				}
 			*/
 		}

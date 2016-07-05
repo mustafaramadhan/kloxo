@@ -1,0 +1,6 @@
+#!/bin/sh
+
+path='/usr/local/lxlabs/kloxo/httpdocs'
+
+echo "* Removing '${path}/commands.php'"
+'rm' -f ${path}/commands.php >/dev/null 2>&1

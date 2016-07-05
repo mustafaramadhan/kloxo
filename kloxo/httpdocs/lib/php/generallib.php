@@ -52,14 +52,14 @@ class portconfig_b extends lxaclass
 
 class kloxoconfig_b extends lxaclass
 {
-	static $__desc_remoteinstall_flag = array("f", "", "host_installapp_remotely");
-	static $__desc_installapp_url = array("", "", "Url_for_remote_installapp");
+	static $__desc_remoteinstall_flag = array("f", "", "host_easyinstaller_remotely");
+	static $__desc_easyinstaller_url = array("", "", "Url_for_remote_easyinstaller");
 }
 
 class lxadminconfig_b extends lxaclass
 {
-	static $__desc_remoteinstall_flag = array("f", "", "host_installapp_remotely");
-	static $__desc_installapp_url = array("", "", "Url_for_remote_installapp");
+	static $__desc_remoteinstall_flag = array("f", "", "host_easyinstaller_remotely");
+	static $__desc_easyinstaller_url = array("", "", "Url_for_remote_easyinstaller");
 }
 
 class customaction_b extends lxaclass
@@ -110,7 +110,7 @@ class generalmisc_b extends Lxaclass
 	static $__desc_maintenance_flag = array("f", "", "system_under_maintenance");
 	static $__desc_xenimportdriver = array("", "", "xen_import_driver");
 	static $__desc_webmail_system_default = array("", "", "webmail_system_default");
-	static $__desc_disableinstallapp = array("f", "", "disable_installapp");
+	static $__desc_disableeasyinstaller = array("f", "", "disable_easyinstaller");
 	static $__desc_htmltitle = array("", "", "html_title");
 	static $__desc_xeninitrd_flag = array("f", "", "xen_initrd_flag");
 	static $__desc_dont_get_live_status = array("f", "", "dont_get_vps_live_status");
@@ -299,9 +299,9 @@ class General extends Lxdb
 		if ($this->subaction === 'generalsetting') {
 			exec("sh /script/fixphp --server=all; sh /script/fixweb --server=all");
 
-			$this->generalmisc_b->disableinstallapp = 'on';
+			$this->generalmisc_b->disableeasyinstaller = 'on';
 
-			touch("../etc/flag/disableinstallapp.flg");
+			touch("../etc/flag/disableeasyinstaller.flg");
 		}
 	}
 
@@ -362,7 +362,7 @@ class General extends Lxdb
 
 			case "kloxo_config":
 				$vlist['kloxoconfig_b-remoteinstall_flag'] = null;
-				$vlist['kloxoconfig_b-installapp_url'] = null;
+				$vlist['kloxoconfig_b-easyinstaller_url'] = null;
 
 				break;
 
@@ -417,9 +417,9 @@ class General extends Lxdb
 					$this->generalmisc_b->setDefaultValue('webstatisticsprogram', 'awstats');
 					$vlist['generalmisc_b-webstatisticsprogram'] = array('s', $list);
 
-					$this->generalmisc_b->disableinstallapp = 'on';
-					touch("../etc/flag/disableinstallapp.flg");
-				//	$vlist['generalmisc_b-disableinstallapp'] = 'on';
+					$this->generalmisc_b->disableeasyinstaller = 'on';
+					touch("../etc/flag/disableeasyinstaller.flg");
+				//	$vlist['generalmisc_b-disableeasyinstaller'] = 'on';
 
 					$list = lx_merge_good('--chooser--', mmail::getWebmailProgList());
 					$this->generalmisc_b->setDefaultValue('webmail_system_default', '--chooser--');
@@ -519,11 +519,11 @@ class General extends Lxdb
 
 	function createShowAlist(&$alist, $subaction = null)
 	{
-		// MR --- process sync before enter to page -- related to installapp issue
-		if (lxfile_exists("../etc/flag/disableinstallapp.flg")) {
-			$this->generalmisc_b->disableinstallapp = 'on';
+		// MR --- process sync before enter to page -- related to easyinstaller issue
+		if (lxfile_exists("../etc/flag/disableeasyinstaller.flg")) {
+			$this->generalmisc_b->disableeasyinstaller = 'on';
 		} else {
-			$this->generalmisc_b->disableinstallapp = 'off';
+			$this->generalmisc_b->disableeasyinstaller = 'off';
 		}
 	}
 

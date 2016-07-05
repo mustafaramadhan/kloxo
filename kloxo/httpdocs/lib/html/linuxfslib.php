@@ -17,20 +17,22 @@ function lxshell_getzipcontent($path)
 {
 	$type = os_getZipType($path);
 
-	if ($type === 'zip') {
-		return lxshell_output("unzip", "-l", $path);
-	} else if ($type === 'tgz') {
-		return lxshell_output("tar", "-tzf", $path);
-	} else if ($type === 'tbz2') {
-		return lxshell_output("tar", "-tjf", $path);
-	} else if ($type === 'txz') {
-		return lxshell_output("tar", "-tJf", $path);
-	} else if ($type === 'p7z') {
-		return lxshell_output("7za", "l", $path);
-	} else if ($type === 'rar') {
-		return lxshell_output("unrar", "l", $path);
-	} else if ($type === 'tar') {
-		return lxshell_output("tar", "-tf", $path);
+	switch ($type) {
+		case 'zip':
+			return lxshell_output("unzip", "-l", $path);
+		case 'tgz':
+			return lxshell_output("tar", "-tzf", $path);
+		case 'tbz2':
+			return lxshell_output("tar", "-tjf", $path);
+		case 'txz':
+			return lxshell_output("tar", "-tJf", $path);
+		case 'p7z':
+			return lxshell_output("7za", "l", $path);
+		case 'rar':
+			return lxshell_output("unrar", "l", $path);
+		case 'tar':
+		default:
+			return lxshell_output("tar", "-tf", $path);
 	}
 }
 
@@ -287,24 +289,41 @@ function lxshell_zip_core($updateflag, $dir, $zipname, $filelist)
 
 	// MR -- Use `--ignore-failed-read' to prevents tar from exitting with non-zero status on unreadable files
 	// http://fvue.nl/wiki/Tar:_file_changed_as_we_read_it
-	if ($updateflag === 'zipadd') {
-		$command = "zip -y -rq -u";
-		$command2 = '';
-	} else if ($updateflag === 'zip'){
-		$command = "zip -y -rq";
-		$command2 = '';
-	} else if ($updateflag === 'tar') {
-		$command = "tar -cf";
-		$command2 = '--ignore-failed-read';
-	} else if ($updateflag === 'p7z') {
-		$command = "7za a -y";
-		$command2 = '';
-	} else if ($updateflag === 'rar') {
-		$command = "rar a -y";
-		$command2 = '';
-	} else {
-		$command = "tar -czf";
-		$command2 = '--ignore-failed-read';
+	switch ($updateflag) {
+		case 'zipadd':
+			$command = "zip -y -rq -u";
+			$command2 = '';
+			break;
+		case 'zip':
+			$command = "zip -y -rq";
+			$command2 = '';
+			break;
+		case 'tar':
+			$command = "tar -cf";
+			$command2 = '--ignore-failed-read';
+		case 'p7z':
+			$command = "7za a -y";
+			$command2 = '';
+		case 'rar':
+			$command = "rar a -y";
+			$command2 = '';
+			break;
+		case 'tbz2':
+		case 'tar.bz2':
+			$command = "tar -cjf";
+			$command2 = '--ignore-failed-read';
+			break;
+		case 'txz':
+		case 'tar.xz':
+			$command = "tar -cJf";
+			$command2 = '--ignore-failed-read';
+			break;
+		case 'tgz':
+		case 'tar.gz':
+		default:
+			$command = "tar -czf";
+			$command2 = '--ignore-failed-read';
+			break;
 	}
 
 	if ($zipname[0] !== '/') {
@@ -351,20 +370,29 @@ function lxshell_unzip($username, $dir, $file, $filelist = null)
 
 	$ztype = os_getZipType($fullpath);
 
-	if ($ztype === 'tgz') {
-		$command = "tar -xzf";
-	} else if ($ztype === 'tbz2') {
-		$command = "tar -xjf";
-	} else if ($ztype === 'txz') {
-		$command = "tar -xJf";
-	} else if ($ztype === 'tar') {
-		$command = "tar -xf";
-	} else if ($ztype === 'p7z') {
-		$command = "7za e -y";
-	} else if ($ztype === 'rar') {
-		$command = "unrar e -y";
-	} else {
-		$command = "unzip -oq";
+	switch ($ztype) {
+		case 'tgz':
+			$command = "tar -xzf";
+			break;
+		case 'tbz2':
+			$command = "tar -xjf";
+			break;
+		case 'txz':
+			$command = "tar -xJf";
+			break;
+		case 'tar':
+			$command = "tar -xf";
+			break;
+		case 'p7z':
+			$command = "7za e -y";
+			break;
+		case 'rar':
+			$command = "unrar e -y";
+			break;
+		case 'zip':
+		default:
+			$command = "unzip -oq";
+			break;
 	}
 
 	$fcmd = "$command $fullpath $files";
@@ -397,20 +425,29 @@ function lxshell_unzip_numeric($dir, $file, $filelist = null)
 
 	$ztype = os_getZipType($fullpath);
 
-	if ($ztype === 'tgz') {
-		$command = "tar --numeric-owner -xzf";
-	} else if ($ztype === 'tbz2') {
-		$command = "tar --numeric-owner -xjf";
-	} else if ($ztype === 'txz') {
-		$command = "tar --numeric-owner -xJf";
-	} else if ($ztype === 'tar') {
-		$command = "tar --numeric-owner -xf";
-	} else if ($ztype === 'p7z') {
-		$command = "7za e -y";
-	} else if ($ztype === 'rar') {
-		$command = "unrar e -y";
-	} else {
-		$command = "unzip -oq";
+	switch ($ztype) {
+		case 'tgz':
+			$command = "tar -xzf";
+			break;
+		case 'tbz2':
+			$command = "tar -xjf";
+			break;
+		case 'txz':
+			$command = "tar -xJf";
+			break;
+		case 'tar':
+			$command = "tar -xf";
+			break;
+		case 'p7z':
+			$command = "7za e -y";
+			break;
+		case 'rar':
+			$command = "unrar e -y";
+			break;
+		case 'zip':
+		default:
+			$command = "unzip -oq";
+			break;
 	}
 
 //	do_exec_system("__system__", $dir, "ionice -c 2 -n 7 $command $fullpath $files", $out, $err, $ret, null);
@@ -423,40 +460,41 @@ function os_getZipType($file)
 {
 	$out = lxshell_output("file", "-b", $file);
 
-	if (csa($out, "gzip")) {
-		$out2 = lxshell_output("file", "-b", '-z', $file);
+	switch (true) {
+		case csa($out, "gzip"):
+			$out2 = lxshell_output("file", "-b", '-z', $file);
 
-		if (csa($out2, "POSIX tar")) {
-			return "tgz";
-		} else {
-			return "gz";
-		}
-	} else if (csa($out, "bzip2")) {
-		$out2 = lxshell_output("file", "-b", '-z', $file);
+			if (csa($out2, "POSIX tar")) {
+				return "tgz";
+			} else {
+				return "gz";
+			}
+		case csa($out, "bzip2"):
+			$out2 = lxshell_output("file", "-b", '-z', $file);
 
-		if (csa($out2, "POSIX tar")) {
-			return "tbz2";
-		} else {
-			return "bz2";
-		}
-	} else if (csa($out, "xz")) {
-		$out2 = lxshell_output("file", "-b", '-z', $file);
+			if (csa($out2, "POSIX tar")) {
+				return "tbz2";
+			} else {
+				return "bz2";
+			}
+		case csa($out, "xz"):
+			$out2 = lxshell_output("file", "-b", '-z', $file);
 
-		if (csa($out2, "POSIX tar")) {
-			return "txz";
-		} else {
-			return "xz";
-		}
-	} else if (csa($out, "tar")) {
-		return "tar";
-	} else if (csa($out, "7z")) {
-		return "p7z";
-	} else if (csa($out, "rar")) {
-		return "rar";
-	} else if (csa($out, "Zip")) {
-		return "zip";
-	} else {
-		return null;
+			if (csa($out2, "POSIX tar")) {
+				return "txz";
+			} else {
+				return "xz";
+			}
+		case csa($out, "tar"):
+			return "tar";
+		case csa($out, "7z"):
+			return "p7z";
+		case csa($out, "rar"):
+			return "rar";
+		case csa($out, "Zip"):
+			return "zip";
+		default:
+			return null;
 	}
 }
 
@@ -528,6 +566,7 @@ function lxfile_rm_rec_content($file)
 	$file = remove_extra_slash($file);
 
 	$list = explode("/", $file);
+
 	if (count($list) <= 2) {
 		return;
 
@@ -688,7 +727,7 @@ function lxfile_cp_content($dirsource, $dirdest)
 // http://stackoverflow.com/questions/2050859/copy-entire-contents-of-a-directory-to-another-using-php
 function xcopy($src, $dest)
 {
-	foreach  (scandir($src) as $file) {
+	foreach (scandir($src) as $file) {
 		if (!is_readable($src.'/'.$file)) { continue; }
 
 		if (is_dir($file) && ($file!='.') && ($file!='..') ) {

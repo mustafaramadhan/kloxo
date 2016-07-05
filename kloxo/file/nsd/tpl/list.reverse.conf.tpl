@@ -38,16 +38,5 @@
 	file_put_contents($file, $str);
 
 	if (!file_exists("/etc/rc.d/init.d/nsd")) { return; }
-/*
-	if (file_exists("/etc/rc.d/init.d/nsd")) {
-		if (file_exists("/usr/sbin/nsd-control")) {
-			$n = "/usr/sbin/nsd-control";
-			exec_with_all_closed("{$n} write ; {$n} reload; {$n} notify");
-		} else {
-			$n = "/usr/sbin/nsdc";
-			exec_with_all_closed("{$n} rebuild ; {$n} reload; {$n} notify");
-		}
-	}
-*/
 
 	createRestartFile("restart-dns");

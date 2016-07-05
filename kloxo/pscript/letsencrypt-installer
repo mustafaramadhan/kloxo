@@ -2,43 +2,40 @@
 
 kloxopath='/usr/local/lxlabs/kloxo'
 
-yum -y install python27 python27-devel python27-pip python27-setuptools \
+yum -y -q install python27 python27-devel python27-pip python27-setuptools \
 	python27-virtualenv >/dev/null 2>&1
 
-yum install -y python python-devel python-virtualenv >/dev/null 2>&1
+yum install -y -q python python-devel python-virtualenv >/dev/null 2>&1
 
-yum remove -y python27-tools >/dev/null 2>&1
+yum remove -y -q python27-tools >/dev/null 2>&1
 
 # these would be installed automaticly by the client but I prefer to do it myself
-yum -y install gcc dialog augeas-libs openssl-devel libffi-devel \
+yum -y -q install gcc dialog augeas-libs openssl-devel libffi-devel \
 	redhat-rpm-config ca-certificates >/dev/null 2>&1
 
 # install let
-yum -y install git
+yum -y -q install git >/dev/null 2>&1
 cd ${kloxopath}
 if [ -d ${kloxopath}/letsencrypt ] ; then
-	'rm' -rf ${kloxopath}/letsencrypt
-	'rm' -rf /root/.local/share/letsencrypt
+	'rm' -rf ${kloxopath}/letsencrypt >/dev/null 2>&1
+	'rm' -rf /root/.local/share/letsencrypt >/dev/null 2>&1
 fi
 
 if [ -d ${kloxopath}/certbot ] ; then
-	'rm' -rf ${kloxopath}/certbot
-	'rm' -rf /root/.local/share/certbot
+	'rm' -rf ${kloxopath}/certbot >/dev/null 2>&1
+	'rm' -rf /root/.local/share/certbot >/dev/null 2>&1
 fi
 
 wget https://github.com/certbot/certbot/archive/master.zip -O master.zip \
-	--no-check-certificate > /dev/null 2>&1
+	--no-check-certificate >/dev/null 2>&1
 
-unzip -oq master.zip > /dev/null 2>&1
-'rm' -rf certbot
-'mv' -f certbot-master certbot
-'rm' -f master.zip
+unzip -oq master.zip >/dev/null 2>&1
+'mv' -f certbot-master certbot >/dev/null 2>&1
+'rm' -f master.zip >/dev/null 2>&1
 
-ln -sf ${kloxopath}/certbot/letsencrypt-auto /usr/bin/letsencrypt-auto
-ln -sf ${kloxopath}/certbot/certbot-auto /usr/bin/certbot-auto
-ln -sf ${kloxopath}/certbot/py26reqs.txt /usr/bin/py26reqs.txt
-
-${kloxopath}/certbot/letsencrypt-auto --version
+ln -sf ${kloxopath}/certbot/letsencrypt-auto /usr/bin/letsencrypt-auto >/dev/null 2>&1
+ln -sf ${kloxopath}/certbot/certbot-auto /usr/bin/certbot-auto >/dev/null 2>&1
+ln -sf ${kloxopath}/certbot/py26reqs.txt /usr/bin/py26reqs.txt >/dev/null 2>&1
 
 cronfile='/var/spool/cron/root'
 
@@ -65,3 +62,7 @@ if [ -f ${cronfile} ] ; then
 fi
 
 cd /
+
+echo
+${kloxopath}/certbot/letsencrypt-auto --version
+echo

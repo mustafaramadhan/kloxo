@@ -239,8 +239,8 @@ class Mysqldb__mysql extends lxDriverClass
 
 		try {
 			// MR -- remove 'engine=' to make portable
-			system("sed -e 's/engine\=[a-zA-z0-9]\s//gI' {$docf}");
 			system("{$cmd} > {$docf}");
+			system("sed -i 's/engine=\([a-zA-z0-9]*\) //gi' {$docf}");
 		} catch (Exception $e) {
 			lxfile_tmp_rm_rec($vd);
 
