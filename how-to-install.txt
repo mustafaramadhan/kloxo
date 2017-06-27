@@ -18,7 +18,7 @@ B.1. Fresh Install
 
     B.1.1. for version 6.5.0 (rpm naming as kloxomr-6.5.0-*.rpm)
 
-        # move to /
+        # move to /tmp
         cd /tmp
 
         # remove old rpm
@@ -40,7 +40,7 @@ B.1. Fresh Install
   
     B.1.2. for version 7.0.0 (rpm naming as kloxomr7-7.0.0-*.rpm)
 
-        # move to /
+        # move to /tmp
         cd /tmp
 
         # remove old rpm
