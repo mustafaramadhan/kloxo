@@ -1,4 +1,4 @@
-<?php 
+<?php
 include_once "htmllib/phplib/lib/linuxcorelib.php";
 include_once "htmllib/lib/linuxfslib.php";
 
@@ -117,7 +117,7 @@ function os_get_allips()
 			$u = explode(",", $l);
 			$t =  trim($u[0]);
 			if (!$t) { continue; }
-			$iplist[] = $t;		
+			$iplist[] = $t;
 		}
 	}
 //	else {
@@ -171,7 +171,7 @@ function getIPs_from_ifconfig($withV6 = true)
 
 // Bug #797 - Failed identify ip on apache
 // MR - mimic from getCurrentIps() on ipaddress__redhatlib.php
-// back to use mimic because possibility trouble on slave 
+// back to use mimic because possibility trouble on slave
 function getIPs_from_ifcfg()
 {
 	$p = '/etc/sysconfig/network-scripts/';
@@ -180,26 +180,26 @@ function getIPs_from_ifcfg()
 	foreach($l as $t => $f) {
 		if (stristr($f, "ifcfg-")) {
 			if ($f === 'ifcfg-lo') { continue; }
-			
+
 			$c = file_get_contents($p.$f);
 			$a = explode("\n", $c);
-			
+
 			foreach($a as $k => $v) {
 				if (stristr($v, "IPADDR=")) {
 					$i = explode("=", $v);
 
 					$ip = trim($i[1]);
 
-					if ($ip === '127.0.0.1') { 
+					if ($ip === '127.0.0.1') {
 						continue;
 					} else {
-						$r[] = trim($i[1]);
+						$r[] = preg_replace('/[^0-9\.]/', '', trim($i[1]));
 					}
 				}
 			}
 		}
 	}
-	
+
 	return $r;
 
 /*
@@ -215,14 +215,14 @@ function getIPs_from_ifcfg()
 //	}
 
 	$iplist = array(); // Initialize return value
-	
+
 	if(!empty($list)) {
 		foreach($list as $k => $v) {
 			// Check ipaddr index
 			$ip_address = isset($v['ipaddr']) ? $v['ipaddr'] : NULL;
-			
+
 			// Skip localhost IP or empty values
-			if ($ip_address !== '127.0.0.1' && !empty($ip_address)) { 
+			if ($ip_address !== '127.0.0.1' && !empty($ip_address)) {
 				$iplist[] = $ip_address;
 			}
 		}
@@ -262,7 +262,7 @@ function os_create_default_slave_driver_db()
 
 function os_fix_lxlabs_permission()
 {
-	global $gbl, $sgbl, $login, $ghtml; 
+	global $gbl, $sgbl, $login, $ghtml;
 	lxfile_mkdir("__path_program_root/session");
 	lxfile_unix_chown_rec("__path_program_root", "lxlabs");
 	lxfile_unix_chmod_rec("__path_program_root/sbin/", "0755");
@@ -321,11 +321,11 @@ function os_service_manage($serv, $act)
 
 function os_create_program_service()
 {
-	global $gbl, $sgbl, $login, $ghtml; 
+	global $gbl, $sgbl, $login, $ghtml;
 	$pgm = $sgbl->__var_program_name;
 
 	$pgminit = "__path_program_root/init/$pgm.init";
-	
+
 	lxfile_unix_chmod("/etc/init.d/$pgm", "0755");
 }
 
@@ -353,7 +353,7 @@ function os_is_php_six_four()
 
 function os_restart_program()
 {
-	global $gbl, $sgbl, $login, $ghtml; 
+	global $gbl, $sgbl, $login, $ghtml;
 	$pgm = $sgbl->__var_program_name;
 	// We just need to kill the main server, and leave the wrapper alone.
 	exec_with_all_closed("/etc/init.d/$pgm lxrestart");
@@ -416,7 +416,7 @@ function os_get_user_from_uid($uid)
 {
 	$pwd = posix_getpwuid($uid);
 
-	if ($pwd['name']) 
+	if ($pwd['name'])
 		return $pwd['name'];
 
 	return $uid;
@@ -426,7 +426,7 @@ function os_get_uid_from_user($user)
 {
 	$pwd = posix_getpwnam($user);
 
-	if ($pwd['uid']) 
+	if ($pwd['uid'])
 		return $pwd['uid'];
 	// If the user doesn't exist return a very large number.
 	return 10000000;
@@ -436,7 +436,7 @@ function os_get_gid_from_user($user)
 {
 	$pwd = posix_getpwnam($user);
 
-	if ($pwd['gid']) 
+	if ($pwd['gid'])
 		return $pwd['gid'];
 	// If the user doesn't exist return a very large number.
 	return 10000000;
@@ -486,6 +486,6 @@ function os_killpid($pid)
 
 function os_set_path()
 {
-	global $gbl, $sgbl, $login, $ghtml; 
+	global $gbl, $sgbl, $login, $ghtml;
 	putenv("PATH=/sbin/:/usr/sbin/:/bin/:/usr/bin:/usr/local/bin/:/usr/local/sbin:$sgbl->__path_program_root/bin:$sgbl->__path_program_root/sbin:");
 }
