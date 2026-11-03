@@ -130,7 +130,7 @@ if (!$cgi_forgotpwd) {
 		<div class="login-text">
 			<div class="ctr"><img src="/theme/login/icon.gif" width="64" height="64" alt="security"/></div>
 			<?=$logfo?>
-			<a class="forgotpwd" href="javascript:document.forgotpassword.submit()"><font color="black"><u>Forgot Password?</u></a>
+			<a class="forgotpwd" href="javascript:document.forgotpassword.submit()">Forgot Password?</a>
 			<form name="forgotpassword" method="post" action="/login/">
 			<input type="hidden" name="frm_forgotpwd" value="1"/>
 			</form>
