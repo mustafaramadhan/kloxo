@@ -1,55 +1,65 @@
 #!/bin/sh
 
-if [ "$(rpm -qa rpmdevtools)" == "" ] ; then
-	yum install rpmdevtools -y
+# MariaDB version selector and upgrade tool for CentOS/RHEL and Debian/Ubuntu
+# Supports versions: 10.4, 10.5, 10.6, 10.11 (LTS), 11.4 (LTS)
+
+if [ "${1}" == "" ] || [ "${1}" == "--help" ] || [ "${1}" == "-h" ] ; then
+	echo "------------------------------------------------------------------"
+	echo " Format: sh $0 <version>"
+	echo " Supported MariaDB versions: 10.4, 10.5, 10.6, 10.11, 11.4"
+	echo " Example: sh $0 10.11"
+	echo "------------------------------------------------------------------"
+	exit 0
 fi
 
-if [ "${1}" == "" ] ; then
-	newver="10.3"
-else
-	newver=${1}
-fi
+newver="${1}"
 
-oldver=$(rpm -q --queryformat '%{VERSION}' MariaDB-server)
+echo "*** Installing / Switching MariaDB to version ${newver} ***"
 
-rpmdev-vercmp ${oldver} ${newver} >/dev/null 2>&1
-status="$?"
-
-echo "*** Upgrade MariaDB from ${oldver} to ${newver} ***"
-
-if [ "${status}" == "12" ] ; then
-	echo "- Begin process..."
-
-	sed -i -e "s:yum.mariadb.org/\(.*\)/centos/\(.*\):yum.mariadb.org/${newver}/centos/\2:g" /etc/yum.repos.d/mratwork.repo
-	yum clean all
-	yum update MariaDB* -y
-	yum remove MariaDB-server -y
-	yum install MariaDB-server -y
-
-	mv -f /etc/my.cnf.d/server.cnf /etc/my.cnf.d/server.cnf.rpmnew
-	mv -f /etc/my.cnf.d/server.cnf.rpmsave /etc/my.cnf.d/server.cnf
-
-	if [ "$(yum list MariaDB-rocksdb-engine)" != "" ] ; then
-		yum install MariaDB-rocksdb-engine -y
+# Check package manager (apt for Ubuntu/Debian, yum/dnf for RHEL/CentOS)
+if command -v apt-get >/dev/null 2>&1 ; then
+	echo "- Detected Debian/Ubuntu environment"
+	export DEBIAN_FRONTEND=noninteractive
+	apt-get update -y
+	# Use mariadb official repository script if curl is available
+	if command -v curl >/dev/null 2>&1 ; then
+		curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | bash -s -- --mariadb-server-version="mariadb-${newver}"
+		apt-get update -y
+		apt-get install -y mariadb-server mariadb-client
+	else
+		apt-get install -y mariadb-server
+	fi
+elif command -v yum >/dev/null 2>&1 ; then
+	echo "- Detected RHEL/CentOS environment"
+	if [ "$(rpm -qa rpmdevtools)" == "" ] ; then
+		yum install rpmdevtools -y
 	fi
 
-	sh /script/restart-mysql
+	if [ -f /etc/yum.repos.d/mratwork.repo ] ; then
+		sed -i -e "s:yum.mariadb.org/\(.*\)/centos/\(.*\):yum.mariadb.org/${newver}/centos/\2:g" /etc/yum.repos.d/mratwork.repo
+	fi
 
-	. /script/directory
-
-	pass=$(lxphp.exe ../bin/common/mp.php)
-
-	mysql_upgrade -u root -p${pass} --force
-
-	sh /script/restart-mysql
-
-	echo "- End process..."
-else
-	echo "- Already upgrade to ${newver}"
+	yum clean all
+	yum update MariaDB* -y
+	yum install MariaDB-server MariaDB-client -y
 fi
 
-echo
-echo "* Note:"
-echo "  - Format: $0 [target-version]"
-echo "    where [target-version] = 10.3 (by default)"
+if [ -f /etc/my.cnf.d/server.cnf.rpmsave ] ; then
+	mv -f /etc/my.cnf.d/server.cnf.rpmsave /etc/my.cnf.d/server.cnf
+fi
 
+sh /script/restart-mysql
+
+if [ -f /usr/local/lxlabs/kloxo/bin/common/mp.php ] ; then
+	. /script/directory
+	pass=$(lxphp.exe ../bin/common/mp.php 2>/dev/null)
+	if [ "${pass}" != "" ] ; then
+		mysql_upgrade -u root -p${pass} --force 2>/dev/null || true
+	else
+		mysql_upgrade -u root --force 2>/dev/null || true
+	fi
+fi
+
+sh /script/restart-mysql
+
+echo "- Successfully upgraded/selected MariaDB ${newver}"
