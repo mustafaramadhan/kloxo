@@ -2422,7 +2422,7 @@ abstract class Lxclass
 			if ($sortby) {
 				$__tvar = "__sortby_{$class}";
 
-				if (!isset($this->$__tvar) || $this->__sortby_{$class} != $sortby || $this->__sortdir != $sortdir) {
+				if (!isset($this->$__tvar) || $this->$__tvar != $sortby || $this->__sortdir != $sortdir) {
 					$this->__sortby = $sortby;
 					$this->__sortdir = $sortdir;
 					$this->$__tvar = $sortby;

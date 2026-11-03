@@ -203,7 +203,7 @@ installed package.'
             if (!class_exists('PEAR_PackageFile')) {
                 require_once 'PEAR/PackageFile.php';
             }
-            $pkg = &new PEAR_PackageFile($this->config, $this->_debug);
+            $pkg = new PEAR_PackageFile($this->config, $this->_debug);
             PEAR::staticPushErrorHandling(PEAR_ERROR_RETURN);
             $info = &$pkg->fromAnyFile($params[0], PEAR_VALIDATE_NORMAL);
             PEAR::staticPopErrorHandling();
@@ -363,7 +363,7 @@ installed package.'
             if (!class_exists('PEAR_PackageFile')) {
                 require_once 'PEAR/PackageFile.php';
             }
-            $pkg = &new PEAR_PackageFile($this->config, $this->_debug);
+            $pkg = new PEAR_PackageFile($this->config, $this->_debug);
             PEAR::staticPushErrorHandling(PEAR_ERROR_RETURN);
             $obj = &$pkg->fromAnyFile($params[0], PEAR_VALIDATE_NORMAL);
             PEAR::staticPopErrorHandling();

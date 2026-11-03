@@ -217,7 +217,7 @@ class PEAR_Validate
                 }
                 $vlen = strlen($test);
                 $majver = substr($name, strlen($name) - $vlen);
-                while ($majver && !is_numeric($majver{0})) {
+                while ($majver && !is_numeric($majver[0])) {
                     $majver = substr($majver, 1);
                 }
                 if ($majver != $test) {
@@ -295,7 +295,7 @@ class PEAR_Validate
                 }
                 if (!$this->_packagexml->getExtends()) {
                     if ($versioncomponents[0] == '1') {
-                        if ($versioncomponents[2]{0} == '0') {
+                        if ($versioncomponents[2][0] == '0') {
                             if ($versioncomponents[2] == '0') {
                                 // version 1.*.0000
                                 $this->_addWarning('version',
@@ -336,7 +336,7 @@ class PEAR_Validate
                 } else {
                     $vlen = strlen($versioncomponents[0] . '');
                     $majver = substr($name, strlen($name) - $vlen);
-                    while ($majver && !is_numeric($majver{0})) {
+                    while ($majver && !is_numeric($majver[0])) {
                         $majver = substr($majver, 1);
                     }
                     if (($versioncomponents[0] != 0) && $majver != $versioncomponents[0]) {
@@ -347,7 +347,7 @@ class PEAR_Validate
                         return true;
                     }
                     if ($versioncomponents[0] == $majver) {
-                        if ($versioncomponents[2]{0} == '0') {
+                        if ($versioncomponents[2][0] == '0') {
                             if ($versioncomponents[2] == '0') {
                                 // version 2.*.0000
                                 $this->_addWarning('version',
@@ -406,7 +406,7 @@ class PEAR_Validate
                 if ($this->_packagexml->getExtends()) {
                     $vlen = strlen($versioncomponents[0] . '');
                     $majver = substr($name, strlen($name) - $vlen);
-                    while ($majver && !is_numeric($majver{0})) {
+                    while ($majver && !is_numeric($majver[0])) {
                         $majver = substr($majver, 1);
                     }
                     if (($versioncomponents[0] != 0) && $majver != $versioncomponents[0]) {

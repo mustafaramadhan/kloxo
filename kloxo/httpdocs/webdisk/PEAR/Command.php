@@ -134,7 +134,7 @@ class PEAR_Command
             return $a;
         }
         $ui =& PEAR_Command::getFrontendObject();
-        $obj = &new $class($ui, $config);
+        $obj = new $class($ui, $config);
         return $obj;
     }
 
@@ -151,7 +151,7 @@ class PEAR_Command
         }
         $ui =& PEAR_Command::getFrontendObject();
         $config = &PEAR_Config::singleton();
-        $obj = &new $class($ui, $config);
+        $obj = new $class($ui, $config);
         return $obj;
     }
 
@@ -239,7 +239,7 @@ class PEAR_Command
             $GLOBALS['_PEAR_Command_commandlist'] = array();
         }
         while ($entry = readdir($dp)) {
-            if ($entry{0} == '.' || substr($entry, -4) != '.xml') {
+            if ($entry[0] == '.' || substr($entry, -4) != '.xml') {
                 continue;
             }
             $class = "PEAR_Command_".substr($entry, 0, -4);

@@ -354,7 +354,7 @@ class PEAR_PackageFile_v1
      */
     function PEAR_PackageFile_v1()
     {
-        $this->_stack = &new PEAR_ErrorStack('PEAR_PackageFile_v1');
+        $this->_stack = new PEAR_ErrorStack('PEAR_PackageFile_v1');
         $this->_stack->setErrorMessageTemplate($this->_getErrorMessage());
         $this->_isValid = 0;
     }
@@ -1192,7 +1192,7 @@ class PEAR_PackageFile_v1
                     $this->_validateError(PEAR_PACKAGEFILE_ERROR_INVALID_FILEROLE,
                         array('file' => $file, 'role' => $fa['role'], 'roles' => PEAR_Common::getFileRoles()));
                 }
-                if ($file{0} == '.' && $file{1} == '/') {
+                if ($file[0] == '.' && $file[1] == '/') {
                     $this->_validateError(PEAR_PACKAGEFILE_ERROR_INVALID_FILENAME,
                         array('file' => $file));
                 }
@@ -1291,7 +1291,7 @@ class PEAR_PackageFile_v1
         if (!class_exists('PEAR_PackageFile_Generator_v1')) {
             require_once 'PEAR/PackageFile/Generator/v1.php';
         }
-        $a = &new PEAR_PackageFile_Generator_v1($this);
+        $a = new PEAR_PackageFile_Generator_v1($this);
         return $a;
     }
 
@@ -1314,7 +1314,7 @@ class PEAR_PackageFile_v1
             if (!class_exists('Archive_Tar')) {
                 require_once 'Archive/Tar.php';
             }
-            $tar = &new Archive_Tar($this->_archiveFile);
+            $tar = new Archive_Tar($this->_archiveFile);
             $tar->pushErrorHandling(PEAR_ERROR_RETURN);
             if ($file != 'package.xml' && $file != 'package2.xml') {
                 $file = $this->getPackage() . '-' . $this->getVersion() . '/' . $file;
@@ -1573,7 +1573,7 @@ class PEAR_PackageFile_v1
             foreach ($methods as $method) {
                 $function = "$class::$method";
                 $key = "function;$function";
-                if ($method{0} == '_' || !strcasecmp($method, $class) ||
+                if ($method[0] == '_' || !strcasecmp($method, $class) ||
                     isset($this->_packageInfo['provides'][$key])) {
                     continue;
                 }
@@ -1584,7 +1584,7 @@ class PEAR_PackageFile_v1
 
         foreach ($srcinfo['declared_functions'] as $function) {
             $key = "function;$function";
-            if ($function{0} == '_' || isset($this->_packageInfo['provides'][$key])) {
+            if ($function[0] == '_' || isset($this->_packageInfo['provides'][$key])) {
                 continue;
             }
             if (!strstr($function, '::') && strncasecmp($function, $pn, $pnl)) {

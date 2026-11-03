@@ -7,7 +7,7 @@
 
 
     // Build class instance
-    $rewrite =&  new hn_urlrewrite();
+    $rewrite  = new hn_urlrewrite();
 
     // start buffer
     $rewrite->buffer_start();   // optionally it can send headers against caching by passing a TRUE to the method

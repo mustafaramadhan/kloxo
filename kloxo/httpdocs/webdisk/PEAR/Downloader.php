@@ -239,7 +239,7 @@ class PEAR_Downloader extends PEAR_Common
         if (!class_exists('PEAR_Downloader_Package')) {
             require_once 'PEAR/Downloader/Package.php';
         }
-        $a = &new PEAR_Downloader_Package($t);
+        $a = new PEAR_Downloader_Package($t);
         return $a;
     }
 
@@ -255,7 +255,7 @@ class PEAR_Downloader extends PEAR_Common
         if (!class_exists('PEAR/Dependency2.php')) {
             require_once 'PEAR/Dependency2.php';
         }
-        $z = &new PEAR_Dependency2($c, $i, $p, $s);
+        $z = new PEAR_Dependency2($c, $i, $p, $s);
         return $z;
     }
 
@@ -693,7 +693,7 @@ class PEAR_Downloader extends PEAR_Common
         if (!class_exists('PEAR_PackageFile')) {
             require_once 'PEAR/PackageFile.php';
         }
-        $a = &new PEAR_PackageFile($c, $d, $t);
+        $a = new PEAR_PackageFile($c, $d, $t);
         return $a;
     }
 
@@ -1041,7 +1041,7 @@ class PEAR_Downloader extends PEAR_Common
             if (OS_WINDOWS && preg_match('/^[a-z]:/i', $path)) {
                 if (preg_match('/^[a-z]:/i', $prepend)) {
                     $prepend = substr($prepend, 2);
-                } elseif ($prepend{0} != '\\') {
+                } elseif ($prepend[0] != '\\') {
                     $prepend = "\\$prepend";
                 }
                 $path = substr($path, 0, 2) . $prepend . substr($path, 2);
@@ -1419,7 +1419,7 @@ class PEAR_Downloader extends PEAR_Common
         while (trim($line = fgets($fp, 1024))) {
             if (preg_match('/^([^:]+):\s+(.*)\s*$/', $line, $matches)) {
                 $headers[strtolower($matches[1])] = trim($matches[2]);
-            } elseif (preg_match('|^HTTP/1.[01] ([0-9]{3}) |', $line, $matches)) {
+            } elseif (preg_match('|^HTTP/1.[01] ([0-9][3]) |', $line, $matches)) {
                 $reply = (int) $matches[1];
                 if ($reply == 304 && ($lastmodified || ($lastmodified === false))) {
                     return false;
