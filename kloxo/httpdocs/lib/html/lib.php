@@ -7629,7 +7629,7 @@ function isWebProxy($drivertype = null)
 {
 	$driverapp = ($drivertype) ? $drivertype : slave_get_driver('web');
 
-	$ret = (stripos($driverapp, 'proxy') !== false) ? true : false;
+	$ret = (stripos($driverapp, 'proxy') !== false || $driverapp === 'apache_nginx') ? true : false;
 
 	return $ret;
 }
@@ -7661,7 +7661,9 @@ function getWebDriverList($drivertype = null)
 {
 	$driverapp = ($drivertype) ? $drivertype : slave_get_driver('web');
 
-	if (isWebProxy($driverapp)) {
+	if ($driverapp === 'apache_nginx' || $driverapp === 'nginxproxy') {
+		$list = array('nginx', 'apache');
+	} elseif (isWebProxy($driverapp)) {
 		$front = str_replace('proxy', '', $driverapp);
 
 		$list = array($front, 'apache');

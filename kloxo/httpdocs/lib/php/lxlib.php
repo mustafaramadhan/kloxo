@@ -149,6 +149,21 @@ function findOperatingSystem($type = null)
 		$ret['os'] = 'rhel';
 		$ret['version'] = file_get_contents("/etc/redhat-release");
 		$ret['pointversion'] = find_os_pointversion();
+	} else if (file_exists("/etc/os-release")) {
+		$os_rel = file_get_contents("/etc/os-release");
+		if (stripos($os_rel, 'ubuntu') !== false) {
+			$ret['os'] = 'ubuntu';
+		} elseif (stripos($os_rel, 'debian') !== false) {
+			$ret['os'] = 'debian';
+		} else {
+			$ret['os'] = 'linux';
+		}
+		$ret['version'] = $os_rel;
+		$ret['pointversion'] = find_os_pointversion();
+	} else if (file_exists("/etc/debian_version")) {
+		$ret['os'] = 'debian';
+		$ret['version'] = file_get_contents("/etc/debian_version");
+		$ret['pointversion'] = find_os_pointversion();
 	}
 
 /* -- not work because no driver for centos inside /usr/local/lxlabs/kloxo/file/conf
