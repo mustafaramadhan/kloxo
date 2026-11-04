@@ -1,5 +1,5 @@
 #!/bin/sh
 
-if [ "$(ps aux|grep kloxo|grep '/usr/local/lxlabs/kloxo/sbin/kloxo'|grep -v 'grep')" == "" ] ; then
+if [ -z "$(ps aux | grep kloxo | grep '/usr/local/lxlabs/kloxo/sbin/kloxo' | grep -v 'grep')" ]; then
 	sh /usr/local/lxlabs/kloxo/sbin/kloxo-wrapper.sh &
 fi

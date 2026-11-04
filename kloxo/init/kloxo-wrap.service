@@ -1,15 +1,17 @@
 [Unit]
-Description=Startup script for Kloxo-MR.
+Description=Backend daemon for Kloxo-MR
 Documentation=https://forum.mratwork.com/
-After=network.target remote-fs.target nss-lookup.target
- 
+After=network.target mariadb.service php8.5-fpm.service
+
 [Service]
-Type=forking
-PIDFile=/usr/local/lxlabs/kloxo/pid/wrapper.pid
-ExecStart=/usr/bin/sh /script/run-kloxo-wrapper &
-ExecReload=/bin/kill -s HUP $MAINPID
-ExecStop=/bin/kill -s QUIT $MAINPID
-PrivateTmp=true
- 
+Type=simple
+User=root
+WorkingDirectory=/usr/local/lxlabs/kloxo/httpdocs
+ExecStart=/usr/bin/php -f /usr/local/lxlabs/kloxo/sbin/kloxo.php master
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
 [Install]
 WantedBy=multi-user.target
