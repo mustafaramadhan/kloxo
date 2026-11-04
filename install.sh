@@ -78,7 +78,6 @@ mkdir -p /usr/local/lxlabs \
 # Essential binary symlinks
 ln -sf /usr/bin/php /usr/bin/lxphp.exe
 ln -sf /usr/bin/php /usr/bin/lphp.exe
-ln -sf "$INSTALL_DIR/pscript" /script
 
 # 3. Setup Directory and Clone / Update Mfklixo
 echo -e "${YELLOW}[3/5] Setting up Mfklixo in ${INSTALL_DIR}...${NC}"
@@ -96,7 +95,13 @@ else
     cd "$INSTALL_DIR"
 fi
 
-# Ensure /script symlink points to repo
+# Synchronize the inner kloxo/ source tree into $INSTALL_DIR root
+if [ -d "$INSTALL_DIR/kloxo" ]; then
+    echo -e "${GREEN}[*] Syncing kloxo source files to installation directory...${NC}"
+    cp -a "$INSTALL_DIR/kloxo/." "$INSTALL_DIR/"
+fi
+
+# Link /script to pscript
 ln -sf "$INSTALL_DIR/pscript" /script
 
 # 4. Configure Database & SSL & PHP-FPM
@@ -120,6 +125,11 @@ if [ -n "$PHP_SOCK" ]; then
     mkdir -p "$INSTALL_DIR/init"
     ln -sf "$PHP_SOCK" "$INSTALL_DIR/init/kloxo-phpcgi.sock"
     ln -sf "$PHP_SOCK" /run/php/php-fpm.sock 2>/dev/null || true
+fi
+
+# Adjust Nginx user for OS family
+if [[ "$OS_FAMILY" == "rhel" ]]; then
+    sed -i 's/user www-data;/user nginx;/' "$INSTALL_DIR/init/kloxo-panel-nginx.conf" 2>/dev/null || true
 fi
 
 # Generate SSL certificate for panel if not present
