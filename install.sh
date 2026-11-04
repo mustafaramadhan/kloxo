@@ -82,6 +82,10 @@ ln -sf /usr/bin/php /usr/bin/lphp.exe
 # 3. Setup Directory and Clone / Update Mfklixo
 echo -e "${YELLOW}[3/5] Setting up Mfklixo in ${INSTALL_DIR}...${NC}"
 
+# Allow git operations regardless of directory ownership
+git config --global --add safe.directory "$INSTALL_DIR" 2>/dev/null || true
+git config --global --add safe.directory "*" 2>/dev/null || true
+
 if [ -d "$INSTALL_DIR/.git" ]; then
     echo -e "${GREEN}[*] Existing installation found, pulling latest changes...${NC}"
     cd "$INSTALL_DIR"
