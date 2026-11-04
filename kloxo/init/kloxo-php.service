@@ -1,15 +1,12 @@
 [Unit]
-Description=Startup script for Kloxo-MR.
-Documentation=https://forum.mratwork.com/
-After=network.target remote-fs.target nss-lookup.target
- 
+Description=Startup script for Mfklixo PHP-FPM runtime
+Documentation=https://github.com/feizezadeh/Mfklixo
+After=network.target
+
 [Service]
-Type=forking
-PIDFile=/usr/local/lxlabs/kloxo/init/kloxo-phpcgi.pid
-ExecStart=/usr/local/lxlabs/kloxo/init/kloxo-phpcgi -y /usr/local/lxlabs/kloxo/init/kloxo-php-fpm.conf -c /opt/php56s/custom/php.ini -R
-ExecReload=/bin/kill -s HUP $MAINPID
-ExecStop=/bin/kill -s QUIT $MAINPID
-PrivateTmp=true
- 
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'SOCK=$(ls -1 /run/php/php*-fpm.sock /var/run/php-fpm/php-fpm.sock /run/php-fpm/www.sock 2>/dev/null | head -n 1); if [ -n "$SOCK" ]; then mkdir -p /usr/local/lxlabs/kloxo/init; ln -sf "$SOCK" /usr/local/lxlabs/kloxo/init/kloxo-phpcgi.sock; fi'
+
 [Install]
 WantedBy=multi-user.target

@@ -37,29 +37,51 @@ fi
 echo -e "${YELLOW}[*] Detected OS: ${PRETTY_NAME}${NC}"
 
 # 1. Install Dependencies
-echo -e "${YELLOW}[1/4] Installing necessary dependencies...${NC}"
+echo -e "${YELLOW}[1/5] Installing necessary dependencies...${NC}"
 if [[ "$OS_NAME" == "ubuntu" ]] || [[ "$OS_LIKE" =~ "debian" ]]; then
     OS_FAMILY="debian"
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -y
-    apt-get install -y git curl wget zip unzip tar systemd \
+    apt-get install -y git curl wget zip unzip tar systemd openssl \
                        php-cli php-fpm php-mysql php-mbstring php-xml php-curl \
                        mariadb-server nginx apache2
 elif [[ "$OS_NAME" =~ "centos" ]] || [[ "$OS_NAME" =~ "rhel" ]] || [[ "$OS_NAME" =~ "almalinux" ]] || [[ "$OS_NAME" =~ "rocky" ]] || [[ "$OS_LIKE" =~ "rhel" ]]; then
     OS_FAMILY="rhel"
     yum update -y
     yum install -y epel-release yum-utils
-    yum install -y git curl wget zip unzip tar systemd \
+    yum install -y git curl wget zip unzip tar systemd openssl \
+                       php-cli php-fpm php-mysqlnd php-mbstring php-xml \
                        mariadb-server nginx httpd
 else
     echo -e "${RED}[ERROR] Unsupported distribution: ${OS_NAME}${NC}"
     exit 1
 fi
 
-# 2. Setup Directory and Clone Mfklixo
+# 2. Setup System Users and Directories
 INSTALL_DIR="/usr/local/lxlabs/kloxo"
-echo -e "${YELLOW}[2/4] Setting up Mfklixo in ${INSTALL_DIR}...${NC}"
-mkdir -p /usr/local/lxlabs
+echo -e "${YELLOW}[2/5] Setting up system user, symlinks, and directories...${NC}"
+
+if ! id -u lxlabs >/dev/null 2>&1; then
+    groupadd -r lxlabs 2>/dev/null || true
+    useradd -r -g lxlabs -d "$INSTALL_DIR" -s /bin/false lxlabs 2>/dev/null || true
+fi
+
+mkdir -p /usr/local/lxlabs \
+         "$INSTALL_DIR/pid" \
+         "$INSTALL_DIR/log" \
+         "$INSTALL_DIR/session" \
+         "$INSTALL_DIR/etc/conf" \
+         "$INSTALL_DIR/etc/slavedb" \
+         "/home/kloxo/httpd" \
+         "/var/cache/kloxo"
+
+# Essential binary symlinks
+ln -sf /usr/bin/php /usr/bin/lxphp.exe
+ln -sf /usr/bin/php /usr/bin/lphp.exe
+ln -sf "$INSTALL_DIR/pscript" /script
+
+# 3. Setup Directory and Clone / Update Mfklixo
+echo -e "${YELLOW}[3/5] Setting up Mfklixo in ${INSTALL_DIR}...${NC}"
 
 if [ -d "$INSTALL_DIR/.git" ]; then
     echo -e "${GREEN}[*] Existing installation found, pulling latest changes...${NC}"
@@ -74,49 +96,132 @@ else
     cd "$INSTALL_DIR"
 fi
 
-# 3. Configure Database & Web Services
-echo -e "${YELLOW}[3/4] Initializing Database and Web Services...${NC}"
+# Ensure /script symlink points to repo
+ln -sf "$INSTALL_DIR/pscript" /script
+
+# 4. Configure Database & SSL & PHP-FPM
+echo -e "${YELLOW}[4/5] Initializing Database, SSL, and Web Services...${NC}"
 
 # Start & Enable MariaDB
 systemctl daemon-reload
 systemctl enable mariadb || systemctl enable mysql || true
 systemctl restart mariadb || systemctl restart mysql || true
 
-# Setup default Apache + Nginx dual reverse proxy
-echo -e "${GREEN}[*] Configuring Apache + Nginx dual web server...${NC}"
+# Start & Enable PHP-FPM
+PHP_FPM_SVC=$(systemctl list-unit-files | grep -E 'php[0-9.]*-fpm\.service|php-fpm\.service' | awk '{print $1}' | head -n 1)
+if [ -n "$PHP_FPM_SVC" ]; then
+    systemctl enable "$PHP_FPM_SVC" || true
+    systemctl restart "$PHP_FPM_SVC" || true
+fi
+
+# Symlink PHP-FPM socket
+PHP_SOCK=$(ls -1 /run/php/php*-fpm.sock /var/run/php-fpm/php-fpm.sock /run/php-fpm/www.sock 2>/dev/null | head -n 1)
+if [ -n "$PHP_SOCK" ]; then
+    mkdir -p "$INSTALL_DIR/init"
+    ln -sf "$PHP_SOCK" "$INSTALL_DIR/init/kloxo-phpcgi.sock"
+    ln -sf "$PHP_SOCK" /run/php/php-fpm.sock 2>/dev/null || true
+fi
+
+# Generate SSL certificate for panel if not present
+if [ ! -f "$INSTALL_DIR/etc/program.pem" ]; then
+    echo -e "${GREEN}[*] Generating SSL certificate for panel...${NC}"
+    openssl req -new -x509 -days 3650 -nodes \
+        -out "$INSTALL_DIR/etc/program.pem" \
+        -keyout "$INSTALL_DIR/etc/program.pem" \
+        -subj "/C=US/ST=State/L=City/O=Mfklixo/OU=Admin/CN=$(hostname)" 2>/dev/null || true
+    chmod 600 "$INSTALL_DIR/etc/program.pem"
+fi
+
+# Setup internal Kloxo database credentials
+if [ ! -f "$INSTALL_DIR/etc/conf/kloxo.pass" ]; then
+    DB_PASS=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 16)
+    echo "$DB_PASS" > "$INSTALL_DIR/etc/conf/kloxo.pass"
+    chmod 600 "$INSTALL_DIR/etc/conf/kloxo.pass"
+else
+    DB_PASS=$(cat "$INSTALL_DIR/etc/conf/kloxo.pass")
+fi
+
+echo 'O:6:"Remote":1:{s:4:"data";a:1:{s:5:"mysql";a:1:{s:10:"dbpassword";s:0:"";}}}' > "$INSTALL_DIR/etc/slavedb/dbadmin"
+echo 'O:6:"Remote":1:{s:4:"data";a:3:{s:3:"web";s:12:"apache_nginx";s:4:"spam";s:10:"bogofilter";s:3:"dns";s:4:"bind";s:4:"pop3";s:7:"courier";s:4:"smtp";s:5:"qmail";}}' > "$INSTALL_DIR/etc/slavedb/driver"
+
+# Create database and grant access
+mariadb -u root -e "
+CREATE DATABASE IF NOT EXISTS kloxo;
+CREATE USER IF NOT EXISTS 'kloxo'@'localhost' IDENTIFIED BY '${DB_PASS}';
+ALTER USER 'kloxo'@'localhost' IDENTIFIED BY '${DB_PASS}';
+GRANT ALL PRIVILEGES ON kloxo.* TO 'kloxo'@'localhost';
+FLUSH PRIVILEGES;
+" 2>/dev/null || mysql -u root -e "
+CREATE DATABASE IF NOT EXISTS kloxo;
+CREATE USER IF NOT EXISTS 'kloxo'@'localhost' IDENTIFIED BY '${DB_PASS}';
+ALTER USER 'kloxo'@'localhost' IDENTIFIED BY '${DB_PASS}';
+GRANT ALL PRIVILEGES ON kloxo.* TO 'kloxo'@'localhost';
+FLUSH PRIVILEGES;
+" 2>/dev/null || true
+
+# Import database structure if empty
+TABLE_COUNT=$(mariadb -u root -N -e "SELECT count(*) FROM information_schema.tables WHERE table_schema='kloxo';" 2>/dev/null || mysql -u root -N -e "SELECT count(*) FROM information_schema.tables WHERE table_schema='kloxo';" 2>/dev/null || echo 0)
+if [ "$TABLE_COUNT" -lt 5 ]; then
+    echo -e "${GREEN}[*] Importing Kloxo schema and default admin data...${NC}"
+    mariadb -u root kloxo < "$INSTALL_DIR/file/sql/db-structure-base.sql" 2>/dev/null || mysql -u root kloxo < "$INSTALL_DIR/file/sql/db-structure-base.sql" 2>/dev/null || true
+    mariadb -u root kloxo < "$INSTALL_DIR/file/sql/db-structure-update.sql" 2>/dev/null || mysql -u root kloxo < "$INSTALL_DIR/file/sql/db-structure-update.sql" 2>/dev/null || true
+    mariadb -u root kloxo < "$INSTALL_DIR/file/sql/admin.sql" 2>/dev/null || mysql -u root kloxo < "$INSTALL_DIR/file/sql/admin.sql" 2>/dev/null || true
+    mariadb -u root kloxo < "$INSTALL_DIR/file/sql/pserver.sql" 2>/dev/null || mysql -u root kloxo < "$INSTALL_DIR/file/sql/pserver.sql" 2>/dev/null || true
+    mariadb -u root kloxo < "$INSTALL_DIR/file/sql/mysql.servers.sql" 2>/dev/null || mysql -u root kloxo < "$INSTALL_DIR/file/sql/mysql.servers.sql" 2>/dev/null || true
+fi
+
+# Fix permissions
+chown -R lxlabs:lxlabs "$INSTALL_DIR"
+chown -R www-data:www-data "$INSTALL_DIR/httpdocs" "$INSTALL_DIR/log" "$INSTALL_DIR/session" "$INSTALL_DIR/pid" 2>/dev/null || chown -R nginx:nginx "$INSTALL_DIR/httpdocs" "$INSTALL_DIR/log" "$INSTALL_DIR/session" "$INSTALL_DIR/pid" 2>/dev/null || true
+chmod -R 775 "$INSTALL_DIR/session" "$INSTALL_DIR/log" "$INSTALL_DIR/pid"
+
+# 5. Setup Kloxo Services & Web Server
+echo -e "${YELLOW}[5/5] Activating Control Panel and Web Services...${NC}"
+
+# Install systemd service unit files
+cp -f "$INSTALL_DIR/init/kloxo-web.service" /etc/systemd/system/kloxo-web.service
+cp -f "$INSTALL_DIR/init/kloxo-php.service" /etc/systemd/system/kloxo-php.service
+cp -f "$INSTALL_DIR/init/kloxo-wrap.service" /etc/systemd/system/kloxo-wrap.service
+chmod 644 /etc/systemd/system/kloxo-*.service
+
+systemctl daemon-reload
+systemctl enable kloxo-php.service kloxo-web.service kloxo-wrap.service || true
+systemctl restart kloxo-php.service || true
+systemctl restart kloxo-web.service || true
+systemctl restart kloxo-wrap.service || true
+
+# Setup Apache + Nginx dual reverse proxy for hosted domains
 if [ -f "$INSTALL_DIR/pscript/switchserver" ]; then
     bash "$INSTALL_DIR/pscript/switchserver" --class=web --driver=apache_nginx || true
 fi
 
-# Generate configurations
 if [ -f "$INSTALL_DIR/bin/fix/fixweb.php" ]; then
     php "$INSTALL_DIR/bin/fix/fixweb.php" --target=defaults || true
 fi
 
-# Enable & restart services
 if [ -f "$INSTALL_DIR/pscript/restart-web" ]; then
     bash "$INSTALL_DIR/pscript/restart-web" -y || true
 fi
 
-# 4. Final summary
-echo -e "${BLUE}===============================================================================${NC}"
-echo -e "${GREEN}[SUCCESS] Mfklixo installation completed successfully!${NC}"
-echo -e "${BLUE}===============================================================================${NC}"
-
-SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+# Detect Server IP (Prefer Public IP if on AWS/Cloud)
+SERVER_IP=$(curl -s -m 3 https://ifconfig.me 2>/dev/null || curl -s -m 3 https://api.ipify.org 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}')
 if [ -z "$SERVER_IP" ]; then
     SERVER_IP="<YOUR_SERVER_IP>"
 fi
 
+echo -e "${BLUE}===============================================================================${NC}"
+echo -e "${GREEN}[SUCCESS] Mfklixo installation completed successfully!${NC}"
+echo -e "${BLUE}===============================================================================${NC}"
 echo -e "You can access your control panel at:"
 echo -e "  HTTP:  ${GREEN}http://${SERVER_IP}:7778/${NC}"
 echo -e "  HTTPS: ${GREEN}https://${SERVER_IP}:7777/${NC}"
 echo
 echo -e "Default Admin Credentials:"
 echo -e "  Username: ${YELLOW}admin${NC}"
-echo -e "  Password: ${YELLOW}admin${NC} (or lxlabs depending on installation stage)"
+echo -e "  Password: ${YELLOW}admin${NC}"
 echo
 echo -e "Useful Commands:"
+echo -e "  Service Status:         ${BLUE}systemctl status kloxo-web${NC}"
 echo -e "  Select MariaDB version: ${BLUE}sh /usr/local/lxlabs/kloxo/pscript/mariadb-upgrade 10.11${NC}"
 echo -e "  Switch PHP branch:      ${BLUE}sh /usr/local/lxlabs/kloxo/pscript/set-php-branch php82${NC}"
 echo -e "  Restart Web:            ${BLUE}sh /usr/local/lxlabs/kloxo/pscript/restart-web -y${NC}"
