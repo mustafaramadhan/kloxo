@@ -1662,17 +1662,19 @@ class HtmlLib
 
 		<style>
 			div.section, div#createNew {
-				border: 1px solid #<?=$col?>;
-				background-color: #fff;
-				/* margin: 9px 5px; */
-				margin: <?=$sectionmargin?>;
-				padding: 0;
-				/* width: 520px; */
-				width: <?=$sectionwidth?>px;
-				resize: both;
+				border: 1px solid rgba(255, 255, 255, 0.08);
+				background: rgba(22, 29, 45, 0.65);
+				backdrop-filter: blur(14px);
+				-webkit-backdrop-filter: blur(14px);
+				border-radius: 18px;
+				margin: 0 0 20px 0;
+				padding: 16px 20px;
+				width: 100%;
+				box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+				box-sizing: border-box;
 				overflow: hidden;
 				float: left;
-				height: <?=$sectionheight?>;
+				height: auto;
 			}
 
 			div#createNew input {
@@ -1680,14 +1682,15 @@ class HtmlLib
 			}
 
 			div#createNew h3, div.section h3 {
-				font-size: 12px;
-				padding: 2px 5px;
-				margin: 0 0 10px 0;
+				font-size: 13px;
+				padding: 8px 12px;
+				margin: 0 0 12px 0;
 				display: block;
-				font-family: Tahoma, Verdana, Arial, Helvetica, Arial, sans-serif;
-				color: #036;
-				background: #edc <?= $img_url ?>;
-				border-bottom: 1px solid #<?=$col?>;
+				font-family: inherit;
+				color: #60a5fa;
+				background: rgba(30, 41, 59, 0.7);
+				border-radius: 10px;
+				border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 			}
 
 			div.section h3 {
@@ -1719,14 +1722,14 @@ class HtmlLib
 <?php
 		if (($show_direction !== 'horizontal') || ($retcount === 1)) {
 ?>
-			<div id="show_page" style="float:left; width: <?= $showpagewidth ?>px; margin: 0 auto 0 auto">
+			<div id="show_page" style="float:left; width: 100%; max-width: 980px; margin: 0 auto 0 auto">
 <?php
 
 		} else {
 			$horiz_width = 15 + ($retcount * ($sectionwidth + 10)) + 15;
 ?>
 
-				<div id="show_page" style="background-color: #def; padding:10px; border: 1px solid #ddd; float:left; width: <?= $showpagewidth ?>px; height: <?= $sectionheight + 20; ?>px; overflow: auto; white-space: nowarp; margin: 0 auto 0 auto">
+				<div id="show_page" style="background: rgba(22, 29, 45, 0.65); padding:10px; border: 1px solid rgba(255, 255, 255, 0.08); float:left; width: 100%; max-width: 980px; height: <?= $sectionheight + 20; ?>px; overflow: auto; white-space: nowarp; margin: 0 auto 0 auto">
 					<div id='horiz_scroll' style="width: <?= $horiz_width ?>px">
 <?php
 		}
@@ -1765,21 +1768,10 @@ class HtmlLib
 			}
 ?>
 							<div id="item_<?= $nametitle ?>" class="section">
-								<table cellpadding='2' cellspacing='0'>
-<?php
-			if ($show_direction !== 'horizontal') {
-?>
-									<tr class='handle' id="handle_<?= $nametitle ?>" style="background:#edc <?= $img_url ?>" onMouseover="document.getElementById('font_<?= $nametitle ?>').style.visibility='visible'; this.style.background='#edc'" onMouseout="document.getElementById('font_<?= $nametitle ?>').style.visibility='hidden'; this.style.background='#edc'">
-<?php
-			} else {
-?>
-									<tr class='handle' id="handle_<?= $nametitle ?>" style="background:#edc">
-
-<?php
-			}
-?>
-										<td width='100%' style="cursor: move;" align='center'><span style='font-weight: bold' title='<?= $dragstring ?>'>&nbsp;<?= $a[$title] ?>&nbsp;</span></td>
-										<td class='handle' style='cursor: pointer' onclick="blindUpOrDown('<?= $lclass ?>', '<?= $class ?>', '<?= $skindir ?>', '<?= $nametitle ?>')">&nbsp;&#x00b1;&nbsp;</td>
+								<table cellpadding='2' cellspacing='0' style="width: 100%; margin-bottom: 12px;">
+									<tr class='handle' id="handle_<?= $nametitle ?>" style="background: rgba(30, 41, 59, 0.7); border-radius: 10px;">
+										<td width='100%' style="cursor: move;" align='left'><span style='font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #60a5fa;' title='<?= $dragstring ?>'>&nbsp;<?= $a[$title] ?>&nbsp;</span></td>
+										<td class='handle' style='cursor: pointer; color: #94A3B8;' onclick="blindUpOrDown('<?= $lclass ?>', '<?= $class ?>', '<?= $skindir ?>', '<?= $nametitle ?>')">&nbsp;&#x00b1;&nbsp;</td>
 									</tr>
 								</table>
 
@@ -6422,20 +6414,10 @@ class HtmlLib
 
 		$help = $descr['help'];
 
-		if ($button_type === 'reverse-font') {
-			$selectcolor = '#abc';
-		} else {
-			$selectcolor = '#def';
-		}
-
+		$selectcolor = 'rgba(37, 99, 235, 0.25)';
 		$blackbordercolor = '#fff';
 		$bgcolorstring = null;
-		
-		if ($button_type === 'reverse-font') {
-			$forecolorstring = "color:#fff";
-		} else {
-			$forecolorstring = "color:#024";
-		}
+		$forecolorstring = "color:#F1F5F9";
 
 		if ($sgbl->isBlackBackground()) {
 			$bgcolorstring = "bgcolor=#000";
