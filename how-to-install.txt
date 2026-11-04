@@ -1,126 +1,103 @@
-A. pre-install -- better for fresh install
+===============================================================================
+                       Mfklixo (Modern Kloxo-MR)
+                       Installation & Setup Guide
+===============================================================================
 
-    cd /
+This guide explains how to install and setup Mfklixo on modern Linux distributions,
+including Ubuntu / Debian as well as RHEL / CentOS / AlmaLinux / Rocky Linux.
 
-    # update centos to latest version
+-------------------------------------------------------------------------------
+1. Pre-installation Requirements
+-------------------------------------------------------------------------------
+
+A clean, fresh server installation is strongly recommended.
+Run the commands below with root privileges.
+
+A. On Ubuntu / Debian:
+----------------------
+    apt-get update -y && apt-get upgrade -y
+    apt-get install -y git curl wget zip unzip tar systemd \
+                       php-cli php-fpm php-mysql php-mbstring php-xml \
+                       mariadb-server nginx apache2
+
+B. On RHEL / CentOS / AlmaLinux / Rocky Linux:
+----------------------------------------------
     yum update -y
-    # install some packages like package-cleanup, etc
-    yum install yum-utils yum-priorities vim-minimal subversion curl zip unzip -y
-    yum install telnet wget -y
+    yum install -y git curl wget zip unzip yum-utils epel-release \
+                   systemd mariadb-server nginx httpd
 
-    cd /
+-------------------------------------------------------------------------------
+2. Cloning & Setting up Mfklixo
+-------------------------------------------------------------------------------
 
-B. Install Kloxo-MR
-   - Install/reinstall/upgrade -- data not destroyed with this fork
-     for existing Kloxo (6.1.x), run 'sh /script/update' first.
+    mkdir -p /usr/local/lxlabs
+    cd /usr/local/lxlabs
+    git clone -b modernize-kloxo https://github.com/feizezadeh/Mfklixo.git kloxo
+    cd /usr/local/lxlabs/kloxo
 
-B.1. Fresh Install
+-------------------------------------------------------------------------------
+3. Initial Configuration & Service Initialization
+-------------------------------------------------------------------------------
 
-    B.1.1. for version 6.5.0 (rpm naming as kloxomr-6.5.0-*.rpm)
+A. Database Setup (MariaDB):
+----------------------------
+    # Start and enable MariaDB
+    systemctl enable mariadb
+    systemctl start mariadb
 
-        # move to /tmp
-        cd /tmp
+    # Optional: Select specific MariaDB version (e.g. 10.11 or 11.4 LTS)
+    sh /usr/local/lxlabs/kloxo/pscript/mariadb-upgrade 10.11
 
-        # remove old rpm
-        rm -f mratwork*
+B. Web Server Setup:
+--------------------
+    # Choose your preferred web server stack:
 
-        # install rpm (read Warning)
-        rpm -ivh https://github.com/mustafaramadhan/rpms/raw/master/mratwork/release/neutral/noarch/mratwork-release-0.0.1-1.noarch.rpm
-        # move to /
-        cd /
+    # 1) Dual Proxy: Apache (Backend) + Nginx (Frontend) [Recommended]
+    sh /usr/local/lxlabs/kloxo/pscript/switchserver --class=web --driver=apache_nginx
 
-        # update
-        yum clean all
+    # 2) Standalone Nginx:
+    sh /usr/local/lxlabs/kloxo/pscript/switchserver --class=web --driver=nginx
 
-        yum update mratwork-* -y
+    # 3) Standalone Apache:
+    sh /usr/local/lxlabs/kloxo/pscript/switchserver --class=web --driver=apache
 
-        yum install kloxomr -y
+C. Generate Initial Configs & Restart Services:
+-----------------------------------------------
+    sh /usr/local/lxlabs/kloxo/bin/fix/fixweb.php --target=defaults
+    sh /usr/local/lxlabs/kloxo/pscript/restart-web -y
 
-        sh /script/upcp
-  
-    B.1.2. for version 7.0.0 (rpm naming as kloxomr7-7.0.0-*.rpm)
+-------------------------------------------------------------------------------
+4. Accessing the Panel
+-------------------------------------------------------------------------------
 
-        # move to /tmp
-        cd /tmp
+Once services are running, access the control panel via browser:
 
-        # remove old rpm
-        rm -f mratwork*
+    URL:      http://<YOUR_SERVER_IP>:7778/
+    or SSL:   https://<YOUR_SERVER_IP>:7777/
 
-        # install rpm (read Warning)
-        rpm -ivh https://github.com/mustafaramadhan/rpms/raw/master/mratwork/release/neutral/noarch/mratwork-release-0.0.1-1.noarch.rpm
+    Default Username: admin
+    Default Password: (set during initialization or reset via script)
 
-        # move to /
-        cd /
+To reset the admin password if needed:
+    php /usr/local/lxlabs/kloxo/bin/common/misc/reset-mysql-root-password.php
 
-        # update
-        yum clean all
+-------------------------------------------------------------------------------
+5. Handy Maintenance Commands
+-------------------------------------------------------------------------------
 
-        yum update mratwork-* -y
+- Switch PHP Branch:
+    sh /usr/local/lxlabs/kloxo/pscript/set-php-branch php82
 
-        yum install kloxomr7 -y
+- Upgrade / Switch MariaDB:
+    sh /usr/local/lxlabs/kloxo/pscript/mariadb-upgrade 11.4
 
-        sh /script/upcp
+- Fix Web Configurations:
+    sh /usr/local/lxlabs/kloxo/bin/fix/fixweb.php
 
-B.2. update from 6.5.0 to 7.0.0
+- Restart All Web Services:
+    sh /usr/local/lxlabs/kloxo/pscript/restart-web -y
 
-    yum replace kloxomr --replace-with=kloxomr7 -y
-	
-    # '-y' mean force
-    sh /script/upcp -y
-    sh /script/mysql-optimize --select=upgrade
+- Restart Database:
+    sh /usr/local/lxlabs/kloxo/pscript/restart-mysql
 
-B.3. update from Kloxo Official 6.1.19
-
-    ## follow step B.1.1 or B.1.2 and read 'WARNING' below before next step
-
-    # '-y' mean force
-    sh /script/upcp -y
-    sh /script/mysql-optimize --select=upgrade
-
-WARNING:
-
-1. Need running 'sh /script/backup-patch' in Kloxo Official (6.1.12) before backup data.
-
-    - In Kloxo offical run:
-
-        cd /script
-        wget https://github.com/mustafaramadhan/kloxo/raw/dev/kloxo/pscript/backup-patch  --no-check-certificate
-        sh ./backup-patch
-
-2. Need remove certain rpms in Kloxo Official after 6.1.12 (testing in 6.1.19)
-
-    # remove packages from Kloxo Official
-    yum remove kloxo* -y
-    
-3. Since 6.5.0.f-20130701, Kloxo-MR using MySQLi API instead MySQL API. Need update mysql 5.0.x to 5.1.x or above for Centos 5.
-
-    Check mysql version with:
-
-        mysql -V|awk '{print $5}'
-
-    Update with:
-
-        yum replace mysql --replace-with=mysql55' (ask to forum for update to MariaDB)
-
-4. Make sure all MySQL databases in MyISAM storage-engine (especially upgrade to version 6.5.0) with execute:
-
-    ## convert to MyISAM storage-engine
-    sh /script/mysql-convert --engine=myisam
-
-5. Trouble with 'rpm -Uvh':
-
-    In CentOS 32bit may trouble with:
-
-        # install rpm (read Warning)
-        rpm -Uvh https://github.com/mustafaramadhan/rpms/raw/master/mratwork/release/neutral/noarch/mratwork-release-0.0.1-1.noarch.rpm
-
-    and then use:
-
-        cd /tmp
-        # remove old rpm
-        rm -f mratwork*
-
-        # get rpm file
-        wget https://github.com/mustafaramadhan/rpms/raw/master/mratwork/release/neutral/noarch/mratwork-release-0.0.1-1.noarch.rpm
-
-        rpm -ivh mratwork-release-0.0.1-1.noarch.rpm
+===============================================================================
