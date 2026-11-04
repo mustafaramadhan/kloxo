@@ -155,10 +155,13 @@ fi
 if [ ! -f "$INSTALL_DIR/etc/conf/kloxo.pass" ]; then
     DB_PASS=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 16)
     echo "$DB_PASS" > "$INSTALL_DIR/etc/conf/kloxo.pass"
-    chmod 600 "$INSTALL_DIR/etc/conf/kloxo.pass"
+    chmod 644 "$INSTALL_DIR/etc/conf/kloxo.pass"
 else
     DB_PASS=$(cat "$INSTALL_DIR/etc/conf/kloxo.pass")
+    chmod 644 "$INSTALL_DIR/etc/conf/kloxo.pass"
 fi
+
+chmod 755 "$INSTALL_DIR/etc" "$INSTALL_DIR/etc/conf" "$INSTALL_DIR/etc/slavedb" 2>/dev/null || true
 
 echo 'O:6:"Remote":1:{s:4:"data";a:1:{s:5:"mysql";a:1:{s:10:"dbpassword";s:0:"";}}}' > "$INSTALL_DIR/etc/slavedb/dbadmin"
 echo 'O:6:"Remote":1:{s:4:"data";a:3:{s:3:"web";s:12:"apache_nginx";s:4:"spam";s:10:"bogofilter";s:3:"dns";s:4:"bind";s:4:"pop3";s:7:"courier";s:4:"smtp";s:5:"qmail";}}' > "$INSTALL_DIR/etc/slavedb/driver"
@@ -177,6 +180,9 @@ ALTER USER 'kloxo'@'localhost' IDENTIFIED BY '${DB_PASS}';
 GRANT ALL PRIVILEGES ON kloxo.* TO 'kloxo'@'localhost';
 FLUSH PRIVILEGES;
 " 2>/dev/null || true
+
+# Disable innodb strict mode temporarily to allow wide table structures
+mariadb -u root -e "SET GLOBAL innodb_strict_mode=0;" 2>/dev/null || mysql -u root -e "SET GLOBAL innodb_strict_mode=0;" 2>/dev/null || true
 
 # Import database structure if empty
 TABLE_COUNT=$(mariadb -u root -N -e "SELECT count(*) FROM information_schema.tables WHERE table_schema='kloxo';" 2>/dev/null || mysql -u root -N -e "SELECT count(*) FROM information_schema.tables WHERE table_schema='kloxo';" 2>/dev/null || echo 0)
