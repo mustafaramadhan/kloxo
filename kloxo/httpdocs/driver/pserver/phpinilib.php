@@ -137,7 +137,7 @@ class phpini extends lxdb
 		}
 	}
 
-	function getParentClass()
+	function getParentClass($var = 'parent_clname')
 	{
 		$parent = $this->getParentO();
 
@@ -145,8 +145,8 @@ class phpini extends lxdb
 			return $parent->getClass();
 		}
 
-		if (isset($this->parent_clname) && $this->parent_clname) {
-			list($pclass, ) = getParentNameAndClass($this->parent_clname);
+		if (isset($this->$var) && $this->$var) {
+			list($pclass, ) = getParentNameAndClass($this->$var);
 
 			if ($pclass) {
 				return $pclass;

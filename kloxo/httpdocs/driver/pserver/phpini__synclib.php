@@ -269,7 +269,7 @@ class phpini__sync extends Lxdriverclass
 		$this->createIniFile();
 
 		// MR -- also restart php-fpm
-		$phptype = db_get_value("serverweb", "pserver-" . $this->syncserver, "php-type");
+		$phptype = db_get_value("serverweb", "pserver-" . $this->syncserver, "php_type");
 		if (strpos($phptype, 'php-fpm') !== false) {
 			createRestartFile('restart-php-fpm');
 		}
