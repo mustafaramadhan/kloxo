@@ -129,7 +129,7 @@ class phpini extends lxdb
 
 	function fixphpIniFlag()
 	{
-		if (!isset($this->phpini_flag_b) || get_class($this->phpini_flag_b) !== 'phpini_flag_b') {
+		if (!isset($this->phpini_flag_b) || !($this->phpini_flag_b instanceof phpini_flag_b)) {
 		//if ($this->getParentO()->getClass() === 'web') { return; }
 		//if ($this->getParentO()->getClass() === 'domain') { return; }
 			$this->phpini_flag_b = new phpini_flag_b(null, null, $this->nname);
@@ -159,7 +159,7 @@ class phpini extends lxdb
 			$list = $this->getInheritedList();
 
 			foreach ($list as $l) {
-				$this->phpini_flag_b->$l = $ob->phpini_flag_b->$l;
+				$this->phpini_flag_b->$l = (isset($ob->phpini_flag_b) && isset($ob->phpini_flag_b->$l)) ? $ob->phpini_flag_b->$l : null;
 			}
 
 			// MR -- trick for escape web-based php.ini
@@ -227,6 +227,7 @@ class phpini extends lxdb
 
 	function initPhpIni()
 	{
+		$this->fixphpIniFlag();
 		$this->setUpInitialValues();
 	}
 
@@ -264,7 +265,8 @@ class phpini extends lxdb
 				$this->initialValue('phpini_flag_b-phpfpm_type_flag', 'ondemand');
 				$vlist["phpini_flag_b-phpfpm_type_flag"] = array('s', self::getPhpfpmTypeList());
 			} else {
-				$vlist["phpini_flag_b-phpfpm_type_flag"] = array('s', array($this->phpini_flag_b->phpfpm_type_flag));
+				$type = (isset($this->phpini_flag_b) && isset($this->phpini_flag_b->phpfpm_type_flag)) ? $this->phpini_flag_b->phpfpm_type_flag : 'ondemand';
+				$vlist["phpini_flag_b-phpfpm_type_flag"] = array('s', array($type));
 			}
 
 		//	$vlist["phpini_flag_b-phpfpm_limit_extensions"] = array('t', self::getPhpfpmLimitExtensions());
@@ -288,17 +290,22 @@ class phpini extends lxdb
 
 	function setUpInitialValues()
 	{
+		if (!isset($this->phpini_flag_b) || !($this->phpini_flag_b instanceof phpini_flag_b)) {
+			$this->phpini_flag_b = new phpini_flag_b(null, null, $this->nname);
+		}
+
 		if ($this->getParentO()->getClass() === 'pserver') {
 			$this->initialValuesBasic();
 		} else {
 			$p = new phpini(null, $this->syncserver, createParentName('pserver', $this->syncserver));
 			$p->get();
+			$p->fixphpIniFlag();
 
 			$b = $p->phpini_flag_b;
 
 			$list = array_merge($this->getInheritedList(), $this->getLocalList(), $this->getExtraList());
 
-			array_unique($list);
+			$list = array_unique($list);
 
 			foreach ($list as $k => $v) {
 				if ($v === 'session_save_path_flag') {
@@ -311,7 +318,8 @@ class phpini extends lxdb
 						exec("chmod 777 $path");
 					}
 				} else {
-					$this->initialValue($v, $b->$v);
+					$val = (isset($b) && is_object($b) && isset($b->$v)) ? $b->$v : null;
+					$this->initialValue($v, $val);
 				}
 			}
 		}
@@ -319,6 +327,10 @@ class phpini extends lxdb
 
 	function initialValuesBasic()
 	{
+		if (!isset($this->phpini_flag_b) || !($this->phpini_flag_b instanceof phpini_flag_b)) {
+			$this->phpini_flag_b = new phpini_flag_b(null, null, $this->nname);
+		}
+
 		$this->initialValue('output_compression_flag', 'off');
 
 		$this->initialValue('upload_max_filesize', '16M');
@@ -375,6 +387,10 @@ class phpini extends lxdb
 
 	function initialValue($var, $val)
 	{
+		if (!isset($this->phpini_flag_b) || !($this->phpini_flag_b instanceof phpini_flag_b)) {
+			$this->phpini_flag_b = new phpini_flag_b(null, null, $this->nname);
+		}
+
 		if (!isset($this->phpini_flag_b->$var) || !$this->phpini_flag_b->$var) {
 			$this->phpini_flag_b->$var = $val;
 		}

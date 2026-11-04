@@ -18,7 +18,7 @@ class ApiToken
 
 		$secret = bin2hex(random_bytes(32));
 		@file_put_contents($secretFile, $secret);
-		@chmod($secretFile, 0600);
+		@chmod($secretFile, 0660);
 		return $secret;
 	}
 
