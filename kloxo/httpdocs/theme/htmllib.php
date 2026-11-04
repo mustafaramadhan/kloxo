@@ -9528,9 +9528,8 @@ function uploadAbort(e) { // upload abort
 		}
 
 		if ($skin_name === 'simplicity') {
-			$skin_background = $login->getSpecialObject('sp_specialplay')->skin_background;
-			$bodybackground = "url(/theme/background/{$skin_background}) center; background-size: cover; background-attachment: fixed";
-			$bodycolor = "ffffff";
+			$bodybackground = "";
+			$bodycolor = "0B0F19";
 		} else {
 			$bodybackground = "";
 			if ($as_simple_skin) {
@@ -9541,26 +9540,18 @@ function uploadAbort(e) { // upload abort
 		}
 ?>
 
-		<body <?= $func ?> style="background:#<?= $bodycolor ?> <?= $bodybackground ?>;">
+		<body <?= $func ?> class="mfklixo-panel-body" style="background:#<?= $bodycolor ?> <?= $bodybackground ?>;">
 <?php
 		if ($skin_name === 'simplicity') {
-			if (file_exists("./login/images/user-logo.png")) {
-?>
-			<div class="div_fixed_logo_left"><img src="./login/images/user-logo.png" height="40"/></div>
-<?php
-			}
-
 			$simplicity_topbar_left =getLinkCustomfile(getcwd() . $skin_dir, "topbar_left.php");
 			$simplicity_menu = getLinkCustomfile(getcwd() . $skin_dir, "menu.php");
 			$simplicity_topbar_right =getLinkCustomfile(getcwd() . $skin_dir, "topbar_right.php");
 ?>
-			<div class="div_fixed_top shadow_all">
+			<div class="div_fixed_top">
 <?php include_once "{$simplicity_topbar_left}"; ?>
 <?php include_once "{$simplicity_menu}"; ?>
 <?php include_once "{$simplicity_topbar_right}"; ?>
 			</div>
-
-			<div class="div_fixed_logo_right"><a href="//mratwork.com"><img src="/login/images/kloxo-mr.png" height="40"/></a></div>
 <?php
 		}
 

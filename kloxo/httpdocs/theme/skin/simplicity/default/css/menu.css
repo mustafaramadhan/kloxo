@@ -1,237 +1,199 @@
-/* top level
---------------------------------------------*/
-.menuTemplate2
-{
-	margin: 0 auto;
-	width: auto;
-	float: left;
-	position: relative;
-	z-index: 4;
-	height: 24px;
-	background: none;
-	border: none;
-	font-family: Tahoma, Verdana Arial, Helvetica, sans-serif;
-	font-size: 9pt;
-	list-style: none;
-	padding: 0;
+/* Modern Glassmorphic Menu System for Mfklixo */
 
-	behavior: url("/theme/skin/simplicity/default/css/cssmenu.htc");
+:root {
+	--nav-bg: rgba(15, 23, 42, 0.85);
+	--nav-border: rgba(255, 255, 255, 0.08);
+	--drop-bg: rgba(18, 24, 38, 0.96);
+	--drop-border: rgba(255, 255, 255, 0.12);
+	--accent-blue: #3b82f6;
+	--accent-glow: rgba(59, 130, 246, 0.3);
+	--text-main: #F8FAFC;
+	--text-muted: #94A3B8;
 }
 
-.menuTemplate2 li
-{
-	padding: 0;
-	float: left;
-	height: 28px;
-	_height: 30px;/*IE6 Hack*/
-	position: relative;/*delete it if you want submenu to be positioned relative to the whole menu instead of this li element*/
-	z-index: 5;
-	
-	border-left: 1px solid;
-	border-right: 1px solid;
-	border-top: 1px solid;
-	border-color: transparent;
-	_border-color: #FFF;/*IE6 Hack*/
+/* Nav container & menu */
+.div_menu {
+	display: flex;
+	align-items: center;
+	background: transparent !important;
+	border: none !important;
+	box-shadow: none !important;
+	height: auto !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	width: auto !important;
 }
 
-.menuTemplate2 li a
-{
-	color: #fff;
+.menuTemplate2 {
+	display: flex !important;
+	align-items: center !important;
+	gap: 4px !important;
+	list-style: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	height: auto !important;
+	position: relative !important;
+	z-index: 50 !important;
+	background: transparent !important;
+	border: none !important;
 }
 
-.menuTemplate2 li:hover, .menuTemplate2 li.onhover
-{
-	border: 1px solid #B00;
+.menuTemplate2 li {
+	position: relative !important;
+	list-style: none !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	height: auto !important;
+	border: none !important;
 }
 
-.menuTemplate2 a
-{
-	padding: 0 4px;
-	line-height: 28px; /*Note: keep this value the same as the height of .menuTemplate2 li */
-	font-size: 9pt;
-	font-weight: normal;
+.menuTemplate2 li.separator {
+	display: none !important;
+}
+
+.menuTemplate2 li a {
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 6px !important;
+	padding: 7px 12px !important;
+	font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+	font-size: 0.825rem !important;
+	font-weight: 500 !important;
+	color: var(--text-muted) !important;
+	text-decoration: none !important;
+	border-radius: 8px !important;
+	transition: all 0.18s ease !important;
+	line-height: 1 !important;
+	border: 1px solid transparent !important;
+}
+
+.menuTemplate2 li a:hover,
+.menuTemplate2 li:hover > a {
+	color: var(--text-main) !important;
+	background: rgba(255, 255, 255, 0.08) !important;
+	border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.menuTemplate2 a.arrow::after {
+	content: '';
 	display: inline-block;
-	outline: 0;
-	text-decoration: none;
-	color: #000;
-	position: relative;
+	width: 5px;
+	height: 5px;
+	border-right: 1.5px solid currentColor;
+	border-bottom: 1.5px solid currentColor;
+	transform: rotate(45deg);
+	margin-left: 3px;
+	margin-top: -3px;
+	opacity: 0.7;
+	transition: transform 0.2s ease;
 }
 
-.menuTemplate2 li:hover a, .menuTemplate2 li.onhover a
-{
-	background-color: #F8F8FF;
-	color: #000;
-	z-index: 9; 
+.menuTemplate2 li:hover a.arrow::after {
+	transform: rotate(-135deg);
+	margin-top: 2px;
 }
 
-.menuTemplate2 a.arrow
-{
-	/* background: url(arrow.gif) no-repeat right center; */
-}
- 
-		
-/*Used to align a top-level item to the right*/		
-.menuTemplate2 li.menuRight
-{
-	float: right;
-	margin-right: 0;
-}
-		
-/*for the top-level separators*/
-.menuTemplate2 li.separator
-{
-	display: none;
-}
-
-/* sub level
---------------------------------------------*/
-
+/* Dropdown Sub-menu */
 .menuTemplate2 div.drop,
-.menuTemplate2 div.drop2
-{
-	position: absolute;
-	z-index: 5;
-
-	border: 1px solid #B00;
-	background-color: #F8F8FF;
-	text-align: left;
-	padding: 15px;  
-	top: 27px;
-
-	left: -9999px;
-	width: 600px; /* MR -- set fix width */
+.menuTemplate2 div.drop2 {
+	display: none;
+	position: absolute !important;
+	top: calc(100% + 8px) !important;
+	left: 0 !important;
+	z-index: 99999 !important;
+	background: var(--drop-bg) !important;
+	backdrop-filter: blur(28px) !important;
+	-webkit-backdrop-filter: blur(28px) !important;
+	border: 1px solid var(--drop-border) !important;
+	border-radius: 16px !important;
+	box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
+	padding: 16px 20px !important;
+	min-width: 380px !important;
+	box-sizing: border-box !important;
 }
 
-.menuTemplate2 div.drop a,
-.menuTemplate2 div.drop2 a
-{
-	padding: 0;
-	/* line-height: 2.0em; */
-	font-size: 9pt;
-	font-weight: normal;
-	display: inline;
-	text-align: left;
-	
-	position: static;
-	z-index: 0;
+.menuTemplate2 li:hover > div.drop,
+.menuTemplate2 li:hover > div.drop2 {
+	display: block !important;
+	animation: dropFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropFadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(-6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 .menuTemplate2 div.drop b,
-.menuTemplate2 div.drop2 b
-{
-	font-weight: bold;
-	line-height: 25px;
+.menuTemplate2 div.drop2 b {
+	display: block !important;
+	font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+	font-size: 0.72rem !important;
+	font-weight: 700 !important;
+	text-transform: uppercase !important;
+	letter-spacing: 0.08em !important;
+	color: #60a5fa !important;
+	padding-bottom: 8px !important;
+	margin-bottom: 10px !important;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
-	
-.menuTemplate2 li:hover div.drop, .menuTemplate2 li.onhover div.drop
-{
-	/* left: -1px; */ /*Use this property to change offset of the dropdown*/
-	left: -320px; /* MR -- set 'centered' drop */
-}
-
-.menuTemplate2 li:hover div.drop2, .menuTemplate2 li.onhover div.drop2
-{
-	/* left: -1px; */ /*Use this property to change offset of the dropdown*/
-	left: -60px; /* MR -- set 'centered' drop */
-}
-
-/* Elements within the drop down sub-menu
---------------------------------------------*/
 
 .menuTemplate2 div.drop div div.dropmenu,
-.menuTemplate2 div.drop2 div div.dropmenu
-{
-	padding: 0 0 15px 10px;
+.menuTemplate2 div.drop2 div div.dropmenu {
+	padding: 0 !important;
+	display: flex !important;
+	flex-direction: column !important;
+	gap: 3px !important;
 }
-.menuTemplate1 li:hover div.drop a, .menuTemplate1 li.onhover div.drop a,
-.menuTemplate1 li:hover div.drop2 a, .menuTemplate1 li.onhover div.drop2 a
-{
-	background: none;
-	background-image: none;
-	padding: 0;
-}
+
 .menuTemplate2 div.drop div a,
-.menuTemplate2 div.drop2 div a
-{
-	line-height: 25px;  
-	color: #048;
-	background: none;
+.menuTemplate2 div.drop2 div a {
+	display: flex !important;
+	align-items: center !important;
+	padding: 6px 10px !important;
+	font-size: 0.825rem !important;
+	color: #CBD5E1 !important;
+	border-radius: 8px !important;
+	text-decoration: none !important;
+	line-height: 1.3 !important;
+	transition: all 0.15s ease !important;
 }
+
 .menuTemplate2 div.drop div a:hover,
-.menuTemplate2 div.drop2 div a:hover
-{
-	text-decoration: underline;
-	cursor: pointer;
-	color: #f00;
+.menuTemplate2 div.drop2 div a:hover {
+	color: #ffffff !important;
+	background: rgba(37, 99, 235, 0.2) !important;
+	transform: translateX(3px) !important;
+	text-decoration: none !important;
 }
 
-.menuTemplate2 div.left
-{
+.menuTemplate2 div.left {
 	float: left;
-	padding-right: 10px;
-	margin-left: 10px;
+	padding-right: 14px;
+	margin-right: 14px;
 }
 
-.menuTemplate2 div.rightborder
-{
-	border-right: 1px dashed #ccc;
+.menuTemplate2 div.rightborder {
+	border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
-.menuTemplate2 div.left div
-{
-	padding-bottom: 6px;
-}
-	 
-/* CSS3 effects
---------------------------------------------*/
-
-/*for top-level*/
-.decor2_1 
-{
-}
-
-/*for submenu.*/
-.decor2_2 
-{
-	-moz-box-shadow: 0 0 14px #AAA;
-	-webkit-box-shadow: 0 0 14px #AAA;
-	box-shadow: 0 0 14px #AAA;  
-}
-
-/* Others */
-.div_menu {
-	width: 680px;
-	background-color: #16a085;
-	border: 0;
-	margin:0 auto 0 auto;
-	height: 30px; 
-	padding: 5px;
-	vertical-align: middle
-}
-
-.div_header_message {
-	color: #fff;
-	margin: 2px;
-	padding: 3px;
-	background-color: #3498db;
-	border: 0
-}
-
-.div_header_message_inactive {
-	color: #3498db;
-	margin: 2px;
-	padding: 3px;
-	background-color: #3498db;
-	border: 0
-}
-
+/* Status flyout */
 .div_header_message_status {
-	width: 240px;
-	padding: 10px;
-	color: #FFFFFF;
-	background-color: #9834db;
-	position: absolute;
-	z-index: 1000;
-	top: 35px;right: 5px;
-	border: 1px solid #888
+	position: fixed !important;
+	top: 60px !important;
+	right: 20px !important;
+	background: rgba(18, 24, 38, 0.95) !important;
+	backdrop-filter: blur(20px) !important;
+	border: 1px solid rgba(255, 255, 255, 0.12) !important;
+	border-radius: 12px !important;
+	padding: 14px 18px !important;
+	color: #F8FAFC !important;
+	font-size: 0.825rem !important;
+	box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6) !important;
+	z-index: 99999 !important;
 }
