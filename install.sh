@@ -44,7 +44,7 @@ if [[ "$OS_NAME" == "ubuntu" ]] || [[ "$OS_LIKE" =~ "debian" ]]; then
     apt-get update -y
     apt-get install -y git curl wget zip unzip tar systemd openssl \
                        php-cli php-fpm php-mysql php-mbstring php-xml php-curl \
-                       mariadb-server nginx apache2
+                       mariadb-server nginx apache2 nodejs npm
 elif [[ "$OS_NAME" =~ "centos" ]] || [[ "$OS_NAME" =~ "rhel" ]] || [[ "$OS_NAME" =~ "almalinux" ]] || [[ "$OS_NAME" =~ "rocky" ]] || [[ "$OS_LIKE" =~ "rhel" ]]; then
     OS_FAMILY="rhel"
     yum update -y
@@ -215,7 +215,21 @@ echo -e "${YELLOW}[5/5] Activating Control Panel and Web Services...${NC}"
 cp -f "$INSTALL_DIR/init/kloxo-web.service" /etc/systemd/system/kloxo-web.service
 cp -f "$INSTALL_DIR/init/kloxo-php.service" /etc/systemd/system/kloxo-php.service
 cp -f "$INSTALL_DIR/init/kloxo-wrap.service" /etc/systemd/system/kloxo-wrap.service
+if [ -f "$INSTALL_DIR/init/kloxo-dashboard.service" ]; then
+    cp -f "$INSTALL_DIR/init/kloxo-dashboard.service" /etc/systemd/system/kloxo-dashboard.service
+fi
 chmod 644 /etc/systemd/system/kloxo-*.service
+
+# Build and enable Next.js Modern Dashboard
+if [ -d "$INSTALL_DIR/frontend" ] && command -v npm >/dev/null 2>&1; then
+    echo -e "${GREEN}[*] Building Next.js Modern Dashboard...${NC}"
+    cd "$INSTALL_DIR/frontend"
+    npm install --production=false
+    npm run build
+    systemctl daemon-reload
+    systemctl enable kloxo-dashboard.service || true
+    systemctl restart kloxo-dashboard.service || true
+fi
 
 systemctl daemon-reload
 systemctl enable kloxo-php.service kloxo-web.service kloxo-wrap.service || true
