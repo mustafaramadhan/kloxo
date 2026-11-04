@@ -4804,11 +4804,7 @@ class HtmlLib
 			}
 
 			if ($sortby && $sortby === $name) {
-				if ($sgbl->isBlackBackground()) {
-					$wrapstr .= " style='background:gray'";
-				} else {
-					$wrapstr .= " style='background:#edc {$img_url}'";
-				}
+				$wrapstr .= " style='background:rgba(37, 99, 235, 0.25)'";
 ?>
 					<td <?= $wrapstr ?> width="<?= $width ?>">
 						<table cellspacing="0" cellpadding="2"  border="0">
@@ -4817,11 +4813,7 @@ class HtmlLib
 
 <?php
 			} else {
-				if ($sgbl->isBlackBackground()) {
-					$wrapstr .= " style='background:#edc'";
-				} else {
-					$wrapstr .= " style='background:#edc {$img_url}'";
-				}
+				$wrapstr .= " style='background:rgba(30, 41, 59, 0.8)'";
 ?>
 
 								<td width="<?= $width ?>" <?= $wrapstr ?> class="collist">
@@ -4987,7 +4979,7 @@ class HtmlLib
 				<tr>
 					<td colspan="<?= $nlcount ?>">
 						<table cellpadding="0" cellspacing="0" border="0" width="100%">
-							<tr height="1" style="background:#edc <?= $img_url ?>">
+							<tr height="1" style="background:rgba(255,255,255,0.06)">
 							</tr>
 							<tr>
 								<td>
@@ -7187,7 +7179,7 @@ class HtmlLib
 ?>
 
 		<div class="div_note">
-			<div class="div_note_title" style="background:#edc <?= $img_url ?>"><span style="font-weight:bold">&nbsp;Find</span></div>
+			<div class="div_note_title"><span style="font-weight:bold">&nbsp;Find</span></div>
 			<div><input style="width: 100%; border:0; padding:2px;" type='text' name='find' onKeyUp="searchpage(this)"></div>
 		</div>
 		<br/>
@@ -8753,13 +8745,13 @@ function uploadAbort(e) { // upload abort
 
 ?>
 
-		<div id="showimage" style="visibility:visible;width:400px; position:absolute; top: 100px; left:0; right:0; margin: 0 auto;">
-			<div style="<?= $style ?>">
-				<div id="dragbar" onmousedown="password_initializedrag(event)" style="background-color: #ec8; text-align: right; padding: 2px; height: 18px; border-bottom: 1px solid red; cursor: pointer">
-					<div style="float:left"><?= $error_box ?><?= $press_esc_to_close ?></div>
-					<div style="float:right"><a href="javascript:hide_a_div_box('showimage')"><!-- <img src="<?= $icondir ?>/close.gif"> -->&#215;</a></div>
+		<div id="showimage">
+			<div class="modern-alert-box">
+				<div id="dragbar" onmousedown="password_initializedrag(event)">
+					<div class="alert-title-wrap"><span><?= $error_box ?><?= $press_esc_to_close ?></span></div>
+					<div><a href="javascript:hide_a_div_box('showimage')">&#215;</a></div>
 				</div>
-				<div style="padding: 10px"><div style='<?= $fontstyle ?>; padding: 10px'><!-- <img src="<?= $imgfile ?>"> --><?= $message ?> <?= $mess ?></div></div>
+				<div class="alert-body-wrap"><?= $message ?> <?= $mess ?></div>
 			</div>
 		</div>
 <?php
