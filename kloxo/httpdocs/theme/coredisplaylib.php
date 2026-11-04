@@ -2218,18 +2218,15 @@ function do_display_init()
 
 		print_warning();
 		password_contact_check();
-	} catch (Exception $e) {
+	} catch (Throwable $e) {
 		log_log("redirect_error", "exception");
 		$gbl->setSessionV('__tmp_redirect_var', $ghtml->__http_vars);
 		$gbl->c_session->write();
 
-		if (is_array($e->variable)) {
-			$evlist = implode(",", $e->variable);
-		} else {
-			$evlist = $e->variable;
-		}
+		$evlist = (isset($e->variable) && is_array($e->variable)) ? implode(",", $e->variable) : (isset($e->variable) ? $e->variable : '');
+		$val = isset($e->value) ? $e->value : '';
 
-		$ghtml->print_redirect_back($e->getMessage(), $evlist, $e->value);
+		$ghtml->print_redirect_back($e->getMessage(), $evlist, $val);
 
 		exit;
 	}
@@ -2365,18 +2362,15 @@ function lx_frm_inc()
 		}
 
 		$gbl->unsetSessionV('__tmp_redirect_var');
-	} catch (Exception $e) {
+	} catch (Throwable $e) {
 		log_log("redirect_error", "exception");
 		$gbl->setSessionV('__tmp_redirect_var', $ghtml->__http_vars);
 		$gbl->c_session->write();
 
-		if (is_array($e->variable)) {
-			$evlist = implode(",", $e->variable);
-		} else {
-			$evlist = $e->variable;
-		}
+		$evlist = (isset($e->variable) && is_array($e->variable)) ? implode(",", $e->variable) : (isset($e->variable) ? $e->variable : '');
+		$val = isset($e->value) ? $e->value : '';
 
-		$ghtml->print_redirect_back($e->getMessage(), $evlist, $e->value);
+		$ghtml->print_redirect_back($e->getMessage(), $evlist, $val);
 
 		exit;
 	}
@@ -2448,7 +2442,7 @@ function display_exec()
 
 	try {
 		lx_frm_inc();
-	} catch (Exception $e) {
+	} catch (Throwable $e) {
 		log_redirect("Caught except");
 ?>
 		The resource you requested could not be retrieved... <?= $e->getMessage() ?>
