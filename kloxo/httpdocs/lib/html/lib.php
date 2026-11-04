@@ -1380,6 +1380,9 @@ function convertCOMarray($array)
 
 function mycount($olist)
 {
+	if (!isset($olist) || !is_countable($olist)) {
+		return 0;
+	}
 	return count($olist);
 }
 

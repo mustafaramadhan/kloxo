@@ -2189,7 +2189,10 @@ function lx_exception_handler($e)
 {
 	global $gbl, $sgbl, $login, $ghtml;
 
-	print("Error message: {$e->getMessage()} {$e->variable} {$e->value}\n");
+	$var = isset($e->variable) ? $e->variable : '';
+	$val = isset($e->value) ? $e->value : '';
+	print("Error message: {$e->getMessage()} {$var} {$val}\n");
+	error_log("Kloxo Exception: " . $e->getMessage() . "\n" . $e->getTraceAsString());
 
 	if ($sgbl->dbg <= 0) {
 		return;

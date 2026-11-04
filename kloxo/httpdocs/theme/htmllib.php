@@ -3474,6 +3474,10 @@ class HtmlLib
 			$p = $this->frm_o_o;
 		}
 
+		if (!is_array($p)) {
+			$p = array();
+		}
+
 		$url = "display.php?" . $url;
 		$this->get_post_from_get($url, $path, $post);
 
@@ -6341,8 +6345,10 @@ class HtmlLib
 				$desc = get_classvar_description($suclass);
 
 				if (csa($desc[0], "N")) {
-					$count = count($post['frm_o_o']) - 1;
-					$var .= "_nn_" . fix_nname_to_be_variable($post['frm_o_o'][$count]['nname']);
+					$count = (isset($post['frm_o_o']) && is_countable($post['frm_o_o'])) ? count($post['frm_o_o']) - 1 : -1;
+					if ($count >= 0 && isset($post['frm_o_o'][$count]['nname'])) {
+						$var .= "_nn_" . fix_nname_to_be_variable($post['frm_o_o'][$count]['nname']);
+					}
 				}
 
 			//	$descr = "{$desc[2]} {$login->getKeywordUc('home')} ";
@@ -6357,7 +6363,7 @@ class HtmlLib
 			$desc = get_classvar_description($suclass);
 
 			if (csa($desc[0], "N")) {
-				$count = count($post['frm_o_o']) - 1;
+				$count = (isset($post['frm_o_o']) && is_countable($post['frm_o_o'])) ? count($post['frm_o_o']) - 1 : -1;
 			}
 
 			return array("", '', $descr, 'desc' => $descr, 'help' => $help);

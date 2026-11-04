@@ -81,7 +81,7 @@ abstract class ClientCore extends Resourcecore
 		foreach($array as $a) {
 			$list = $a . "_list";
 
-			if (count($listpriv->$list) > 1) {
+			if (isset($listpriv->$list) && is_countable($listpriv->$list) && count($listpriv->$list) > 1) {
 				$more = true;
 
 				break;
