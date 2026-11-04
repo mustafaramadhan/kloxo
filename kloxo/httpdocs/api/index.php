@@ -647,7 +647,7 @@ try {
 		initProgram('admin');
 		$db = new Sqlite(null, 'cron');
 		$escapedCmd = addslashes($command);
-		$db->rawQuery("REPLACE INTO cron (nname, parent_clname, command, simple_cron, ttype, status) VALUES ('{$id}', 'client-admin', '{$escapedCmd}', '{$schedule}', 'simple', 'on');");
+		$db->rawQuery("REPLACE INTO cron (nname, parent_clname, command, simple_cron, ttype, username) VALUES ('{$id}', 'client-admin', '{$escapedCmd}', '{$schedule}', 'simple', 'admin');");
 
 		jsonResponse(['success' => true, 'message' => 'Cron job created successfully', 'id' => $id]);
 	}
