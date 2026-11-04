@@ -200,6 +200,14 @@ chown -R lxlabs:lxlabs "$INSTALL_DIR"
 chown -R www-data:www-data "$INSTALL_DIR/httpdocs" "$INSTALL_DIR/log" "$INSTALL_DIR/session" "$INSTALL_DIR/pid" 2>/dev/null || chown -R nginx:nginx "$INSTALL_DIR/httpdocs" "$INSTALL_DIR/log" "$INSTALL_DIR/session" "$INSTALL_DIR/pid" 2>/dev/null || true
 chmod -R 775 "$INSTALL_DIR/session" "$INSTALL_DIR/log" "$INSTALL_DIR/pid"
 
+# Initialize system drivers and IP addresses
+if [ -f "$INSTALL_DIR/bin/common/driverload.php" ]; then
+    php -f "$INSTALL_DIR/bin/common/driverload.php" 2>/dev/null || true
+fi
+if [ -f "$INSTALL_DIR/bin/fixIpAddress.php" ]; then
+    php -f "$INSTALL_DIR/bin/fixIpAddress.php" 2>/dev/null || true
+fi
+
 # 5. Setup Kloxo Services & Web Server
 echo -e "${YELLOW}[5/5] Activating Control Panel and Web Services...${NC}"
 
