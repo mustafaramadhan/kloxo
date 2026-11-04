@@ -12,7 +12,7 @@
 	$domain = $splitter[0];
 	$port = ($splitter[1]) ? $splitter[1] : '7778';
 	$requesturi = $a["REQUEST_URI"];
-	$scheme = $a["HTTP_SCHEME"];
+	$scheme = (isset($a["HTTP_SCHEME"])) ? $a["HTTP_SCHEME"] : ((isset($a["HTTPS"]) && $a["HTTPS"] === "on") ? "https" : "http");
 
 	$domain_pure = preg_replace('/(cp\.|webmail\.|www\.|mail\.)(.*)/i', "$2", $domain);
 

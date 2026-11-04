@@ -123,12 +123,17 @@ if [ -n "$PHP_FPM_SVC" ]; then
     systemctl restart "$PHP_FPM_SVC" || true
 fi
 
-# Symlink PHP-FPM socket
-PHP_SOCK=$(ls -1 /run/php/php*-fpm.sock /var/run/php-fpm/php-fpm.sock /run/php-fpm/www.sock 2>/dev/null | head -n 1)
+# Symlink PHP-FPM socket (match actual socket file, avoid circular symlink)
+PHP_SOCK=$(find /run/php /var/run/php-fpm /run/php-fpm -maxdepth 1 -name "php*fpm*.sock" -type s 2>/dev/null | head -n 1)
+if [ -z "$PHP_SOCK" ]; then
+    PHP_SOCK=$(ls -1 /run/php/php*.sock /var/run/php-fpm/php-fpm.sock /run/php-fpm/www.sock 2>/dev/null | grep -v 'php-fpm.sock$' | head -n 1)
+fi
 if [ -n "$PHP_SOCK" ]; then
     mkdir -p "$INSTALL_DIR/init"
     ln -sf "$PHP_SOCK" "$INSTALL_DIR/init/kloxo-phpcgi.sock"
-    ln -sf "$PHP_SOCK" /run/php/php-fpm.sock 2>/dev/null || true
+    if [ "$PHP_SOCK" != "/run/php/php-fpm.sock" ]; then
+        ln -sf "$PHP_SOCK" /run/php/php-fpm.sock 2>/dev/null || true
+    fi
 fi
 
 # Adjust Nginx user for OS family
