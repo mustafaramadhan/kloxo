@@ -1,4 +1,9 @@
 <?php
+if (!isset($_GET['frm_action']) && !isset($_POST['frm_action'])) {
+	$_GET['frm_action'] = 'show';
+	$_REQUEST['frm_action'] = 'show';
+}
+
 $v = 0;
 
 include_once 'theme/coredisplaylib.php';

@@ -2312,7 +2312,8 @@ function lx_frm_inc()
 	global $gbl, $sgbl, $login, $ghtml;
 
 	if (!$ghtml->iset("frm_action")) {
-		display_die('Action Not set');
+		$ghtml->frm_action = 'show';
+		$ghtml->__http_vars['frm_action'] = 'show';
 	}
 
 //	if (isRemotePost()) {

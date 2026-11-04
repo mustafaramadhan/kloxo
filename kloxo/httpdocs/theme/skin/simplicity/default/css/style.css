@@ -653,3 +653,14 @@ table.darktableheader1 td {
 	border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
 	font-size: 0.85rem !important;
 }
+
+/* Error / Notice box */
+.div_display_die {
+	background: rgba(239, 68, 68, 0.15) !important;
+	border: 1px solid rgba(239, 68, 68, 0.4) !important;
+	color: #fca5a5 !important;
+	padding: 16px 20px !important;
+	border-radius: 12px !important;
+	font-weight: 500 !important;
+	margin: 20px 0 !important;
+}
