@@ -1326,7 +1326,7 @@ abstract class Lxclass
 
 		$this->$typevar = 'fullist';
 
-		$this->$totalvar = count($this->$list);
+		$this->$totalvar = (isset($this->$list) && is_countable($this->$list)) ? count($this->$list) : 0;
 
 		if (!isset($this->$list)) {
 			$this->$list = NULL;
