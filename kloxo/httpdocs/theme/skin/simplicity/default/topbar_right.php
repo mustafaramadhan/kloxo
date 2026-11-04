@@ -1,5 +1,6 @@
 <?php
-$status_title = $this->print_message('simplicity');
+$raw_status = $this->print_message('simplicity');
+$status_title = (is_string($raw_status)) ? trim($raw_status) : '';
 
 if ($status_title !== '') {
 	$status_title = str_replace(":  ", ":\n<ul style=\"margin-left:-20px\"><li>", $status_title);
@@ -7,7 +8,7 @@ if ($status_title !== '') {
 }
 ?>
 
-<?php if ($status_title != ''): ?>
+<?php if (!empty($status_title)): ?>
 	<div id="div_cfstatus" class="div_header_message_status">
 		<?=$status_title;?>
 	</div>
