@@ -65,6 +65,23 @@
 
 ---
 
+## ⚡ One-Line Automated Installation
+
+You can install Mfklixo automatically on fresh Ubuntu, Debian, AlmaLinux, Rocky Linux, or CentOS systems with a single command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/feizezadeh/Mfklixo/modernize-kloxo/install.sh | bash
+```
+
+Or clone and run locally:
+```bash
+git clone -b modernize-kloxo https://github.com/feizezadeh/Mfklixo.git
+cd Mfklixo
+sudo bash install.sh
+```
+
+---
+
 ## 📦 Getting Started & Commands
 
 ### Switch Web Server
