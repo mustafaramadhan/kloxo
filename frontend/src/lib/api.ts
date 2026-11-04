@@ -44,6 +44,74 @@ export interface IpItem {
   status: boolean;
 }
 
+export interface MailAccountItem {
+  email: string;
+  owner: string;
+  status: boolean;
+  used_mb: number;
+  quota_mb: number | string;
+}
+
+export interface FtpUserItem {
+  username: string;
+  directory: string;
+  owner: string;
+  status: boolean;
+  disk_usage_mb: number;
+}
+
+export interface ClientItem {
+  username: string;
+  type: string;
+  email: string;
+  status: boolean;
+  domains_used: number;
+  domains_quota: string | number;
+  disk_used_mb: number;
+}
+
+export interface CronJobItem {
+  id: string;
+  owner: string;
+  command: string;
+  type: string;
+  schedule: string;
+}
+
+export interface FileItem {
+  name: string;
+  path: string;
+  is_directory: boolean;
+  size_bytes: number;
+  permissions: string;
+  modified: string;
+}
+
+export interface FileListResponse {
+  success: boolean;
+  current_path: string;
+  parent_path: string | null;
+  items: FileItem[];
+}
+
+export interface PhpInfoData {
+  version: string;
+  sapi: string;
+  memory_limit: string;
+  max_execution_time: string;
+  upload_max_filesize: string;
+  post_max_size: string;
+  opcache_enabled: boolean;
+  extensions: string[];
+}
+
+export interface LogResponse {
+  success: boolean;
+  service: string;
+  file: string;
+  lines: string[];
+}
+
 export function getStoredToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('mfklixo_token');

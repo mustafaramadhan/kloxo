@@ -16,6 +16,12 @@ import {
   Menu,
   X,
   RefreshCw,
+  FolderTree,
+  Mail,
+  Share2,
+  Users,
+  Clock,
+  Terminal,
 } from 'lucide-react';
 import { getStoredToken, setStoredToken } from '@/lib/api';
 
@@ -51,11 +57,32 @@ export default function Shell({ children }: ShellProps) {
     router.push('/login');
   };
 
-  const navItems = [
-    { name: 'Overview', href: '/', icon: LayoutDashboard },
-    { name: 'Services', href: '/services', icon: Server },
-    { name: 'Domains', href: '/domains', icon: Globe },
-    { name: 'Databases', href: '/databases', icon: Database },
+  const navGroups = [
+    {
+      title: 'Hosting & Core',
+      items: [
+        { name: 'Overview', href: '/', icon: LayoutDashboard },
+        { name: 'Services', href: '/services', icon: Server },
+        { name: 'Domains', href: '/domains', icon: Globe },
+        { name: 'Databases', href: '/databases', icon: Database },
+      ],
+    },
+    {
+      title: 'Files & Communication',
+      items: [
+        { name: 'File Manager', href: '/files', icon: FolderTree },
+        { name: 'Mail Accounts', href: '/mail', icon: Mail },
+        { name: 'FTP Users', href: '/ftp', icon: Share2 },
+      ],
+    },
+    {
+      title: 'System & Management',
+      items: [
+        { name: 'Clients', href: '/clients', icon: Users },
+        { name: 'Cron Tasks', href: '/cron', icon: Clock },
+        { name: 'Server Logs & PHP', href: '/logs', icon: Terminal },
+      ],
+    },
   ];
 
   return (
@@ -92,47 +119,53 @@ export default function Shell({ children }: ShellProps) {
           </button>
         </div>
 
-        <nav className="p-4 space-y-1.5">
-          <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Control Center
-          </div>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
-                  active
-                    ? 'bg-gradient-to-r from-sky-500/20 to-indigo-500/20 text-sky-400 border border-sky-500/30 shadow-sm'
-                    : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
-                }`}
-              >
-                <Icon className={`h-4 w-4 ${active ? 'text-sky-400' : 'text-slate-400'}`} />
-                {item.name}
-              </Link>
-            );
-          })}
+        <nav className="p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-140px)]">
+          {navGroups.map((group) => (
+            <div key={group.title} className="space-y-1">
+              <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                {group.title}
+              </div>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all ${
+                      active
+                        ? 'bg-gradient-to-r from-sky-500/20 to-indigo-500/20 text-sky-400 border border-sky-500/30 shadow-sm'
+                        : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                    }`}
+                  >
+                    <Icon className={`h-4 w-4 ${active ? 'text-sky-400' : 'text-slate-400'}`} />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
 
-          <div className="pt-6 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Navigation & Legacy
+          <div className="pt-2">
+            <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              Legacy Support
+            </div>
+            <a
+              href="/legacy/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-all border border-transparent hover:border-white/5"
+            >
+              <span className="flex items-center gap-3">
+                <ExternalLink className="h-4 w-4 text-amber-400" />
+                Legacy Panel
+              </span>
+              <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-300">
+                Classic
+              </span>
+            </a>
           </div>
-          <a
-            href="/legacy/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-all border border-transparent hover:border-white/5"
-          >
-            <span className="flex items-center gap-3">
-              <ExternalLink className="h-4 w-4 text-amber-400" />
-              Legacy Panel
-            </span>
-            <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-300">
-              Kloxo
-            </span>
-          </a>
         </nav>
 
         {/* User Card in bottom of sidebar */}

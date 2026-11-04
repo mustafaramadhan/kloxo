@@ -328,6 +328,247 @@ try {
 		jsonResponse(['success' => true, 'ips' => $ips]);
 	}
 
+	// ==========================================
+	// 6. Mail Accounts Management
+	// ==========================================
+	if ($path === '/mail/accounts' && $method === 'GET') {
+		authenticateUser();
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'mailaccount');
+		$rows = $db->getTable(['nname', 'parent_clname', 'status', 'used_q_maildisk_usage', 'priv_q_maildisk_usage']);
+
+		$accounts = [];
+		foreach ((array)$rows as $r) {
+			$accounts[] = [
+				'email' => $r['nname'] ?? '',
+				'owner' => $r['parent_clname'] ?? 'admin',
+				'status' => ($r['status'] ?? 'on') === 'on',
+				'used_mb' => round(((float)($r['used_q_maildisk_usage'] ?? 0)) / 1024, 2),
+				'quota_mb' => ((float)($r['priv_q_maildisk_usage'] ?? 0)) > 0 ? round(((float)$r['priv_q_maildisk_usage']) / 1024, 2) : 'unlimited'
+			];
+		}
+
+		jsonResponse(['success' => true, 'accounts' => $accounts]);
+	}
+
+	// ==========================================
+	// 7. FTP Accounts Management
+	// ==========================================
+	if ($path === '/ftp/users' && $method === 'GET') {
+		authenticateUser();
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'ftpuser');
+		$rows = $db->getTable(['nname', 'directory', 'status', 'parent_clname', 'ftp_disk_usage']);
+
+		$users = [];
+		foreach ((array)$rows as $r) {
+			$users[] = [
+				'username' => $r['nname'] ?? '',
+				'directory' => $r['directory'] ?? '/home/admin',
+				'owner' => $r['parent_clname'] ?? 'admin',
+				'status' => ($r['status'] ?? 'on') === 'on',
+				'disk_usage_mb' => round(((float)($r['ftp_disk_usage'] ?? 0)) / 1024, 2)
+			];
+		}
+
+		jsonResponse(['success' => true, 'users' => $users]);
+	}
+
+	// ==========================================
+	// 8. Clients & Resellers Management
+	// ==========================================
+	if ($path === '/clients' && $method === 'GET') {
+		authenticateUser();
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'client');
+		$rows = $db->getTable(['nname', 'cttype', 'contactemail', 'status', 'used_q_domain_num', 'priv_q_domain_num', 'used_q_clientdisk_usage']);
+
+		$clients = [];
+		foreach ((array)$rows as $r) {
+			$clients[] = [
+				'username' => $r['nname'] ?? '',
+				'type' => $r['cttype'] ?? 'customer',
+				'email' => $r['contactemail'] ?? '',
+				'status' => ($r['status'] ?? 'on') === 'on',
+				'domains_used' => (int)($r['used_q_domain_num'] ?? 0),
+				'domains_quota' => ($r['priv_q_domain_num'] ?? '') === 'Infinity' || empty($r['priv_q_domain_num']) ? 'Unlimited' : $r['priv_q_domain_num'],
+				'disk_used_mb' => round(((float)($r['used_q_clientdisk_usage'] ?? 0)) / 1024, 2)
+			];
+		}
+
+		jsonResponse(['success' => true, 'clients' => $clients]);
+	}
+
+	// ==========================================
+	// 9. Scheduled Tasks (Cron Jobs)
+	// ==========================================
+	if ($path === '/cron/jobs' && $method === 'GET') {
+		authenticateUser();
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'cron');
+		$rows = $db->getTable(['nname', 'parent_clname', 'command', 'argument', 'ttype', 'simple_cron', 'cron_day_hour']);
+
+		$jobs = [];
+		foreach ((array)$rows as $r) {
+			$jobs[] = [
+				'id' => $r['nname'] ?? '',
+				'owner' => $r['parent_clname'] ?? 'admin',
+				'command' => trim(($r['command'] ?? '') . ' ' . ($r['argument'] ?? '')),
+				'type' => $r['ttype'] ?? 'simple',
+				'schedule' => $r['simple_cron'] ?? ($r['cron_day_hour'] ?? 'daily')
+			];
+		}
+
+		jsonResponse(['success' => true, 'jobs' => $jobs]);
+	}
+
+	// ==========================================
+	// 10. File Manager Endpoints
+	// ==========================================
+	if ($path === '/files' && $method === 'GET') {
+		authenticateUser();
+
+		$requestedPath = (string)($_GET['path'] ?? '/home/admin');
+		$baseRoot = '/home';
+		$realPath = realpath($requestedPath);
+
+		if (!$realPath || strpos($realPath, $baseRoot) !== 0) {
+			$realPath = '/home/admin';
+			if (!is_dir($realPath)) {
+				@mkdir($realPath, 0755, true);
+			}
+		}
+
+		$items = [];
+		$entries = @scandir($realPath) ?: [];
+
+		foreach ($entries as $entry) {
+			if ($entry === '.') continue;
+			$full = $realPath . '/' . $entry;
+			$isDir = is_dir($full);
+			$items[] = [
+				'name' => $entry,
+				'path' => $full,
+				'is_directory' => $isDir,
+				'size_bytes' => $isDir ? 0 : (@filesize($full) ?: 0),
+				'permissions' => substr(sprintf('%o', @fileperms($full) ?: 0), -4),
+				'modified' => @filemtime($full) ? date('Y-m-d H:i:s', filemtime($full)) : ''
+			];
+		}
+
+		// Sort directories first, then alphabetical
+		usort($items, function ($a, $b) {
+			if ($a['is_directory'] === $b['is_directory']) {
+				return strcasecmp($a['name'], $b['name']);
+			}
+			return $a['is_directory'] ? -1 : 1;
+		});
+
+		jsonResponse([
+			'success' => true,
+			'current_path' => $realPath,
+			'parent_path' => ($realPath !== '/home' && dirname($realPath) !== $realPath) ? dirname($realPath) : null,
+			'items' => $items
+		]);
+	}
+
+	if ($path === '/files/content' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$filePath = (string)($input['path'] ?? '');
+		$real = realpath($filePath);
+
+		if (!$real || strpos($real, '/home') !== 0 || !is_file($real)) {
+			jsonResponse(['error' => 'Not Found', 'message' => 'File does not exist or access denied'], 404);
+		}
+
+		// Avoid reading huge binary files
+		$size = filesize($real);
+		if ($size > 5 * 1024 * 1024) {
+			jsonResponse(['error' => 'File Too Large', 'message' => 'Files larger than 5MB cannot be opened in editor'], 400);
+		}
+
+		$content = file_get_contents($real);
+		jsonResponse([
+			'success' => true,
+			'path' => $real,
+			'size' => $size,
+			'content' => $content
+		]);
+	}
+
+	if ($path === '/files/save' && $method === 'POST') {
+		$user = authenticateUser();
+		$input = getJsonInput();
+		$filePath = (string)($input['path'] ?? '');
+		$content = (string)($input['content'] ?? '');
+		$real = realpath(dirname($filePath));
+
+		if (!$real || strpos($real, '/home') !== 0) {
+			jsonResponse(['error' => 'Forbidden', 'message' => 'Invalid path destination'], 403);
+		}
+
+		$dest = $real . '/' . basename($filePath);
+		$res = file_put_contents($dest, $content);
+
+		jsonResponse([
+			'success' => ($res !== false),
+			'path' => $dest,
+			'bytes_written' => $res ?: 0
+		]);
+	}
+
+	// ==========================================
+	// 11. System Logs & PHP Configuration
+	// ==========================================
+	if ($path === '/system/logs' && $method === 'GET') {
+		authenticateUser();
+
+		$service = (string)($_GET['service'] ?? 'nginx');
+		$logMap = [
+			'nginx' => '/var/log/nginx/error.log',
+			'php' => '/var/log/php8.5-fpm.log',
+			'kloxo' => '/usr/local/lxlabs/kloxo/log/kloxo-panel-error.log'
+		];
+
+		$targetFile = $logMap[$service] ?? $logMap['nginx'];
+		$lines = [];
+
+		if (file_exists($targetFile) && is_readable($targetFile)) {
+			$raw = shell_exec("tail -n 100 " . escapeshellarg($targetFile)) ?: '';
+			$lines = explode("\n", trim($raw));
+		}
+
+		jsonResponse([
+			'success' => true,
+			'service' => $service,
+			'file' => $targetFile,
+			'lines' => $lines
+		]);
+	}
+
+	if ($path === '/system/phpinfo' && $method === 'GET') {
+		authenticateUser();
+
+		jsonResponse([
+			'success' => true,
+			'php' => [
+				'version' => PHP_VERSION,
+				'sapi' => PHP_SAPI,
+				'memory_limit' => ini_get('memory_limit'),
+				'max_execution_time' => ini_get('max_execution_time'),
+				'upload_max_filesize' => ini_get('upload_max_filesize'),
+				'post_max_size' => ini_get('post_max_size'),
+				'opcache_enabled' => function_exists('opcache_get_status') && (bool)opcache_get_status(),
+				'extensions' => get_loaded_extensions()
+			]
+		]);
+	}
+
 	jsonResponse(['error' => 'Not Found', 'message' => "Endpoint {$method} {$path} does not exist"], 404);
 
 } catch (Throwable $e) {
