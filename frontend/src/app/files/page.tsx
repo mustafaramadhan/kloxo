@@ -13,9 +13,12 @@ import {
   Eye,
   Save,
   X,
-  FilePlus,
+  Plus,
   Trash2,
-  HardDrive,
+  FolderPlus,
+  FilePlus,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 
 export default function FileManagerPage() {
@@ -24,6 +27,12 @@ export default function FileManagerPage() {
   const [items, setItems] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
+
+  // Modals
+  const [showCreateModal, setShowCreateModal] = useState<'file' | 'directory' | null>(null);
+  const [newItemName, setNewItemName] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   // File Editor Modal
   const [activeFile, setActiveFile] = useState<string | null>(null);
@@ -86,6 +95,47 @@ export default function FileManagerPage() {
     }
   };
 
+  const handleCreateItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newItemName.trim() || !showCreateModal) return;
+    setActionLoading(true);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string }>('/files/create', {
+        method: 'POST',
+        body: JSON.stringify({
+          path: currentPath,
+          name: newItemName.trim(),
+          type: showCreateModal,
+        }),
+      });
+      setMessage({ text: res.message || 'Item created successfully', success: true });
+      setShowCreateModal(null);
+      setNewItemName('');
+      await fetchDirectory(currentPath);
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to create item', success: false });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteItem = async (item: FileItem) => {
+    if (!confirm(`Are you sure you want to delete ${item.is_directory ? 'folder' : 'file'} "${item.name}"?`)) return;
+    setActionLoading(true);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string }>('/files', {
+        method: 'DELETE',
+        body: JSON.stringify({ path: item.path }),
+      });
+      setMessage({ text: res.message || 'Item deleted successfully', success: true });
+      await fetchDirectory(currentPath);
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to delete item', success: false });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
     <Shell>
       <div className="space-y-6">
@@ -97,16 +147,32 @@ export default function FileManagerPage() {
               File Manager
             </h1>
             <p className="text-sm text-slate-400">
-              Browse, view, and edit files on your hosting server
+              Browse, view, create, and edit files on your hosting server
             </p>
           </div>
-          <button
-            onClick={() => fetchDirectory(currentPath)}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 hover:bg-white/10 transition-colors w-fit"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowCreateModal('file')}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-medium text-slate-200 hover:bg-white/10 transition-colors"
+            >
+              <FilePlus className="h-4 w-4 text-sky-400" />
+              New File
+            </button>
+            <button
+              onClick={() => setShowCreateModal('directory')}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-medium text-slate-200 hover:bg-white/10 transition-colors"
+            >
+              <FolderPlus className="h-4 w-4 text-amber-400" />
+              New Folder
+            </button>
+            <button
+              onClick={() => fetchDirectory(currentPath)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-medium text-slate-200 hover:bg-white/10 transition-colors"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {/* Path Bar */}
@@ -124,6 +190,23 @@ export default function FileManagerPage() {
             {currentPath}
           </div>
         </div>
+
+        {message && (
+          <div
+            className={`flex items-center gap-3 rounded-2xl p-4 text-sm border ${
+              message.success
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+            }`}
+          >
+            {message.success ? (
+              <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-rose-400 shrink-0" />
+            )}
+            <span>{message.text}</span>
+          </div>
+        )}
 
         {error && (
           <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-300">
@@ -172,18 +255,24 @@ export default function FileManagerPage() {
                       </td>
                       <td className="px-6 py-3.5 text-xs text-slate-400">{item.modified}</td>
                       <td className="px-6 py-3.5 text-right">
-                        {!item.is_directory && (
+                        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                          {!item.is_directory && (
+                            <button
+                              onClick={() => handleOpenFile(item)}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-sky-400 hover:bg-sky-500/20 transition-colors"
+                            >
+                              <Eye className="h-3 w-3" />
+                              Edit
+                            </button>
+                          )}
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenFile(item);
-                            }}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-sky-400 hover:bg-sky-500/20 transition-colors"
+                            onClick={() => handleDeleteItem(item)}
+                            title="Delete"
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 transition-colors"
                           >
-                            <Eye className="h-3 w-3" />
-                            Edit
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -192,6 +281,67 @@ export default function FileManagerPage() {
             </div>
           )}
         </div>
+
+        {/* Create Modal */}
+        {showCreateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+            <div className="w-full max-w-md rounded-3xl border border-white/10 bg-slate-950 p-6 shadow-2xl">
+              <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  {showCreateModal === 'directory' ? (
+                    <FolderPlus className="h-5 w-5 text-amber-400" />
+                  ) : (
+                    <FilePlus className="h-5 w-5 text-sky-400" />
+                  )}
+                  Create New {showCreateModal === 'directory' ? 'Folder' : 'File'}
+                </h3>
+                <button
+                  onClick={() => setShowCreateModal(null)}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateItem} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                    {showCreateModal === 'directory' ? 'Folder Name' : 'File Name'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    placeholder={showCreateModal === 'directory' ? 'assets' : 'index.php'}
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Will be created in <code className="text-sky-300">{currentPath}</code>
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(null)}
+                    className="rounded-xl border border-white/10 px-4 py-2 text-xs font-medium text-slate-300 hover:bg-white/5"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={actionLoading}
+                    className="rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 px-5 py-2 text-xs font-semibold text-white shadow-md hover:opacity-90 disabled:opacity-50"
+                  >
+                    {actionLoading ? 'Creating...' : 'Create'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* File Editor Modal */}
         {activeFile && (

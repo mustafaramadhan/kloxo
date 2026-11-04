@@ -282,6 +282,53 @@ try {
 		jsonResponse(['success' => true, 'domains' => $domains]);
 	}
 
+	if ($path === '/domains' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$domain = strtolower(trim((string)($input['domain'] ?? '')));
+
+		if (!preg_match('/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i', $domain)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Invalid domain format'], 400);
+		}
+
+		$docroot = "/home/admin/{$domain}/public_html";
+		if (!is_dir($docroot)) {
+			@mkdir($docroot, 0755, true);
+			@file_put_contents("{$docroot}/index.html", "<!DOCTYPE html><html><head><title>{$domain}</title></head><body style='font-family:sans-serif;text-align:center;padding:50px'><h1>{$domain}</h1><p>Website created successfully with Mfklixo Next-Gen Panel.</p></body></html>");
+		}
+
+		$vhostDir = "/home/kloxo/httpd";
+		if (!is_dir($vhostDir)) @mkdir($vhostDir, 0755, true);
+		$vhost = "server {\n    listen 80;\n    server_name {$domain} www.{$domain};\n    root {$docroot};\n    index index.php index.html;\n    location ~ \\.php$ {\n        include /etc/nginx/fastcgi_params;\n        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;\n        fastcgi_pass unix:/usr/local/lxlabs/kloxo/init/kloxo-phpcgi.sock;\n    }\n}\n";
+		@file_put_contents("{$vhostDir}/{$domain}.conf", $vhost);
+		@shell_exec("sudo systemctl reload nginx 2>/dev/null");
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'domain');
+		$db->rawQuery("REPLACE INTO domain (nname, parent_clname, status, webpserver, dnspserver, mmailpserver) VALUES ('{$domain}', 'client-admin', 'on', 'localhost', 'localhost', 'localhost');");
+
+		jsonResponse(['success' => true, 'message' => "Domain {$domain} created successfully", 'domain' => $domain]);
+	}
+
+	if ($path === '/domains' && $method === 'DELETE') {
+		authenticateUser();
+		$input = getJsonInput();
+		$domain = strtolower(trim((string)($input['domain'] ?? $_GET['domain'] ?? '')));
+
+		if (empty($domain)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Domain parameter required'], 400);
+		}
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'domain');
+		$db->delRow('nname', $domain);
+
+		@unlink("/home/kloxo/httpd/{$domain}.conf");
+		@shell_exec("sudo systemctl reload nginx 2>/dev/null");
+
+		jsonResponse(['success' => true, 'message' => "Domain {$domain} deleted successfully"]);
+	}
+
 	// ==========================================
 	// 4. Databases Management
 	// ==========================================
@@ -303,6 +350,59 @@ try {
 		}
 
 		jsonResponse(['success' => true, 'databases' => $dbs]);
+	}
+
+	if ($path === '/databases' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$name = preg_replace('/[^a-zA-Z0-9_]/', '', (string)($input['name'] ?? ''));
+		$dbuser = preg_replace('/[^a-zA-Z0-9_]/', '', (string)($input['username'] ?? $name));
+		$password = (string)($input['password'] ?? '');
+
+		if (empty($name) || empty($password)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Database name and password required'], 400);
+		}
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'mysqldb');
+		$escapedPass = addslashes($password);
+
+		$db->rawQuery("CREATE DATABASE IF NOT EXISTS `{$name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
+		$db->rawQuery("CREATE USER IF NOT EXISTS '{$dbuser}'@'localhost' IDENTIFIED BY '{$escapedPass}';");
+		$db->rawQuery("ALTER USER '{$dbuser}'@'localhost' IDENTIFIED BY '{$escapedPass}';");
+		$db->rawQuery("GRANT ALL PRIVILEGES ON `{$name}`.* TO '{$dbuser}'@'localhost';");
+		$db->rawQuery("FLUSH PRIVILEGES;");
+
+		$db->rawQuery("REPLACE INTO mysqldb (nname, dbname, username, parent_clname, syncserver, dbtype) VALUES ('{$name}', '{$name}', '{$dbuser}', 'client-admin', 'localhost', 'mysql');");
+
+		jsonResponse(['success' => true, 'message' => "Database {$name} created successfully", 'database' => $name]);
+	}
+
+	if ($path === '/databases' && $method === 'DELETE') {
+		authenticateUser();
+		$input = getJsonInput();
+		$name = preg_replace('/[^a-zA-Z0-9_]/', '', (string)($input['name'] ?? $_GET['name'] ?? ''));
+
+		if (empty($name)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Database name required'], 400);
+		}
+
+		if (in_array(strtolower($name), ['kloxo', 'mysql', 'information_schema', 'performance_schema', 'sys'], true)) {
+			jsonResponse(['error' => 'Forbidden', 'message' => 'System databases cannot be deleted'], 403);
+		}
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'mysqldb');
+		$rows = $db->getRows('nname', $name);
+		$u = $rows[0]['username'] ?? '';
+
+		$db->rawQuery("DROP DATABASE IF EXISTS `{$name}`;");
+		if ($u && !in_array($u, ['root', 'kloxo'], true)) {
+			$db->rawQuery("DROP USER IF EXISTS '{$u}'@'localhost';");
+		}
+		$db->delRow('nname', $name);
+
+		jsonResponse(['success' => true, 'message' => "Database {$name} deleted successfully"]);
 	}
 
 	// ==========================================
@@ -352,6 +452,41 @@ try {
 		jsonResponse(['success' => true, 'accounts' => $accounts]);
 	}
 
+	if ($path === '/mail/accounts' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$email = strtolower(trim((string)($input['email'] ?? '')));
+		$password = (string)($input['password'] ?? '');
+		$quota = (int)($input['quota_mb'] ?? 500);
+
+		if (!filter_var($email, FILTER_VALIDATE_EMAIL) || empty($password)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Valid email address and password required'], 400);
+		}
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'mailaccount');
+		$escapedPass = addslashes($password);
+		$db->rawQuery("REPLACE INTO mailaccount (nname, parent_clname, status, realpass, password, priv_q_maildisk_usage, syncserver) VALUES ('{$email}', 'client-admin', 'on', '{$escapedPass}', md5('{$escapedPass}'), '{$quota}', 'localhost');");
+
+		jsonResponse(['success' => true, 'message' => "Mailbox {$email} created successfully", 'email' => $email]);
+	}
+
+	if ($path === '/mail/accounts' && $method === 'DELETE') {
+		authenticateUser();
+		$input = getJsonInput();
+		$email = strtolower(trim((string)($input['email'] ?? $_GET['email'] ?? '')));
+
+		if (empty($email)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Email address required'], 400);
+		}
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'mailaccount');
+		$db->delRow('nname', $email);
+
+		jsonResponse(['success' => true, 'message' => "Mailbox {$email} deleted successfully"]);
+	}
+
 	// ==========================================
 	// 7. FTP Accounts Management
 	// ==========================================
@@ -374,6 +509,42 @@ try {
 		}
 
 		jsonResponse(['success' => true, 'users' => $users]);
+	}
+
+	if ($path === '/ftp/users' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$username = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($input['username'] ?? ''));
+		$password = (string)($input['password'] ?? '');
+		$directory = (string)($input['directory'] ?? '/home/admin');
+
+		if (empty($username) || empty($password)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Username and password required'], 400);
+		}
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'ftpuser');
+		$escapedPass = addslashes($password);
+		$escapedDir = addslashes($directory);
+		$db->rawQuery("REPLACE INTO ftpuser (nname, parent_clname, status, realpass, directory, syncserver) VALUES ('{$username}', 'client-admin', 'on', '{$escapedPass}', '{$escapedDir}', 'localhost');");
+
+		jsonResponse(['success' => true, 'message' => "FTP user {$username} created successfully", 'username' => $username]);
+	}
+
+	if ($path === '/ftp/users' && $method === 'DELETE') {
+		authenticateUser();
+		$input = getJsonInput();
+		$username = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($input['username'] ?? $_GET['username'] ?? ''));
+
+		if (empty($username)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Username required'], 400);
+		}
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'ftpuser');
+		$db->delRow('nname', $username);
+
+		jsonResponse(['success' => true, 'message' => "FTP user {$username} deleted successfully"]);
 	}
 
 	// ==========================================
@@ -402,6 +573,42 @@ try {
 		jsonResponse(['success' => true, 'clients' => $clients]);
 	}
 
+	if ($path === '/clients' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$username = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($input['username'] ?? ''));
+		$password = (string)($input['password'] ?? '');
+		$email = (string)($input['email'] ?? '');
+		$type = in_array($input['type'] ?? '', ['reseller', 'customer']) ? $input['type'] : 'customer';
+
+		if (empty($username) || empty($password)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Username and password required'], 400);
+		}
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'client');
+		$escapedPass = addslashes($password);
+		$db->rawQuery("REPLACE INTO client (nname, parent_clname, cttype, contactemail, status, realpass, password) VALUES ('{$username}', 'client-admin', '{$type}', '{$email}', 'on', '{$escapedPass}', md5('{$escapedPass}'));");
+
+		jsonResponse(['success' => true, 'message' => "Client {$username} created successfully", 'username' => $username]);
+	}
+
+	if ($path === '/clients' && $method === 'DELETE') {
+		authenticateUser();
+		$input = getJsonInput();
+		$username = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($input['username'] ?? $_GET['username'] ?? ''));
+
+		if ($username === 'admin') {
+			jsonResponse(['error' => 'Forbidden', 'message' => 'Cannot delete master admin account'], 403);
+		}
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'client');
+		$db->delRow('nname', $username);
+
+		jsonResponse(['success' => true, 'message' => "Client {$username} deleted successfully"]);
+	}
+
 	// ==========================================
 	// 9. Scheduled Tasks (Cron Jobs)
 	// ==========================================
@@ -424,6 +631,41 @@ try {
 		}
 
 		jsonResponse(['success' => true, 'jobs' => $jobs]);
+	}
+
+	if ($path === '/cron/jobs' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$command = trim((string)($input['command'] ?? ''));
+		$schedule = trim((string)($input['schedule'] ?? 'daily'));
+
+		if (empty($command)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Command required'], 400);
+		}
+
+		$id = 'cron_' . substr(md5($command . time()), 0, 8);
+		initProgram('admin');
+		$db = new Sqlite(null, 'cron');
+		$escapedCmd = addslashes($command);
+		$db->rawQuery("REPLACE INTO cron (nname, parent_clname, command, simple_cron, ttype, status) VALUES ('{$id}', 'client-admin', '{$escapedCmd}', '{$schedule}', 'simple', 'on');");
+
+		jsonResponse(['success' => true, 'message' => 'Cron job created successfully', 'id' => $id]);
+	}
+
+	if ($path === '/cron/jobs' && $method === 'DELETE') {
+		authenticateUser();
+		$input = getJsonInput();
+		$id = trim((string)($input['id'] ?? $_GET['id'] ?? ''));
+
+		if (empty($id)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Cron ID required'], 400);
+		}
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'cron');
+		$db->delRow('nname', $id);
+
+		jsonResponse(['success' => true, 'message' => "Cron task {$id} deleted successfully"]);
 	}
 
 	// ==========================================
@@ -474,6 +716,55 @@ try {
 			'parent_path' => ($realPath !== '/home' && dirname($realPath) !== $realPath) ? dirname($realPath) : null,
 			'items' => $items
 		]);
+	}
+
+	if ($path === '/files/create' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$targetPath = (string)($input['path'] ?? '/home/admin');
+		$name = basename(trim((string)($input['name'] ?? '')));
+		$type = (string)($input['type'] ?? 'file');
+
+		$real = realpath($targetPath);
+		if (!$real || strpos($real, '/home') !== 0) {
+			jsonResponse(['error' => 'Forbidden', 'message' => 'Invalid destination directory'], 403);
+		}
+
+		$dest = $real . '/' . $name;
+		if ($type === 'directory') {
+			$res = @mkdir($dest, 0755, true);
+		} else {
+			$res = @touch($dest);
+		}
+
+		jsonResponse([
+			'success' => ($res !== false),
+			'message' => ($type === 'directory' ? 'Folder' : 'File') . " {$name} created successfully",
+			'path' => $dest
+		]);
+	}
+
+	if ($path === '/files' && $method === 'DELETE') {
+		authenticateUser();
+		$input = getJsonInput();
+		$filePath = (string)($input['path'] ?? $_GET['path'] ?? '');
+		$real = realpath($filePath);
+
+		if (!$real || strpos($real, '/home') !== 0 || in_array($real, ['/home', '/home/admin', '/home/kloxo'], true)) {
+			jsonResponse(['error' => 'Forbidden', 'message' => 'Cannot delete system-critical directory'], 403);
+		}
+
+		if (is_dir($real)) {
+			$res = @rmdir($real);
+			if (!$res) {
+				@shell_exec("rm -rf " . escapeshellarg($real));
+				$res = !file_exists($real);
+			}
+		} else {
+			$res = @unlink($real);
+		}
+
+		jsonResponse(['success' => $res, 'message' => "Item deleted successfully"]);
 	}
 
 	if ($path === '/files/content' && $method === 'POST') {
