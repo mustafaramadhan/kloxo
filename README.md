@@ -1,82 +1,97 @@
-![Kloxo-MR logo](https://github.com/mustafaramadhan/kloxo/blob/dev/kloxo-mr_big.png)
+# Mfklixo (Modern Kloxo-MR)
 
-### Kloxo fork by Mustafa Ramadhan
+![Kloxo-MR logo](kloxo-mr_big.png)
 
+> **Mfklixo** is an upgraded, modernized, and bug-fixed edition of **Kloxo-MR** (a feature-rich fork of Kloxo 6.1.12+). This edition brings full compatibility with **modern PHP 8.x**, adds support for **Ubuntu & systemd**, modernizes the web UI, and introduces selectable versions for **MariaDB (up to 11.4 LTS)** and **PHP (up to 8.5)**.
 
-===================
+---
 
-Branch:
-- master - original code from lxcenter
-- dev - branch for next release
-- bugfix-6.5.0 - branch for bugfix for 6.5.0.f
-- rpms - branch for mratwork repo rpms
+## 🚀 Key Improvements & Modern Enhancements
 
-===================
+### 1. Modern PHP 8.x Full Compatibility
+- Resolved **all 49+ syntax and runtime fatal errors** caused by legacy PHP 5.x constructs.
+- Removed deprecated `__autoload()` in favor of standard `spl_autoload_register`.
+- Replaced deprecated curly brace string/array indexing (`$str{0}` ➔ `$str[0]`).
+- Fixed invalid dynamic property syntax and references (`$this->__sortby_{$class}` ➔ `$this->$__tvar`).
+- Removed deprecated reference assignments (`=& new` ➔ `= new`).
+- Updated PEAR / WebDAV magic method signatures for strict PHP 8 compatibility (`PEAR_Autoloader::__call($method, $args)`).
 
-# Kloxo-MR
+### 2. Multi-OS Support & Ubuntu / Debian Integration
+- Added automatic OS detection via standard `/etc/os-release` (supporting **Ubuntu 20.04 / 22.04 / 24.04 / 26.04+** and **Debian** alongside RHEL/CentOS).
+- Integrated native **`systemctl`** service management for modern systemd-based Linux distributions.
+- Added dedicated driver configurations for Debian/Ubuntu (`file/driver/ubuntu.inc`).
+- Supported both `apache2` (Debian/Ubuntu) and `httpd` (RHEL/CentOS) web service names seamlessly.
 
-This is special edition (fork) of Kloxo with many features not existing on Kloxo official release (6.1.12+).
+### 3. Web Servers & Reverse Proxy Drivers
+- **Supported Web Servers:**
+  - **Nginx** (standalone high-performance engine)
+  - **Apache (httpd / apache2)**
+  - **Apache + Nginx Dual Proxy (`apache_nginx`)**: Nginx as reverse proxy front-end handling SSL & static assets with Apache as back-end.
+  - **Lighttpd**, **Hiawatha**, and proxy variants.
+- Configurable directly from the panel or via command line.
 
-This fork named as Kloxo-MR (meaning 'Kloxo fork by Mustafa Ramadhan').
+### 4. Database: MariaDB & MySQL Version Selector
+- Added support for selectable MariaDB versions:
+  - **MariaDB 10.4, 10.5, 10.6, 10.11 (LTS), and 11.4 (LTS)**.
+  - MySQL 5.7, 8.0, and 8.4 LTS.
+- Included unified upgrade/switch script:
+  ```bash
+  sh /script/mariadb-upgrade 10.11
+  # or
+  sh /script/mariadb-upgrade 11.4
+  ```
 
-### URL
+### 5. Multi-PHP Branch Selection
+- Support for modern PHP branches from PHP 5.6 up to **PHP 7.4, 8.0, 8.1, 8.2, 8.3, 8.4, and 8.5**.
+- Switch PHP branches with:
+  ```bash
+  sh /script/set-php-branch php82
+  ```
 
-1. More information about Kloxo (Official from LxCenter) - http://lxcenter.org/ and http://forum.lxcenter.org/
+### 6. Modernized Web UI
+- Redesigned login and authentication pages using **CSS Custom Properties (CSS variables)**, **Flexbox responsive layout**, and modern dark-mode aesthetic.
+- Enhanced accessibility with standard form labels, autocomplete attributes, and client-side validation.
 
-2. More information about Kloxo-MR - http://mratwork.com/ and http://forum.mratwork.com/
+---
 
-### Kloxo-MR Features
+## 🛠️ Requirements & Supported Platforms
 
-* OS: Redhat/CentOS 5 and 6 (32bit and 64bit) or their variants; also Redhat/Centos 7 *)
-* Billing: AWBS, WHMCS, HostBill, TheHostingTool, AccountLab Plus, Blesta and BoxBilling (note: claim by billing's author)
-* Web server: Nginx, Nginx-Proxy and Lighttpd-proxy, Hiawatha, Hiawatha-proxy and Httpd 24, beside Httpd and Lighttpd; also Dual and Multiple Web server *)
-* Webcache server: Squid, Varnish and ATS *)
-* Php: Dual-php with php 5.3/5.4 as primary and php 5.2 as secondary; multiple-php *)
-* PHP-type for Apache: php-fpm_worker/_event and fcgid_worker/_event; beside mod_php/_ruid2/_itk and suphp/_worker/_event
-* Mail server: qmail-toaster instead special qmail (in progress: change from courier-imap to dovecot as imap/pop3) *)
-* Database: MySQL or MariaDB *)
-* Database Manager: PHPMyAdmin; Adminer, MyWebSql and SqlBuddy as additional **)
-* Webmail: Afterlogic Webmail Lite, Telaen, Squirrelmail, Roundcube and Rainloop; Horde and T-Dah dropped
-* FTP server: Pure-ftpd
-* DNS Server: Bind and Djbdns; add Powerdns, ~~MaraDNS~~, NSD, myDNS and Yadifa *)
-* Addons: ClamAV, Spamassassin/Bogofilter/Spamdyke, RKHunter and MalDetect
-* Free SSL: Let's Encrypt (via letsencrypt/certbot-auto and acme.sh) and StartAPI *)
-* Fixed many bugs of Kloxo Official (including security issues)
-* And many more!
+| Component | Supported Targets |
+| :--- | :--- |
+| **Operating Systems** | Ubuntu 20.04+, Debian 11+, AlmaLinux / Rocky Linux / CentOS 7/8/9 |
+| **PHP Runtime** | PHP 7.4 to PHP 8.5+ |
+| **Init System** | systemd (preferred), SysVinit / update-rc.d |
+| **Database** | MariaDB 10.4+ / 11.x LTS, MySQL 5.7 / 8.x |
 
-### Contributing
+---
 
-* Always invite for devs and testers. Go to http://mratwork.com/ and http://forum.mratwork.com/
+## 📦 Getting Started & Commands
 
-### Licensing - AGPLv3
+### Switch Web Server
+```bash
+# Switch to Apache + Nginx reverse proxy
+sh /script/switchserver --class=web --driver=apache_nginx
 
-* Like Kloxo Official, Kloxo-MR adopt AGPLv3 too.
+# Switch to Nginx standalone
+sh /script/switchserver --class=web --driver=nginx
 
-### How to install
+# Switch to Apache standalone
+sh /script/switchserver --class=web --driver=apache
+```
 
-* Read https://github.com/mustafaramadhan/kloxo/blob/dev/how-to-install.txt
+### Upgrade / Select MariaDB Version
+```bash
+sh /script/mariadb-upgrade 10.11
+```
 
-### Notes
-*) New features in Kloxo-MR 7.0.0 (aka Kloxo-MR 7)
+### Fix & Restart Web Services
+```bash
+sh /script/fixweb
+sh /script/restart-web -y
+```
 
-- Version 6.5.1 change to 7.0.0 since 20 Aug 2014 (beta step)
-- OS: Redhat/CentOS 7 (64bit) (since 27 Feb 2017) *)
-- Web server: Hiawatha (since 28 Sep 2013) and Httpd 2.4 (since 20 Jun 2015); Dual (since 19 Jan 2016) and Multiple Web server (in progress)
-- Webcache server: Squid, Varnish and ATS (Apache Traffic Server) (since 3 Oct 2013)
-- DNS server: Powerdns, NSD, MyDNS and Yadifa (since 16 Sep 2013)
-- Mail server: Dovecot (since 19 Jun 2016)
-- Database: using MariaDB 10.x instead MySQL 5.5
-- Php: multiple Php versions
-  * suphp base (since 27 Jun 2014)
-  * fcgid base (since 5 Jul 2015)
-  * php-fpm/spawning base (since 24 May 2016)
-- Free SSL:
-  * Let's Encrypt (since 4 May 2016)
-  * StartAPI (since 29 Jun 2016)
-- Stats:
-  * Change URL from 'domain.com/stats' to 'stats.domain.com' (since 3 Sep 2016)
+---
 
-**) New features in Kloxo-MR 6.5.0 after released
-- Panel: Adminer, MyWebSql and SqlBuddy as alternative for Database management
-- Core: change from lxphp + lxlighttpd  to use Hiawatha + php52s for running panel
+## 📄 License
 
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPLv3)**. See [LICENSE.txt](LICENSE.txt) for details.
