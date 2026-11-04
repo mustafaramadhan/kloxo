@@ -61,6 +61,21 @@ fi
 INSTALL_DIR="/usr/local/lxlabs/kloxo"
 echo -e "${YELLOW}[2/5] Setting up system user, symlinks, and directories...${NC}"
 
+# Ensure sufficient virtual memory for low-resource VPS (at least 2GB swap)
+SWAP_TOTAL=$(free -m | awk '/^Swap:/ {print $2}')
+if [ -n "$SWAP_TOTAL" ] && [ "$SWAP_TOTAL" -lt 1024 ]; then
+    echo -e "${YELLOW}[*] Configuring 2GB swap space to support compilation...${NC}"
+    if [ ! -f /swapfile ]; then
+        fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048
+        chmod 600 /swapfile
+        mkswap /swapfile
+        swapon /swapfile || true
+        if ! grep -q '/swapfile' /etc/fstab; then
+            echo '/swapfile none swap sw 0 0' >> /etc/fstab
+        fi
+    fi
+fi
+
 if ! id -u lxlabs >/dev/null 2>&1; then
     groupadd -r lxlabs 2>/dev/null || true
     useradd -r -g lxlabs -d "$INSTALL_DIR" -s /bin/false lxlabs 2>/dev/null || true
@@ -200,6 +215,13 @@ chown -R lxlabs:lxlabs "$INSTALL_DIR"
 chown -R www-data:www-data "$INSTALL_DIR/httpdocs" "$INSTALL_DIR/log" "$INSTALL_DIR/session" "$INSTALL_DIR/pid" 2>/dev/null || chown -R nginx:nginx "$INSTALL_DIR/httpdocs" "$INSTALL_DIR/log" "$INSTALL_DIR/session" "$INSTALL_DIR/pid" 2>/dev/null || true
 chmod -R 775 "$INSTALL_DIR/session" "$INSTALL_DIR/log" "$INSTALL_DIR/pid"
 
+# REST API Secret Key
+if [ ! -f "$INSTALL_DIR/etc/api_secret.key" ]; then
+    openssl rand -hex 32 > "$INSTALL_DIR/etc/api_secret.key"
+fi
+chown lxlabs:www-data "$INSTALL_DIR/etc/api_secret.key" 2>/dev/null || true
+chmod 640 "$INSTALL_DIR/etc/api_secret.key" 2>/dev/null || true
+
 # Initialize system drivers and IP addresses
 if [ -f "$INSTALL_DIR/bin/common/driverload.php" ]; then
     php -f "$INSTALL_DIR/bin/common/driverload.php" 2>/dev/null || true
@@ -226,6 +248,7 @@ if [ -d "$INSTALL_DIR/frontend" ] && command -v npm >/dev/null 2>&1; then
     cd "$INSTALL_DIR/frontend"
     npm install --production=false
     npm run build
+    chmod -R 755 "$INSTALL_DIR/frontend/.next" 2>/dev/null || true
     systemctl daemon-reload
     systemctl enable kloxo-dashboard.service || true
     systemctl restart kloxo-dashboard.service || true
