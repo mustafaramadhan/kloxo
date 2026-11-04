@@ -8626,7 +8626,11 @@ function uploadAbort(e) { // upload abort
 ?>
 
 		<script>
-			top.bottomframe.updateStatusBar("<?=$message?>");
+			if (typeof top !== 'undefined' && top && top.bottomframe && typeof top.bottomframe.updateStatusBar === 'function') {
+				top.bottomframe.updateStatusBar("<?= addslashes($message) ?>");
+			} else if (typeof updateStatusBar === 'function') {
+				updateStatusBar("<?= addslashes($message) ?>");
+			}
 		</script>
 <?php
 	}

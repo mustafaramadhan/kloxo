@@ -919,9 +919,13 @@ class pservercore extends Lxclient
 		$ob = new Driver($this->__masterserver, null, $this->nname);
 		$ob->get();
 
+		$driver_dir = dirname(__FILE__) . "/../../../file/driver";
 		$os = $this->ostype;
-	//	include "../file/driver/$os.inc";
-		include "../file/driver/rhel.inc";
+		if ($os && file_exists("$driver_dir/$os.inc")) {
+			include "$driver_dir/$os.inc";
+		} else {
+			include "$driver_dir/rhel.inc";
+		}
 
 		if (!$driver) {
 			print("Error Reading Driver Config File...\n");

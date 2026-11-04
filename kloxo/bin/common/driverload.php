@@ -1,5 +1,6 @@
 <?php 
 
+chdir(dirname(__FILE__) . '/../../httpdocs');
 include_once "lib/html/include.php";
 
 driverload_main();

@@ -1,6 +1,6 @@
 <?php 
-include "common.inc";
-include "linux.inc";
-include "redhat.inc";
+include_once __DIR__ . "/common.inc";
+include_once __DIR__ . "/linux.inc";
+include_once __DIR__ . "/redhat.inc";
 
 
