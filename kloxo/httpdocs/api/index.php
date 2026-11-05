@@ -1646,7 +1646,9 @@ INI;
 		}
 
 		$startTime = microtime(true);
-		$conn = @new mysqli('localhost', 'root', 'Daya@2024', $dbName);
+		$passFile = '/usr/local/lxlabs/kloxo/etc/conf/kloxo.pass';
+		$dbPass = file_exists($passFile) ? trim((string)file_get_contents($passFile)) : 'FCayldtdUInsugVe';
+		$conn = @new mysqli('localhost', 'kloxo', $dbPass, $dbName);
 		if ($conn->connect_error) {
 			jsonResponse(['error' => 'Connection Failed', 'message' => $conn->connect_error], 500);
 		}
