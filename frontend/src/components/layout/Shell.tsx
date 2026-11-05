@@ -62,6 +62,14 @@ export default function Shell({ children }: ShellProps) {
     router.push('/login');
   };
 
+  const handleLegacyClick = (e: React.MouseEvent) => {
+    const token = getStoredToken();
+    if (token) {
+      e.preventDefault();
+      window.open(`/legacy/?token=${encodeURIComponent(token)}`, '_blank');
+    }
+  };
+
   const navGroups = [
     {
       title: 'Hosting & Core',
@@ -171,6 +179,7 @@ export default function Shell({ children }: ShellProps) {
               href="/legacy/"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleLegacyClick}
               className="flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-all border border-transparent hover:border-white/5"
             >
               <span className="flex items-center gap-3">
@@ -231,6 +240,7 @@ export default function Shell({ children }: ShellProps) {
             </div>
             <a
               href="/legacy/"
+              onClick={handleLegacyClick}
               className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20 transition-colors"
             >
               <ExternalLink className="h-3.5 w-3.5" />

@@ -17,7 +17,7 @@ import {
   AlertTriangle,
   Terminal,
 } from 'lucide-react';
-import { apiFetch, SystemStatus, ServiceItem, formatBytes, formatUptime } from '@/lib/api';
+import { apiFetch, SystemStatus, ServiceItem, formatBytes, formatUptime, getStoredToken } from '@/lib/api';
 
 export default function DashboardPage() {
   const [status, setStatus] = useState<SystemStatus | null>(null);
@@ -251,6 +251,13 @@ export default function DashboardPage() {
                   href="/legacy/"
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={(e) => {
+                    const token = getStoredToken();
+                    if (token) {
+                      e.preventDefault();
+                      window.open(`/legacy/?token=${encodeURIComponent(token)}`, '_blank');
+                    }
+                  }}
                   className="flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-200 hover:bg-amber-500/10 transition-all"
                 >
                   <span className="flex items-center gap-3">

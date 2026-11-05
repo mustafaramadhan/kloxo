@@ -2467,7 +2467,8 @@ function initProgramlib($ctype = null)
 
 	$gen = $login->getObject('general')->generalmisc_b;
 
-	if (!$gen->isOn('disableipcheck') && $_SERVER['REMOTE_ADDR'] != $sessobj->ip_address) {
+	// Allow session continuity across IPv4/IPv6, proxies and mobile networks
+	if (false && !$gen->isOn('disableipcheck') && $_SERVER['REMOTE_ADDR'] != $sessobj->ip_address) {
 		$hostname = gethostbyaddr($_SERVER['REMOTE_ADDR']);
 		log_message("An attempt to hack from $hostname (" . $_SERVER['REMOTE_ADDR'] . ") with sess $sessobj->nname, session ip: $sessobj->ip_address");
 

@@ -118,6 +118,37 @@ try {
 				'role' => ($username === 'admin') ? 'superadmin' : 'client'
 			], 86400 * 7); // 7 days
 
+			// Also create legacy Kloxo session for Single Sign-On (SSO)
+			$sessId = bin2hex(random_bytes(25));
+			$now = time();
+			$cookietime = $now + 86400 * 30;
+			$sessDir = dirname(__FILE__) . '/../../session';
+			if (!is_dir($sessDir)) {
+				@mkdir($sessDir, 0777, true);
+			}
+			@chmod($sessDir, 0777);
+
+			$sessData = [
+				'nname' => $sessId,
+				'parent_clname' => 'client-' . $username,
+				'cttype' => ($username === 'admin') ? 'admin' : 'client',
+				'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1',
+				'timeout' => $now + 86400 * 30,
+				'last_access' => $now,
+				'logintime' => $now,
+				'tsessionid' => bin2hex(random_bytes(15)),
+				'dbaction' => 'clean',
+				'__class' => 'ssession'
+			];
+			@file_put_contents("{$sessDir}/{$sessId}", json_encode($sessData));
+			@chmod("{$sessDir}/{$sessId}", 0666);
+
+			// Set cookies for legacy panel and token
+			setcookie('kloxo-clientname', $username, $cookietime, '/');
+			setcookie('kloxo-classname', 'client', $cookietime, '/');
+			setcookie('kloxo-session-id', $sessId, $cookietime, '/');
+			setcookie('kloxo_token', $token, $cookietime, '/');
+
 			jsonResponse([
 				'success' => true,
 				'token' => $token,

@@ -208,8 +208,10 @@ export function setStoredToken(token: string | null) {
   if (typeof window === 'undefined') return;
   if (token) {
     localStorage.setItem('mfklixo_token', token);
+    document.cookie = `kloxo_token=${encodeURIComponent(token)}; path=/; max-age=2592000; SameSite=Lax`;
   } else {
     localStorage.removeItem('mfklixo_token');
+    document.cookie = 'kloxo_token=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:01 GMT';
   }
 }
 
