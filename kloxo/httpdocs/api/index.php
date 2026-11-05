@@ -270,7 +270,6 @@ try {
 	if ($path === '/domains' && $method === 'GET') {
 		authenticateUser();
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'domain');
 		$rows = $db->getTable(['nname', 'parent_clname', 'status', 'webpserver', 'dnspserver', 'mmailpserver']);
 
@@ -310,7 +309,6 @@ try {
 		@file_put_contents("{$vhostDir}/{$domain}.conf", $vhost);
 		@shell_exec("sudo systemctl reload nginx 2>/dev/null");
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'domain');
 		$db->rawQuery("REPLACE INTO domain (nname, parent_clname, status, webpserver, dnspserver, mmailpserver) VALUES ('{$domain}', 'client-admin', 'on', 'localhost', 'localhost', 'localhost');");
 
@@ -326,7 +324,6 @@ try {
 			jsonResponse(['error' => 'Bad Request', 'message' => 'Domain parameter required'], 400);
 		}
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'domain');
 		$db->delRow('nname', $domain);
 
@@ -342,7 +339,6 @@ try {
 	if ($path === '/databases' && $method === 'GET') {
 		authenticateUser();
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'mysqldb');
 		$rows = $db->getTable(['nname', 'dbname', 'username', 'parent_clname', 'used_q_mysqldb_usage']);
 
@@ -370,7 +366,6 @@ try {
 			jsonResponse(['error' => 'Bad Request', 'message' => 'Database name and password required'], 400);
 		}
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'mysqldb');
 		$escapedPass = addslashes($password);
 
@@ -398,7 +393,6 @@ try {
 			jsonResponse(['error' => 'Forbidden', 'message' => 'System databases cannot be deleted'], 403);
 		}
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'mysqldb');
 		$rows = $db->getRows('nname', $name);
 		$u = $rows[0]['username'] ?? '';
@@ -418,7 +412,6 @@ try {
 	if ($path === '/network/ips' && $method === 'GET') {
 		authenticateUser();
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'ipaddress');
 		$rows = $db->getTable(['nname', 'devname', 'ipaddr', 'netmask', 'status']);
 
@@ -441,7 +434,6 @@ try {
 	if ($path === '/mail/accounts' && $method === 'GET') {
 		authenticateUser();
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'mailaccount');
 		$rows = $db->getTable(['nname', 'parent_clname', 'status', 'used_q_maildisk_usage', 'priv_q_maildisk_usage']);
 
@@ -470,7 +462,6 @@ try {
 			jsonResponse(['error' => 'Bad Request', 'message' => 'Valid email address and password required'], 400);
 		}
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'mailaccount');
 		$escapedPass = addslashes($password);
 		$db->rawQuery("REPLACE INTO mailaccount (nname, parent_clname, status, realpass, password, priv_q_maildisk_usage, syncserver) VALUES ('{$email}', 'client-admin', 'on', '{$escapedPass}', md5('{$escapedPass}'), '{$quota}', 'localhost');");
@@ -487,7 +478,6 @@ try {
 			jsonResponse(['error' => 'Bad Request', 'message' => 'Email address required'], 400);
 		}
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'mailaccount');
 		$db->delRow('nname', $email);
 
@@ -500,7 +490,6 @@ try {
 	if ($path === '/ftp/users' && $method === 'GET') {
 		authenticateUser();
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'ftpuser');
 		$rows = $db->getTable(['nname', 'directory', 'status', 'parent_clname', 'ftp_disk_usage']);
 
@@ -529,7 +518,6 @@ try {
 			jsonResponse(['error' => 'Bad Request', 'message' => 'Username and password required'], 400);
 		}
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'ftpuser');
 		$escapedPass = addslashes($password);
 		$escapedDir = addslashes($directory);
@@ -547,7 +535,6 @@ try {
 			jsonResponse(['error' => 'Bad Request', 'message' => 'Username required'], 400);
 		}
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'ftpuser');
 		$db->delRow('nname', $username);
 
@@ -560,7 +547,6 @@ try {
 	if ($path === '/clients' && $method === 'GET') {
 		authenticateUser();
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'client');
 		$rows = $db->getTable(['nname', 'cttype', 'contactemail', 'status', 'used_q_domain_num', 'priv_q_domain_num', 'used_q_clientdisk_usage']);
 
@@ -592,7 +578,6 @@ try {
 			jsonResponse(['error' => 'Bad Request', 'message' => 'Username and password required'], 400);
 		}
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'client');
 		$escapedPass = addslashes($password);
 		$db->rawQuery("REPLACE INTO client (nname, parent_clname, cttype, contactemail, status, realpass, password) VALUES ('{$username}', 'client-admin', '{$type}', '{$email}', 'on', '{$escapedPass}', md5('{$escapedPass}'));");
@@ -609,7 +594,6 @@ try {
 			jsonResponse(['error' => 'Forbidden', 'message' => 'Cannot delete master admin account'], 403);
 		}
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'client');
 		$db->delRow('nname', $username);
 
@@ -622,7 +606,6 @@ try {
 	if ($path === '/cron/jobs' && $method === 'GET') {
 		authenticateUser();
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'cron');
 		$rows = $db->getTable(['nname', 'parent_clname', 'command', 'argument', 'ttype', 'simple_cron', 'cron_day_hour']);
 
@@ -651,7 +634,6 @@ try {
 		}
 
 		$id = 'cron_' . substr(md5($command . time()), 0, 8);
-		initProgram('admin');
 		$db = new Sqlite(null, 'cron');
 		$escapedCmd = addslashes($command);
 		$db->rawQuery("REPLACE INTO cron (nname, parent_clname, command, simple_cron, ttype, username) VALUES ('{$id}', 'client-admin', '{$escapedCmd}', '{$schedule}', 'simple', 'admin');");
@@ -668,7 +650,6 @@ try {
 			jsonResponse(['error' => 'Bad Request', 'message' => 'Cron ID required'], 400);
 		}
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'cron');
 		$db->delRow('nname', $id);
 
@@ -1076,7 +1057,6 @@ try {
 	// ==========================================
 	if ($path === '/dns/zones' && $method === 'GET') {
 		authenticateUser();
-		initProgram('admin');
 		$db = new Sqlite(null, 'dns');
 		$dnsRows = (array)$db->getTable(['nname', 'soanameserver', 'ttl', 'zone_type']);
 
@@ -1120,7 +1100,6 @@ try {
 			jsonResponse(['error' => 'Bad Request', 'message' => 'Domain name required'], 400);
 		}
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'dns');
 		$soa = "ns1.{$domain}";
 		$db->rawQuery("REPLACE INTO dns (nname, parent_clname, soanameserver, ttl, zone_type, syncserver) VALUES ('{$domain}', 'client-admin', '{$soa}', '{$ttl}', 'master', 'localhost');");
@@ -1136,7 +1115,6 @@ try {
 			jsonResponse(['error' => 'Bad Request', 'message' => 'Domain required'], 400);
 		}
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'dns');
 		$db->delRow('nname', $domain);
 		@unlink("/home/kloxo/dns/{$domain}.json");
@@ -1223,7 +1201,6 @@ try {
 	// ==========================================
 	if ($path === '/ssl/certificates' && $method === 'GET') {
 		authenticateUser();
-		initProgram('admin');
 		$db = new Sqlite(null, 'sslcert');
 		$rows = (array)$db->getTable(['nname', 'certname', 'parent_domain', 'upload_status']);
 
@@ -1268,7 +1245,6 @@ try {
 			@file_put_contents($keyPath, $key);
 		}
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'sslcert');
 		$escapedCertname = addslashes($certname);
 		$escapedDomain = addslashes($domain);
@@ -1286,7 +1262,6 @@ try {
 			jsonResponse(['error' => 'Bad Request', 'message' => 'Certificate identifier required'], 400);
 		}
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'sslcert');
 		$db->delRow('nname', $id);
 		@unlink("/home/kloxo/ssl/{$id}.crt");
@@ -1300,7 +1275,6 @@ try {
 	// ==========================================
 	if ($path === '/security/firewall' && $method === 'GET') {
 		authenticateUser();
-		initProgram('admin');
 		$db = new Sqlite(null, 'firewall');
 		$rows = (array)$db->getTable(['nname', 'from_port', 'to_port', 'action', 'status']);
 
@@ -1355,7 +1329,6 @@ try {
 		}
 
 		$id = "rule_{$port}_" . strtolower($protocol);
-		initProgram('admin');
 		$db = new Sqlite(null, 'firewall');
 		$db->rawQuery("REPLACE INTO firewall (nname, parent_clname, from_port, to_port, action, status, syncserver) VALUES ('{$id}', 'client-admin', '{$port}', '{$port}', '{$action}', 'on', 'localhost');");
 
@@ -1374,7 +1347,6 @@ try {
 			jsonResponse(['error' => 'Bad Request', 'message' => 'Rule ID required'], 400);
 		}
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'firewall');
 		$db->delRow('nname', $id);
 
@@ -1383,7 +1355,6 @@ try {
 
 	if ($path === '/security/blocked-ips' && $method === 'GET') {
 		authenticateUser();
-		initProgram('admin');
 		$db = new Sqlite(null, 'blockedip');
 		$rows = (array)$db->getTable(['nname', 'ipaddress']);
 
@@ -1408,7 +1379,6 @@ try {
 		}
 
 		$id = "block_" . md5($ip);
-		initProgram('admin');
 		$db = new Sqlite(null, 'blockedip');
 		$db->rawQuery("REPLACE INTO blockedip (nname, parent_clname, ipaddress) VALUES ('{$id}', 'client-admin', '{$ip}');");
 		@shell_exec("sudo iptables -A INPUT -s " . escapeshellarg($ip) . " -j DROP 2>/dev/null");
@@ -1421,7 +1391,6 @@ try {
 		$input = getJsonInput();
 		$ip = trim((string)($input['ip'] ?? ''));
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'blockedip');
 		$db->delRow('ipaddress', $ip);
 		$db->delRow('nname', "block_" . md5($ip));
@@ -1553,7 +1522,6 @@ INI;
 	// ==========================================
 	if ($path === '/subdomains' && $method === 'GET') {
 		authenticateUser();
-		initProgram('admin');
 		$db = new Sqlite(null, 'domain');
 		$rows = (array)$db->getTable(['nname', 'parent_clname', 'status', 'subdomain_parent']);
 
@@ -1609,7 +1577,6 @@ INI;
 		@file_put_contents("/home/kloxo/httpd/{$fullSubdomain}.conf", $vhost);
 		@shell_exec("sudo systemctl reload nginx 2>/dev/null");
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'domain');
 		$escapedSub = addslashes($fullSubdomain);
 		$escapedParent = addslashes($parent);
@@ -1623,7 +1590,6 @@ INI;
 		$input = getJsonInput();
 		$subdomain = preg_replace('/[^a-zA-Z0-9_.-]/', '', (string)($input['subdomain'] ?? $_GET['subdomain'] ?? ''));
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'domain');
 		$db->delRow('nname', $subdomain);
 		@unlink("/home/kloxo/httpd/{$subdomain}.conf");
@@ -1704,7 +1670,6 @@ INI;
 	// ==========================================
 	if ($path === '/mail/forwarders' && $method === 'GET') {
 		authenticateUser();
-		initProgram('admin');
 		$db = new Sqlite(null, 'mailforward');
 		$rows = (array)$db->getTable(['nname', 'parent_clname', 'forwardaddress']);
 
@@ -1729,7 +1694,6 @@ INI;
 			jsonResponse(['error' => 'Bad Request', 'message' => 'Source and destination email required'], 400);
 		}
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'mailforward');
 		$escapedDest = addslashes($destination);
 		$db->rawQuery("REPLACE INTO mailforward (nname, parent_clname, forwardaddress, syncserver) VALUES ('{$source}', 'client-admin', '{$escapedDest}', 'localhost');");
@@ -1742,7 +1706,6 @@ INI;
 		$input = getJsonInput();
 		$id = trim((string)($input['id'] ?? $input['source'] ?? ''));
 
-		initProgram('admin');
 		$db = new Sqlite(null, 'mailforward');
 		$db->delRow('nname', $id);
 

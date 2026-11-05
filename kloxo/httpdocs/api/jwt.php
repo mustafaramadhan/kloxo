@@ -22,15 +22,30 @@ class ApiToken
 		return $secret;
 	}
 
+	public static function base64UrlEncode(string $data): string
+	{
+		return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+	}
+
+	public static function base64UrlDecode(string $data): string
+	{
+		$data = str_replace(' ', '+', $data);
+		$remainder = strlen($data) % 4;
+		if ($remainder) {
+			$data .= str_repeat('=', 4 - $remainder);
+		}
+		return (string)base64_decode(strtr($data, '-_', '+/'));
+	}
+
 	public static function generate(array $payload, int $ttlSeconds = 86400): string
 	{
-		$header = base64_encode(json_encode(['typ' => 'JWT', 'alg' => 'HS256']));
+		$header = self::base64UrlEncode((string)json_encode(['typ' => 'JWT', 'alg' => 'HS256']));
 		$payload['exp'] = time() + $ttlSeconds;
 		$payload['iat'] = time();
-		$payloadEncoded = base64_encode(json_encode($payload));
+		$payloadEncoded = self::base64UrlEncode((string)json_encode($payload));
 
 		$signature = hash_hmac('sha256', "{$header}.{$payloadEncoded}", self::getSecret(), true);
-		$signatureEncoded = base64_encode($signature);
+		$signatureEncoded = self::base64UrlEncode($signature);
 
 		return "{$header}.{$payloadEncoded}.{$signatureEncoded}";
 	}
@@ -45,11 +60,11 @@ class ApiToken
 		[$header, $payloadEncoded, $signatureEncoded] = $parts;
 		$expectedSignature = hash_hmac('sha256', "{$header}.{$payloadEncoded}", self::getSecret(), true);
 
-		if (!hash_equals($expectedSignature, (string)base64_decode($signatureEncoded))) {
+		if (!hash_equals($expectedSignature, self::base64UrlDecode($signatureEncoded))) {
 			return null;
 		}
 
-		$payload = json_decode((string)base64_decode($payloadEncoded), true);
+		$payload = json_decode(self::base64UrlDecode($payloadEncoded), true);
 		if (!is_array($payload)) {
 			return null;
 		}
