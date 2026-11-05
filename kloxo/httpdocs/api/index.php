@@ -62,9 +62,16 @@ function getAuthHeader(): string
 
 function authenticateUser(): array
 {
+	$token = null;
 	$authHeader = getAuthHeader();
 	if (preg_match('/Bearer\s+(\S+)/i', $authHeader, $matches)) {
-		$payload = ApiToken::verify($matches[1]);
+		$token = $matches[1];
+	} elseif (!empty($_GET['token'])) {
+		$token = (string)$_GET['token'];
+	}
+
+	if ($token) {
+		$payload = ApiToken::verify($token);
 		if ($payload && isset($payload['username'])) {
 			return $payload;
 		}
@@ -813,6 +820,210 @@ try {
 		]);
 	}
 
+	if ($path === '/files/upload' && $method === 'POST') {
+		authenticateUser();
+		$targetDir = (string)($_POST['target_dir'] ?? '/home/admin');
+		$real = realpath($targetDir);
+		if (!$real || strpos($real, '/home') !== 0 || !is_dir($real)) {
+			jsonResponse(['error' => 'Forbidden', 'message' => 'Invalid destination directory'], 403);
+		}
+
+		if (!empty($_FILES['file']['tmp_name'])) {
+			$name = basename($_FILES['file']['name']);
+			$dest = $real . '/' . $name;
+			if (move_uploaded_file($_FILES['file']['tmp_name'], $dest)) {
+				@chown($dest, 'www-data');
+				jsonResponse(['success' => true, 'message' => "File {$name} uploaded successfully", 'path' => $dest]);
+			}
+		}
+
+		$input = getJsonInput();
+		if (!empty($input['filename']) && isset($input['content_base64'])) {
+			$name = basename($input['filename']);
+			$dest = $real . '/' . $name;
+			$decoded = base64_decode((string)$input['content_base64']);
+			if (file_put_contents($dest, $decoded) !== false) {
+				@chown($dest, 'www-data');
+				jsonResponse(['success' => true, 'message' => "File {$name} uploaded successfully", 'path' => $dest]);
+			}
+		}
+
+		jsonResponse(['error' => 'Bad Request', 'message' => 'No valid file uploaded'], 400);
+	}
+
+	if ($path === '/files/download' && $method === 'GET') {
+		authenticateUser();
+		$filePath = (string)($_GET['path'] ?? '');
+		$real = realpath($filePath);
+		if (!$real || strpos($real, '/home') !== 0 || !is_file($real)) {
+			jsonResponse(['error' => 'Not Found', 'message' => 'File not found or access denied'], 404);
+		}
+
+		$filename = basename($real);
+		header('Content-Type: application/octet-stream');
+		header('Content-Disposition: attachment; filename="' . $filename . '"');
+		header('Content-Length: ' . filesize($real));
+		header('Cache-Control: no-cache, must-revalidate');
+		readfile($real);
+		exit;
+	}
+
+	if ($path === '/files/extract' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$archivePath = (string)($input['path'] ?? '');
+		$destDir = (string)($input['destination'] ?? dirname($archivePath));
+
+		$realArchive = realpath($archivePath);
+		$realDest = realpath($destDir);
+
+		if (!$realArchive || strpos($realArchive, '/home') !== 0 || !is_file($realArchive)) {
+			jsonResponse(['error' => 'Not Found', 'message' => 'Archive file not found'], 404);
+		}
+		if (!$realDest || strpos($realDest, '/home') !== 0 || !is_dir($realDest)) {
+			jsonResponse(['error' => 'Forbidden', 'message' => 'Invalid extract destination'], 403);
+		}
+
+		$escapedArchive = escapeshellarg($realArchive);
+		$escapedDest = escapeshellarg($realDest);
+
+		if (preg_match('/\.zip$/i', $realArchive)) {
+			$cmd = "unzip -o {$escapedArchive} -d {$escapedDest} 2>&1";
+		} elseif (preg_match('/\.(tar\.gz|tgz)$/i', $realArchive)) {
+			$cmd = "tar -xzf {$escapedArchive} -C {$escapedDest} 2>&1";
+		} elseif (preg_match('/\.tar$/i', $realArchive)) {
+			$cmd = "tar -xf {$escapedArchive} -C {$escapedDest} 2>&1";
+		} else {
+			jsonResponse(['error' => 'Unsupported', 'message' => 'Format not supported. Must be .zip, .tar.gz, or .tar'], 400);
+		}
+
+		$output = shell_exec($cmd);
+		jsonResponse(['success' => true, 'message' => 'Archive extracted successfully', 'output' => $output]);
+	}
+
+	if ($path === '/files/compress' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$files = (array)($input['files'] ?? []);
+		$archiveName = basename((string)($input['archive_name'] ?? 'archive'));
+		$destDir = (string)($input['destination'] ?? '/home/admin');
+		$format = strtolower((string)($input['format'] ?? 'zip'));
+
+		$realDest = realpath($destDir);
+		if (!$realDest || strpos($realDest, '/home') !== 0 || !is_dir($realDest)) {
+			jsonResponse(['error' => 'Forbidden', 'message' => 'Invalid destination directory'], 403);
+		}
+
+		$escapedFiles = [];
+		foreach ($files as $f) {
+			$rf = realpath($f);
+			if ($rf && strpos($rf, '/home') === 0) {
+				$escapedFiles[] = escapeshellarg(basename($rf));
+			}
+		}
+
+		if (empty($escapedFiles)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'No valid files selected'], 400);
+		}
+
+		$fileList = implode(' ', $escapedFiles);
+		$firstFileDir = dirname(realpath($files[0]));
+
+		if ($format === 'tar.gz') {
+			$finalName = preg_replace('/(\.tar\.gz|\.zip)?$/i', '', $archiveName) . '.tar.gz';
+			$targetFile = $realDest . '/' . $finalName;
+			$cmd = "cd " . escapeshellarg($firstFileDir) . " && tar -czf " . escapeshellarg($targetFile) . " {$fileList} 2>&1";
+		} else {
+			$finalName = preg_replace('/(\.tar\.gz|\.zip)?$/i', '', $archiveName) . '.zip';
+			$targetFile = $realDest . '/' . $finalName;
+			$cmd = "cd " . escapeshellarg($firstFileDir) . " && zip -r " . escapeshellarg($targetFile) . " {$fileList} 2>&1";
+		}
+
+		shell_exec($cmd);
+		jsonResponse(['success' => file_exists($targetFile), 'message' => "Archive {$finalName} created", 'path' => $targetFile]);
+	}
+
+	if ($path === '/files/rename' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$targetPath = (string)($input['path'] ?? '');
+		$newName = basename((string)($input['new_name'] ?? ''));
+
+		$real = realpath($targetPath);
+		if (!$real || strpos($real, '/home') !== 0 || empty($newName)) {
+			jsonResponse(['error' => 'Forbidden', 'message' => 'Invalid target path'], 403);
+		}
+
+		$dest = dirname($real) . '/' . $newName;
+		$res = @rename($real, $dest);
+		jsonResponse(['success' => $res, 'message' => "Renamed to {$newName}", 'new_path' => $dest]);
+	}
+
+	if ($path === '/files/move' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$source = (string)($input['source'] ?? '');
+		$targetDir = (string)($input['destination'] ?? '');
+
+		$realSource = realpath($source);
+		$realDestDir = realpath($targetDir);
+
+		if (!$realSource || strpos($realSource, '/home') !== 0) {
+			jsonResponse(['error' => 'Forbidden', 'message' => 'Invalid source path'], 403);
+		}
+		if (!$realDestDir || strpos($realDestDir, '/home') !== 0 || !is_dir($realDestDir)) {
+			jsonResponse(['error' => 'Forbidden', 'message' => 'Invalid destination directory'], 403);
+		}
+
+		$finalDest = $realDestDir . '/' . basename($realSource);
+		$res = @rename($realSource, $finalDest);
+		jsonResponse(['success' => $res, 'message' => 'Item moved successfully', 'new_path' => $finalDest]);
+	}
+
+	if ($path === '/files/copy' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$source = (string)($input['source'] ?? '');
+		$targetDir = (string)($input['destination'] ?? '');
+
+		$realSource = realpath($source);
+		$realDestDir = realpath($targetDir);
+
+		if (!$realSource || strpos($realSource, '/home') !== 0) {
+			jsonResponse(['error' => 'Forbidden', 'message' => 'Invalid source path'], 403);
+		}
+		if (!$realDestDir || strpos($realDestDir, '/home') !== 0 || !is_dir($realDestDir)) {
+			jsonResponse(['error' => 'Forbidden', 'message' => 'Invalid destination directory'], 403);
+		}
+
+		$finalDest = $realDestDir . '/' . basename($realSource);
+		if (is_dir($realSource)) {
+			@shell_exec("cp -r " . escapeshellarg($realSource) . " " . escapeshellarg($finalDest));
+			$res = is_dir($finalDest);
+		} else {
+			$res = @copy($realSource, $finalDest);
+		}
+
+		jsonResponse(['success' => (bool)$res, 'message' => 'Item copied successfully', 'new_path' => $finalDest]);
+	}
+
+	if ($path === '/files/permissions' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$filePath = (string)($input['path'] ?? '');
+		$perms = (string)($input['permissions'] ?? '0755');
+
+		$real = realpath($filePath);
+		if (!$real || strpos($real, '/home') !== 0) {
+			jsonResponse(['error' => 'Forbidden', 'message' => 'Invalid path'], 403);
+		}
+
+		$mode = octdec(str_pad(ltrim($perms, '0'), 3, '0', STR_PAD_LEFT));
+		$res = @chmod($real, $mode);
+
+		jsonResponse(['success' => (bool)$res, 'message' => "Permissions updated to {$perms}"]);
+	}
+
 	// ==========================================
 	// 11. System Logs & PHP Configuration
 	// ==========================================
@@ -1335,6 +1546,205 @@ INI;
 		@shell_exec("sudo systemctl restart kloxo-php 2>/dev/null");
 
 		jsonResponse(['success' => true, 'message' => 'PHP configuration updated and applied successfully']);
+	}
+
+	// ==========================================
+	// 17. Subdomains Management
+	// ==========================================
+	if ($path === '/subdomains' && $method === 'GET') {
+		authenticateUser();
+		initProgram('admin');
+		$db = new Sqlite(null, 'domain');
+		$rows = (array)$db->getTable(['nname', 'parent_clname', 'status', 'subdomain_parent']);
+
+		$subdomains = [];
+		foreach ($rows as $r) {
+			$name = $r['nname'] ?? '';
+			if (!empty($r['subdomain_parent']) || substr_count($name, '.') >= 2) {
+				$subdomains[] = [
+					'subdomain' => $name,
+					'parent_domain' => $r['subdomain_parent'] ?: preg_replace('/^[^\.]+\./', '', $name),
+					'docroot' => "/home/admin/{$name}/public_html",
+					'status' => ($r['status'] ?? 'on') === 'on'
+				];
+			}
+		}
+
+		jsonResponse(['success' => true, 'subdomains' => $subdomains]);
+	}
+
+	if ($path === '/subdomains' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$prefix = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($input['prefix'] ?? ''));
+		$parent = preg_replace('/[^a-zA-Z0-9_.-]/', '', (string)($input['parent_domain'] ?? ''));
+
+		if (empty($prefix) || empty($parent)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Subdomain prefix and parent domain required'], 400);
+		}
+
+		$fullSubdomain = "{$prefix}.{$parent}";
+		$docroot = "/home/admin/{$fullSubdomain}/public_html";
+		@mkdir($docroot, 0755, true);
+		@file_put_contents("{$docroot}/index.html", "<!DOCTYPE html><html><head><title>{$fullSubdomain}</title></head><body style='font-family:sans-serif;text-align:center;padding:50px;'><h1>Subdomain {$fullSubdomain} is Active</h1><p>Hosted by Mfklixo Next-Gen Control Panel</p></body></html>");
+		@chown("/home/admin/{$fullSubdomain}", 'www-data');
+
+		$vhost = "server {
+	listen 80;
+	server_name {$fullSubdomain};
+	root {$docroot};
+	index index.html index.php;
+
+	location / {
+		try_files \$uri \$uri/ /index.php?\$args;
+	}
+
+	location ~ \.php$ {
+		fastcgi_pass unix:/var/run/kloxo-php-fpm.sock;
+		fastcgi_index index.php;
+		include fastcgi_params;
+		fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+	}
+}";
+		@file_put_contents("/home/kloxo/httpd/{$fullSubdomain}.conf", $vhost);
+		@shell_exec("sudo systemctl reload nginx 2>/dev/null");
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'domain');
+		$escapedSub = addslashes($fullSubdomain);
+		$escapedParent = addslashes($parent);
+		$db->rawQuery("REPLACE INTO domain (nname, parent_clname, status, subdomain_parent, webpserver) VALUES ('{$escapedSub}', 'client-admin', 'on', '{$escapedParent}', 'localhost');");
+
+		jsonResponse(['success' => true, 'message' => "Subdomain {$fullSubdomain} created successfully", 'subdomain' => $fullSubdomain]);
+	}
+
+	if ($path === '/subdomains' && $method === 'DELETE') {
+		authenticateUser();
+		$input = getJsonInput();
+		$subdomain = preg_replace('/[^a-zA-Z0-9_.-]/', '', (string)($input['subdomain'] ?? $_GET['subdomain'] ?? ''));
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'domain');
+		$db->delRow('nname', $subdomain);
+		@unlink("/home/kloxo/httpd/{$subdomain}.conf");
+		@shell_exec("sudo systemctl reload nginx 2>/dev/null");
+
+		jsonResponse(['success' => true, 'message' => "Subdomain {$subdomain} deleted successfully"]);
+	}
+
+	// ==========================================
+	// 18. Web Database SQL Runner
+	// ==========================================
+	if ($path === '/databases/query' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$dbName = preg_replace('/[^a-zA-Z0-9_]/', '', (string)($input['database'] ?? ''));
+		$sql = trim((string)($input['query'] ?? ''));
+
+		if (empty($dbName) || empty($sql)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Database name and SQL query required'], 400);
+		}
+
+		$startTime = microtime(true);
+		$conn = @new mysqli('localhost', 'root', 'Daya@2024', $dbName);
+		if ($conn->connect_error) {
+			jsonResponse(['error' => 'Connection Failed', 'message' => $conn->connect_error], 500);
+		}
+
+		$result = $conn->query($sql);
+		$duration = round((microtime(true) - $startTime) * 1000, 2);
+
+		if ($result === false) {
+			$errMsg = $conn->error;
+			$conn->close();
+			jsonResponse(['error' => 'SQL Error', 'message' => $errMsg], 400);
+		}
+
+		if ($result === true) {
+			$affected = $conn->affected_rows;
+			$conn->close();
+			jsonResponse([
+				'success' => true,
+				'type' => 'mutation',
+				'affected_rows' => $affected,
+				'duration_ms' => $duration,
+				'message' => "Query executed successfully. ({$affected} rows affected in {$duration} ms)"
+			]);
+		}
+
+		$columns = [];
+		$fields = $result->fetch_fields();
+		foreach ($fields as $f) {
+			$columns[] = $f->name;
+		}
+
+		$rows = [];
+		$count = 0;
+		while ($row = $result->fetch_assoc()) {
+			$rows[] = $row;
+			$count++;
+			if ($count >= 200) break;
+		}
+		$conn->close();
+
+		jsonResponse([
+			'success' => true,
+			'type' => 'select',
+			'columns' => $columns,
+			'rows' => $rows,
+			'total_rows' => $count,
+			'duration_ms' => $duration
+		]);
+	}
+
+	// ==========================================
+	// 19. Email Forwarders
+	// ==========================================
+	if ($path === '/mail/forwarders' && $method === 'GET') {
+		authenticateUser();
+		initProgram('admin');
+		$db = new Sqlite(null, 'mailforward');
+		$rows = (array)$db->getTable(['nname', 'parent_clname', 'forwardaddress']);
+
+		$forwarders = [];
+		foreach ($rows as $r) {
+			$forwarders[] = [
+				'id' => $r['nname'],
+				'source' => $r['nname'],
+				'destination' => $r['forwardaddress'] ?? ''
+			];
+		}
+		jsonResponse(['success' => true, 'forwarders' => $forwarders]);
+	}
+
+	if ($path === '/mail/forwarders' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$source = trim((string)($input['source'] ?? ''));
+		$destination = trim((string)($input['destination'] ?? ''));
+
+		if (empty($source) || empty($destination)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Source and destination email required'], 400);
+		}
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'mailforward');
+		$escapedDest = addslashes($destination);
+		$db->rawQuery("REPLACE INTO mailforward (nname, parent_clname, forwardaddress, syncserver) VALUES ('{$source}', 'client-admin', '{$escapedDest}', 'localhost');");
+
+		jsonResponse(['success' => true, 'message' => "Forwarder from {$source} to {$destination} added successfully"]);
+	}
+
+	if ($path === '/mail/forwarders' && $method === 'DELETE') {
+		authenticateUser();
+		$input = getJsonInput();
+		$id = trim((string)($input['id'] ?? $input['source'] ?? ''));
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'mailforward');
+		$db->delRow('nname', $id);
+
+		jsonResponse(['success' => true, 'message' => "Forwarder deleted successfully"]);
 	}
 
 	jsonResponse(['error' => 'Not Found', 'message' => "Endpoint {$method} {$path} does not exist"], 404);

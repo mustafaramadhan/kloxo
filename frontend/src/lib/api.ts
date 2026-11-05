@@ -175,6 +175,30 @@ export interface PhpConfigResponse {
   extensions: string[];
 }
 
+export interface SubdomainItem {
+  subdomain: string;
+  parent_domain: string;
+  docroot: string;
+  status: boolean;
+}
+
+export interface MailForwarderItem {
+  id: string;
+  source: string;
+  destination: string;
+}
+
+export interface SqlQueryResult {
+  success: boolean;
+  type: 'select' | 'mutation';
+  columns?: string[];
+  rows?: Record<string, any>[];
+  total_rows?: number;
+  affected_rows?: number;
+  duration_ms: number;
+  message?: string;
+}
+
 export function getStoredToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('mfklixo_token');
