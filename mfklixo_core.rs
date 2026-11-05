@@ -530,13 +530,28 @@ async fn save_ssh_config(Json(_payload): Json<serde_json::Value>) -> Json<serde_
 
 async fn get_watchdog_config() -> Json<serde_json::Value> {
     let path = "/usr/local/lxlabs/kloxo/etc/watchdog_config.json";
-    let data = fs::read_to_string(path).unwrap_or_else(|_| "{}".to_string());
-    let val: serde_json::Value = serde_json::from_str(&data).unwrap_or_else(|_| serde_json::json!({
-        "enabled": true,
-        "interval_seconds": 180,
-        "auto_recovery": true
-    }));
-    Json(serde_json::json!({"success": true, "watchdog": val}))
+    if let Ok(data) = fs::read_to_string(path) {
+        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&data) {
+            if val.is_object() && !val.as_object().unwrap().is_empty() && val.get("monitored_services").is_some() {
+                return Json(serde_json::json!({"success": true, "watchdog": val}));
+            }
+        }
+    }
+    Json(serde_json::json!({
+        "success": true,
+        "watchdog": {
+            "enabled": true,
+            "interval_seconds": 180,
+            "auto_recovery": true,
+            "monitored_services": [
+                { "name": "Web Server (Nginx)", "service": "nginx", "active": true },
+                { "name": "PHP FastCGI (kloxo-php)", "service": "kloxo-php", "active": true },
+                { "name": "MariaDB Database", "service": "mariadb", "active": true },
+                { "name": "DNS Server (BIND 9)", "service": "named", "active": true },
+                { "name": "FTP Server (Pure-FTPd)", "service": "pure-ftpd", "active": true }
+            ]
+        }
+    }))
 }
 
 async fn save_watchdog_config(Json(payload): Json<serde_json::Value>) -> Json<serde_json::Value> {
@@ -547,14 +562,23 @@ async fn save_watchdog_config(Json(payload): Json<serde_json::Value>) -> Json<se
 
 async fn get_lxguard_config() -> Json<serde_json::Value> {
     let path = "/usr/local/lxlabs/kloxo/etc/lxguard_config.json";
-    let data = fs::read_to_string(path).unwrap_or_else(|_| "{}".to_string());
-    let val: serde_json::Value = serde_json::from_str(&data).unwrap_or_else(|_| serde_json::json!({
-        "enabled": true,
-        "max_attempts": 5,
-        "ban_minutes": 60,
-        "banned_ips": []
-    }));
-    Json(serde_json::json!({"success": true, "lxguard": val}))
+    if let Ok(data) = fs::read_to_string(path) {
+        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&data) {
+            if val.is_object() && !val.as_object().unwrap().is_empty() && val.get("banned_ips").is_some() {
+                return Json(serde_json::json!({"success": true, "lxguard": val}));
+            }
+        }
+    }
+    Json(serde_json::json!({
+        "success": true,
+        "lxguard": {
+            "enabled": true,
+            "max_attempts": 5,
+            "ban_minutes": 60,
+            "whitelist_ips": ["127.0.0.1"],
+            "banned_ips": []
+        }
+    }))
 }
 
 async fn save_lxguard_config(Json(payload): Json<serde_json::Value>) -> Json<serde_json::Value> {

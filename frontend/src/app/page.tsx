@@ -1118,12 +1118,12 @@ export default function DashboardPage() {
                   <p className="text-[11px] text-slate-400">Quota metrics & consumption limits</p>
                 </div>
                 <span className="rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-400">
-                  {quotas.length || 17} Quotas
+                  {(quotas || []).length || 17} Quotas
                 </span>
               </div>
 
               <div className="space-y-3.5 max-h-[720px] overflow-y-auto pr-1">
-                {(quotas.length > 0
+                {((quotas || []).length > 0
                   ? quotas
                   : [
                       { title: 'Clients', used: 1, max: 'unlimited', unit: '' },
@@ -1390,7 +1390,7 @@ export default function DashboardPage() {
                     <div className="py-8 text-center text-xs text-slate-400 animate-pulse">Detecting components...</div>
                   ) : (
                     <div className="grid gap-2.5 sm:grid-cols-2">
-                      {componentsList.map((comp, idx) => (
+                      {(componentsList || []).map((comp, idx) => (
                         <div key={idx} className="rounded-xl border border-white/5 bg-slate-900/50 p-3 flex items-center justify-between">
                           <div>
                             <p className="text-xs font-bold text-white">{comp.name}</p>
@@ -1435,7 +1435,7 @@ export default function DashboardPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                          {processesList.map((p) => (
+                          {(processesList || []).map((p) => (
                             <tr key={p.pid} className="hover:bg-white/5 font-mono">
                               <td className="px-3 py-2 text-sky-400">{p.pid}</td>
                               <td className="px-3 py-2 text-slate-300">{p.user}</td>
@@ -1466,7 +1466,7 @@ export default function DashboardPage() {
                 <div className="space-y-3">
                   <p className="text-xs text-slate-300">Recent administrative activities and system logins.</p>
                   <div className="rounded-xl border border-white/5 bg-slate-900/60 p-3 space-y-2 max-h-[300px] overflow-y-auto">
-                    {actionLogs.map((log, idx) => (
+                    {(actionLogs || []).map((log, idx) => (
                       <div key={idx} className="flex items-start justify-between gap-4 text-xs border-b border-white/5 pb-2">
                         <span className="font-mono text-slate-200">{log.log}</span>
                         <span className="text-[10px] text-slate-400 whitespace-nowrap">{log.timestamp}</span>
@@ -1481,7 +1481,7 @@ export default function DashboardPage() {
                 <div className="space-y-3">
                   <p className="text-xs text-slate-300">All loaded PHP extensions and compilation status.</p>
                   <div className="flex flex-wrap gap-2 max-h-[300px] overflow-y-auto p-1">
-                    {phpModules.map((m, idx) => (
+                    {(phpModules || []).map((m, idx) => (
                       <span
                         key={idx}
                         className="rounded-lg border border-white/10 bg-slate-900/80 px-2.5 py-1 text-xs font-mono text-sky-300 flex items-center gap-1.5"
@@ -1606,7 +1606,7 @@ export default function DashboardPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
-                        {plans.map((p, idx) => (
+                        {(plans || []).map((p, idx) => (
                           <tr key={idx} className="hover:bg-white/5">
                             <td className="px-3 py-2 font-bold text-white">{p.name}</td>
                             <td className="px-3 py-2 text-slate-300">{p.disk_mb} MB</td>
@@ -1667,7 +1667,7 @@ export default function DashboardPage() {
               {(activeModal === 'ticket' || activeModal === 'ticketconfig') && (
                 <div className="space-y-4">
                   <div className="space-y-2 max-h-[220px] overflow-y-auto">
-                    {tickets.map((t) => (
+                    {(tickets || []).map((t) => (
                       <div key={t.id} className="rounded-xl border border-white/5 bg-slate-900/50 p-3 text-xs">
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-bold text-white flex items-center gap-2">
@@ -1729,7 +1729,7 @@ export default function DashboardPage() {
               {activeModal === 'smessage' && (
                 <div className="space-y-4">
                   <div className="space-y-2 max-h-[220px] overflow-y-auto">
-                    {messages.map((m) => (
+                    {(messages || []).map((m) => (
                       <div key={m.id} className="rounded-xl border border-white/5 bg-slate-900/50 p-3 text-xs">
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-bold text-white">{m.title}</span>
@@ -1831,16 +1831,18 @@ export default function DashboardPage() {
 
                   <div className="space-y-2">
                     <p className="text-xs font-bold text-slate-300">Monitored System Services</p>
-                    {watchdog.monitored_services.map((s, idx) => (
+                    {(watchdog.monitored_services || []).map((s, idx) => (
                       <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl border border-white/5 bg-slate-900/40 text-xs">
                         <span className="text-slate-200">{s.name}</span>
                         <input
                           type="checkbox"
                           checked={s.active}
                           onChange={(e) => {
-                            const updated = [...watchdog.monitored_services];
-                            updated[idx].active = e.target.checked;
-                            setWatchdog({ ...watchdog, monitored_services: updated });
+                            const updated = [...(watchdog.monitored_services || [])];
+                            if (updated[idx]) {
+                              updated[idx].active = e.target.checked;
+                              setWatchdog({ ...watchdog, monitored_services: updated });
+                            }
                           }}
                           className="h-4 w-4 rounded border-white/10 text-sky-500 focus:ring-0"
                         />
@@ -1888,8 +1890,8 @@ export default function DashboardPage() {
                   <div>
                     <h4 className="text-xs font-bold text-slate-300 mb-2">Currently Banned Suspicious IPs</h4>
                     <div className="rounded-xl border border-white/5 bg-slate-900/60 p-3 space-y-2 max-h-[150px] overflow-y-auto">
-                      {lxguard.banned_ips.length > 0 ? (
-                        lxguard.banned_ips.map((b, idx) => (
+                      {(lxguard.banned_ips || []).length > 0 ? (
+                        (lxguard.banned_ips || []).map((b, idx) => (
                           <div key={idx} className="flex items-center justify-between text-xs border-b border-white/5 pb-1.5">
                             <span className="font-mono text-rose-400">{b.ip}</span>
                             <span className="text-[11px] text-slate-400">{b.attempts} failed logins</span>
@@ -1897,7 +1899,7 @@ export default function DashboardPage() {
                               onClick={() => {
                                 setLxguard({
                                   ...lxguard,
-                                  banned_ips: lxguard.banned_ips.filter((item) => item.ip !== b.ip),
+                                  banned_ips: (lxguard.banned_ips || []).filter((item) => item.ip !== b.ip),
                                 });
                               }}
                               className="text-[10px] text-sky-400 hover:underline"
@@ -1935,7 +1937,7 @@ export default function DashboardPage() {
                       onChange={(e) => setSwitchProgram({ ...switchProgram, web_engine: e.target.value })}
                       className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none uppercase"
                     >
-                      {switchProgram.available_web_engines.map((e) => (
+                      {(switchProgram.available_web_engines || []).map((e) => (
                         <option key={e} value={e}>
                           {e}
                         </option>
@@ -1949,7 +1951,7 @@ export default function DashboardPage() {
                       onChange={(e) => setSwitchProgram({ ...switchProgram, php_engine: e.target.value })}
                       className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none uppercase"
                     >
-                      {switchProgram.available_php_engines.map((e) => (
+                      {(switchProgram.available_php_engines || []).map((e) => (
                         <option key={e} value={e}>
                           {e}
                         </option>
@@ -1963,7 +1965,7 @@ export default function DashboardPage() {
                       onChange={(e) => setSwitchProgram({ ...switchProgram, dns_engine: e.target.value })}
                       className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none uppercase"
                     >
-                      {switchProgram.available_dns_engines.map((e) => (
+                      {(switchProgram.available_dns_engines || []).map((e) => (
                         <option key={e} value={e}>
                           {e}
                         </option>
@@ -1995,7 +1997,7 @@ export default function DashboardPage() {
                       onChange={(e) => handleSaveTimezone(e.target.value)}
                       className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
                     >
-                      {timezoneData.available_timezones.map((tz) => (
+                      {(timezoneData.available_timezones || []).map((tz) => (
                         <option key={tz} value={tz}>
                           {tz}
                         </option>
@@ -2186,7 +2188,7 @@ export default function DashboardPage() {
                 <div className="space-y-4">
                   <p className="text-xs text-slate-300">Manage custom shortcuts and third-party portal links.</p>
                   <div className="space-y-2">
-                    {customButtons.map((b, idx) => (
+                    {(customButtons || []).map((b, idx) => (
                       <div key={idx} className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-slate-900/50 text-xs">
                         <span className="font-bold text-white">{b.label}</span>
                         <span className="font-mono text-sky-400">{b.url}</span>
