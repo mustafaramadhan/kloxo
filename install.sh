@@ -57,6 +57,17 @@ else
     exit 1
 fi
 
+# Ensure Rust is available for compiling mfklixo-core
+if ! command -v cargo >/dev/null 2>&1; then
+    if [ -f "$HOME/.cargo/bin/cargo" ]; then
+        export PATH="$HOME/.cargo/bin:$PATH"
+    else
+        echo -e "${GREEN}[*] Installing Rust toolchain for Mfklixo Core Daemon...${NC}"
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+        export PATH="$HOME/.cargo/bin:$PATH"
+    fi
+fi
+
 # 2. Setup System Users and Directories
 INSTALL_DIR="/usr/local/lxlabs/kloxo"
 echo -e "${YELLOW}[2/5] Setting up system user, symlinks, and directories...${NC}"
@@ -233,14 +244,28 @@ fi
 # 5. Setup Kloxo Services & Web Server
 echo -e "${YELLOW}[5/5] Activating Control Panel and Web Services...${NC}"
 
+# Build and install Mfklixo Rust Core Daemon
+echo -e "${GREEN}[*] Building Mfklixo Rust Core Daemon...${NC}"
+export PATH="$HOME/.cargo/bin:$PATH"
+if [ -f "$INSTALL_DIR/Cargo.toml" ] && command -v cargo >/dev/null 2>&1; then
+    cd "$INSTALL_DIR"
+    cargo build --release
+    mkdir -p "$INSTALL_DIR/bin"
+    cp -f target/release/mfklixo-core "$INSTALL_DIR/bin/mfklixo-core"
+    chmod +x "$INSTALL_DIR/bin/mfklixo-core"
+fi
+
 # Install systemd service unit files
 cp -f "$INSTALL_DIR/init/kloxo-web.service" /etc/systemd/system/kloxo-web.service
 cp -f "$INSTALL_DIR/init/kloxo-php.service" /etc/systemd/system/kloxo-php.service
 cp -f "$INSTALL_DIR/init/kloxo-wrap.service" /etc/systemd/system/kloxo-wrap.service
+if [ -f "$INSTALL_DIR/init/mfklixo-core.service" ]; then
+    cp -f "$INSTALL_DIR/init/mfklixo-core.service" /etc/systemd/system/mfklixo-core.service
+fi
 if [ -f "$INSTALL_DIR/init/kloxo-dashboard.service" ]; then
     cp -f "$INSTALL_DIR/init/kloxo-dashboard.service" /etc/systemd/system/kloxo-dashboard.service
 fi
-chmod 644 /etc/systemd/system/kloxo-*.service
+chmod 644 /etc/systemd/system/kloxo-*.service /etc/systemd/system/mfklixo-*.service 2>/dev/null || true
 
 # Build and enable Next.js Modern Dashboard
 if [ -d "$INSTALL_DIR/frontend" ] && command -v npm >/dev/null 2>&1; then
@@ -256,6 +281,10 @@ fi
 
 systemctl daemon-reload
 systemctl enable kloxo-php.service kloxo-web.service kloxo-wrap.service || true
+if [ -f /etc/systemd/system/mfklixo-core.service ]; then
+    systemctl enable --now mfklixo-core.service || true
+    systemctl restart mfklixo-core.service || true
+fi
 systemctl restart kloxo-php.service || true
 systemctl restart kloxo-web.service || true
 systemctl restart kloxo-wrap.service || true

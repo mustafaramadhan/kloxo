@@ -85,6 +85,15 @@ impl AppConfig {
 
         Self {
             database_url: env::var("DATABASE_URL").unwrap_or_else(|_| {
+                let pass_path = kloxo_root.join("etc/conf/kloxo.pass");
+                if pass_path.exists() {
+                    if let Ok(pass) = fs::read_to_string(&pass_path) {
+                        let pass = pass.trim();
+                        if !pass.is_empty() {
+                            return format!("mysql://kloxo:{}@127.0.0.1/kloxo", pass);
+                        }
+                    }
+                }
                 let sqlite_path = kloxo_root.join("etc/conf/kloxo.db");
                 if sqlite_path.exists() {
                     format!("sqlite://{}?mode=rwc", sqlite_path.to_string_lossy())
@@ -843,8 +852,20 @@ pub struct LoginPayload {
 }
 
 fn check_kloxo_password(plain: &str, stored_hash: &str, realpass: &str) -> bool {
-    if !realpass.is_empty() && plain == realpass {
-        return true;
+    if !realpass.is_empty() {
+        if plain == realpass {
+            return true;
+        }
+        if let Some(b64) = realpass.strip_prefix("__lxen:") {
+            use base64::Engine;
+            if let Ok(decoded) = base64::engine::general_purpose::STANDARD.decode(b64.trim()) {
+                if let Ok(s) = String::from_utf8(decoded) {
+                    if s == plain {
+                        return true;
+                    }
+                }
+            }
+        }
     }
     if stored_hash.starts_with("$2y$")
         || stored_hash.starts_with("$2b$")
