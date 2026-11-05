@@ -112,6 +112,69 @@ export interface LogResponse {
   lines: string[];
 }
 
+export interface DnsZoneItem {
+  domain: string;
+  soanameserver: string;
+  ttl: number;
+  zone_type: string;
+}
+
+export interface DnsRecordItem {
+  id: string;
+  type: string;
+  hostname: string;
+  value: string;
+  priority?: number;
+  ttl: number;
+}
+
+export interface SslCertItem {
+  id: string;
+  certname: string;
+  domain: string;
+  upload_status: string;
+  has_crt: boolean;
+  has_key: boolean;
+}
+
+export interface FirewallRuleItem {
+  id: string;
+  port: number;
+  action: 'allow' | 'deny';
+  protocol: string;
+  status: boolean;
+  description: string;
+}
+
+export interface BlockedIpItem {
+  id: string;
+  ip: string;
+}
+
+export interface BackupItem {
+  filename: string;
+  path: string;
+  size_bytes: number;
+  size_formatted: string;
+  created_at: string;
+}
+
+export interface PhpConfigDirectives {
+  memory_limit: string;
+  upload_max_filesize: string;
+  post_max_size: string;
+  max_execution_time: string;
+  max_input_time: string;
+  display_errors: string;
+}
+
+export interface PhpConfigResponse {
+  success: boolean;
+  php_version: string;
+  directives: PhpConfigDirectives;
+  extensions: string[];
+}
+
 export function getStoredToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('mfklixo_token');

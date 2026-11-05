@@ -860,6 +860,483 @@ try {
 		]);
 	}
 
+	// ==========================================
+	// 12. DNS Management (Zones & Records)
+	// ==========================================
+	if ($path === '/dns/zones' && $method === 'GET') {
+		authenticateUser();
+		initProgram('admin');
+		$db = new Sqlite(null, 'dns');
+		$dnsRows = (array)$db->getTable(['nname', 'soanameserver', 'ttl', 'zone_type']);
+
+		$domDb = new Sqlite(null, 'domain');
+		$domains = (array)$domDb->getTable(['nname']);
+
+		$zones = [];
+		$seen = [];
+		foreach ($dnsRows as $r) {
+			$name = $r['nname'] ?? '';
+			if (!$name || isset($seen[$name])) continue;
+			$seen[$name] = true;
+			$zones[] = [
+				'domain' => $name,
+				'soanameserver' => $r['soanameserver'] ?: "ns1.{$name}",
+				'ttl' => (int)($r['ttl'] ?: 3600),
+				'zone_type' => $r['zone_type'] ?: 'master'
+			];
+		}
+		foreach ($domains as $d) {
+			$name = $d['nname'] ?? '';
+			if (!$name || isset($seen[$name])) continue;
+			$seen[$name] = true;
+			$zones[] = [
+				'domain' => $name,
+				'soanameserver' => "ns1.{$name}",
+				'ttl' => 3600,
+				'zone_type' => 'master'
+			];
+		}
+
+		jsonResponse(['success' => true, 'zones' => $zones]);
+	}
+
+	if ($path === '/dns/zones' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$domain = preg_replace('/[^a-zA-Z0-9_.-]/', '', (string)($input['domain'] ?? ''));
+		$ttl = (int)($input['ttl'] ?? 3600);
+		if (empty($domain)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Domain name required'], 400);
+		}
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'dns');
+		$soa = "ns1.{$domain}";
+		$db->rawQuery("REPLACE INTO dns (nname, parent_clname, soanameserver, ttl, zone_type, syncserver) VALUES ('{$domain}', 'client-admin', '{$soa}', '{$ttl}', 'master', 'localhost');");
+
+		jsonResponse(['success' => true, 'message' => "DNS zone {$domain} created successfully", 'domain' => $domain]);
+	}
+
+	if ($path === '/dns/zones' && $method === 'DELETE') {
+		authenticateUser();
+		$input = getJsonInput();
+		$domain = preg_replace('/[^a-zA-Z0-9_.-]/', '', (string)($input['domain'] ?? $_GET['domain'] ?? ''));
+		if (empty($domain)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Domain required'], 400);
+		}
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'dns');
+		$db->delRow('nname', $domain);
+		@unlink("/home/kloxo/dns/{$domain}.json");
+
+		jsonResponse(['success' => true, 'message' => "DNS zone {$domain} deleted successfully"]);
+	}
+
+	if ($path === '/dns/records' && $method === 'GET') {
+		authenticateUser();
+		$zone = preg_replace('/[^a-zA-Z0-9_.-]/', '', (string)($_GET['zone'] ?? ''));
+		if (empty($zone)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Zone required'], 400);
+		}
+
+		@mkdir('/home/kloxo/dns', 0755, true);
+		$recFile = "/home/kloxo/dns/{$zone}.json";
+		if (file_exists($recFile)) {
+			$records = json_decode((string)file_get_contents($recFile), true) ?: [];
+		} else {
+			$records = [
+				['id' => '1', 'type' => 'A', 'hostname' => '@', 'value' => '18.222.232.63', 'ttl' => 3600],
+				['id' => '2', 'type' => 'A', 'hostname' => 'www', 'value' => '18.222.232.63', 'ttl' => 3600],
+				['id' => '3', 'type' => 'A', 'hostname' => 'mail', 'value' => '18.222.232.63', 'ttl' => 3600],
+				['id' => '4', 'type' => 'CNAME', 'hostname' => 'ftp', 'value' => '@', 'ttl' => 3600],
+				['id' => '5', 'type' => 'MX', 'hostname' => '@', 'value' => "mail.{$zone}", 'priority' => 10, 'ttl' => 3600],
+				['id' => '6', 'type' => 'TXT', 'hostname' => '@', 'value' => 'v=spf1 a mx ~all', 'ttl' => 3600]
+			];
+			@file_put_contents($recFile, json_encode($records, JSON_PRETTY_PRINT));
+		}
+
+		jsonResponse(['success' => true, 'zone' => $zone, 'records' => $records]);
+	}
+
+	if ($path === '/dns/records' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$zone = preg_replace('/[^a-zA-Z0-9_.-]/', '', (string)($input['zone'] ?? ''));
+		$type = strtoupper(preg_replace('/[^a-zA-Z]/', '', (string)($input['type'] ?? 'A')));
+		$hostname = trim((string)($input['hostname'] ?? '@'));
+		$value = trim((string)($input['value'] ?? ''));
+		$priority = (int)($input['priority'] ?? 10);
+		$ttl = (int)($input['ttl'] ?? 3600);
+
+		if (empty($zone) || empty($value)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Zone and value required'], 400);
+		}
+
+		@mkdir('/home/kloxo/dns', 0755, true);
+		$recFile = "/home/kloxo/dns/{$zone}.json";
+		$records = file_exists($recFile) ? (json_decode((string)file_get_contents($recFile), true) ?: []) : [];
+
+		$newRec = [
+			'id' => (string)time() . '_' . rand(100, 999),
+			'type' => $type,
+			'hostname' => $hostname,
+			'value' => $value,
+			'priority' => $priority,
+			'ttl' => $ttl
+		];
+		$records[] = $newRec;
+		@file_put_contents($recFile, json_encode($records, JSON_PRETTY_PRINT));
+
+		jsonResponse(['success' => true, 'message' => 'Record added successfully', 'record' => $newRec]);
+	}
+
+	if ($path === '/dns/records' && $method === 'DELETE') {
+		authenticateUser();
+		$input = getJsonInput();
+		$zone = preg_replace('/[^a-zA-Z0-9_.-]/', '', (string)($input['zone'] ?? ''));
+		$id = (string)($input['id'] ?? '');
+
+		$recFile = "/home/kloxo/dns/{$zone}.json";
+		if (file_exists($recFile)) {
+			$records = json_decode((string)file_get_contents($recFile), true) ?: [];
+			$records = array_values(array_filter($records, fn($r) => ($r['id'] ?? '') !== $id));
+			@file_put_contents($recFile, json_encode($records, JSON_PRETTY_PRINT));
+		}
+
+		jsonResponse(['success' => true, 'message' => 'Record deleted successfully']);
+	}
+
+	// ==========================================
+	// 13. SSL / TLS Certificate Management
+	// ==========================================
+	if ($path === '/ssl/certificates' && $method === 'GET') {
+		authenticateUser();
+		initProgram('admin');
+		$db = new Sqlite(null, 'sslcert');
+		$rows = (array)$db->getTable(['nname', 'certname', 'parent_domain', 'upload_status']);
+
+		$certs = [];
+		foreach ($rows as $r) {
+			$domain = $r['parent_domain'] ?: $r['nname'];
+			$certs[] = [
+				'id' => $r['nname'],
+				'certname' => $r['certname'] ?: $r['nname'],
+				'domain' => $domain,
+				'upload_status' => $r['upload_status'] ?: 'active',
+				'has_crt' => file_exists("/home/kloxo/ssl/{$domain}.crt"),
+				'has_key' => file_exists("/home/kloxo/ssl/{$domain}.key")
+			];
+		}
+
+		jsonResponse(['success' => true, 'certificates' => $certs]);
+	}
+
+	if ($path === '/ssl/certificates' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$domain = preg_replace('/[^a-zA-Z0-9_.-]/', '', (string)($input['domain'] ?? ''));
+		$certname = preg_replace('/[^a-zA-Z0-9_.-]/', '', (string)($input['certname'] ?? $domain));
+		$isSelfSigned = !empty($input['generate_self_signed']);
+		$crt = (string)($input['crt'] ?? '');
+		$key = (string)($input['key'] ?? '');
+
+		if (empty($domain)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Domain name required'], 400);
+		}
+
+		@mkdir('/home/kloxo/ssl', 0755, true);
+		$crtPath = "/home/kloxo/ssl/{$domain}.crt";
+		$keyPath = "/home/kloxo/ssl/{$domain}.key";
+
+		if ($isSelfSigned) {
+			$cmd = "openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout " . escapeshellarg($keyPath) . " -out " . escapeshellarg($crtPath) . " -subj '/CN={$domain}/O=Mfklixo' 2>&1";
+			@shell_exec($cmd);
+		} else {
+			@file_put_contents($crtPath, $crt);
+			@file_put_contents($keyPath, $key);
+		}
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'sslcert');
+		$escapedCertname = addslashes($certname);
+		$escapedDomain = addslashes($domain);
+		$db->rawQuery("REPLACE INTO sslcert (nname, certname, parent_clname, parent_domain, upload_status, syncserver) VALUES ('{$escapedCertname}', '{$escapedCertname}', 'client-admin', '{$escapedDomain}', 'active', 'localhost');");
+
+		jsonResponse(['success' => true, 'message' => "Certificate for {$domain} configured successfully", 'domain' => $domain]);
+	}
+
+	if ($path === '/ssl/certificates' && $method === 'DELETE') {
+		authenticateUser();
+		$input = getJsonInput();
+		$id = preg_replace('/[^a-zA-Z0-9_.-]/', '', (string)($input['id'] ?? $input['certname'] ?? ''));
+
+		if (empty($id)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Certificate identifier required'], 400);
+		}
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'sslcert');
+		$db->delRow('nname', $id);
+		@unlink("/home/kloxo/ssl/{$id}.crt");
+		@unlink("/home/kloxo/ssl/{$id}.key");
+
+		jsonResponse(['success' => true, 'message' => "Certificate {$id} deleted successfully"]);
+	}
+
+	// ==========================================
+	// 14. Firewall & Blocked IPs
+	// ==========================================
+	if ($path === '/security/firewall' && $method === 'GET') {
+		authenticateUser();
+		initProgram('admin');
+		$db = new Sqlite(null, 'firewall');
+		$rows = (array)$db->getTable(['nname', 'from_port', 'to_port', 'action', 'status']);
+
+		$rules = [];
+		if (empty($rows)) {
+			$defaults = [
+				['id' => 'rule_80', 'port' => 80, 'action' => 'allow', 'protocol' => 'TCP', 'description' => 'HTTP Web Server'],
+				['id' => 'rule_443', 'port' => 443, 'action' => 'allow', 'protocol' => 'TCP', 'description' => 'HTTPS Secure Web'],
+				['id' => 'rule_22', 'port' => 22, 'action' => 'allow', 'protocol' => 'TCP', 'description' => 'SSH Remote Access'],
+				['id' => 'rule_21', 'port' => 21, 'action' => 'allow', 'protocol' => 'TCP', 'description' => 'FTP File Transfer'],
+				['id' => 'rule_7777', 'port' => 7777, 'action' => 'allow', 'protocol' => 'TCP', 'description' => 'Kloxo Modern Dashboard (SSL)'],
+				['id' => 'rule_7778', 'port' => 7778, 'action' => 'allow', 'protocol' => 'TCP', 'description' => 'Kloxo Dashboard (HTTP)'],
+				['id' => 'rule_3306', 'port' => 3306, 'action' => 'allow', 'protocol' => 'TCP', 'description' => 'MariaDB / MySQL Server']
+			];
+			foreach ($defaults as $d) {
+				$db->rawQuery("REPLACE INTO firewall (nname, parent_clname, from_port, to_port, action, status, syncserver) VALUES ('{$d['id']}', 'client-admin', '{$d['port']}', '{$d['port']}', '{$d['action']}', 'on', 'localhost');");
+				$rules[] = [
+					'id' => $d['id'],
+					'port' => $d['port'],
+					'action' => $d['action'],
+					'protocol' => $d['protocol'],
+					'status' => true,
+					'description' => $d['description']
+				];
+			}
+		} else {
+			foreach ($rows as $r) {
+				$rules[] = [
+					'id' => $r['nname'],
+					'port' => (int)($r['from_port'] ?? 0),
+					'action' => $r['action'] ?? 'allow',
+					'protocol' => 'TCP',
+					'status' => ($r['status'] ?? 'on') === 'on',
+					'description' => "Port " . ($r['from_port'] ?? '') . " traffic"
+				];
+			}
+		}
+
+		jsonResponse(['success' => true, 'rules' => $rules]);
+	}
+
+	if ($path === '/security/firewall' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$port = (int)($input['port'] ?? 0);
+		$action = ($input['action'] ?? 'allow') === 'deny' ? 'deny' : 'allow';
+		$protocol = strtoupper(trim((string)($input['protocol'] ?? 'TCP')));
+		$desc = trim((string)($input['description'] ?? "Port {$port}"));
+
+		if ($port <= 0 || $port > 65535) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Valid port number (1-65535) required'], 400);
+		}
+
+		$id = "rule_{$port}_" . strtolower($protocol);
+		initProgram('admin');
+		$db = new Sqlite(null, 'firewall');
+		$db->rawQuery("REPLACE INTO firewall (nname, parent_clname, from_port, to_port, action, status, syncserver) VALUES ('{$id}', 'client-admin', '{$port}', '{$port}', '{$action}', 'on', 'localhost');");
+
+		$ruleFlag = $action === 'deny' ? '-j DROP' : '-j ACCEPT';
+		@shell_exec("sudo iptables -I INPUT -p " . strtolower($protocol) . " --dport {$port} {$ruleFlag} 2>/dev/null");
+
+		jsonResponse(['success' => true, 'message' => "Firewall rule for port {$port} created successfully", 'id' => $id]);
+	}
+
+	if ($path === '/security/firewall' && $method === 'DELETE') {
+		authenticateUser();
+		$input = getJsonInput();
+		$id = trim((string)($input['id'] ?? ''));
+
+		if (empty($id)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Rule ID required'], 400);
+		}
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'firewall');
+		$db->delRow('nname', $id);
+
+		jsonResponse(['success' => true, 'message' => "Firewall rule {$id} deleted successfully"]);
+	}
+
+	if ($path === '/security/blocked-ips' && $method === 'GET') {
+		authenticateUser();
+		initProgram('admin');
+		$db = new Sqlite(null, 'blockedip');
+		$rows = (array)$db->getTable(['nname', 'ipaddress']);
+
+		$ips = [];
+		foreach ($rows as $r) {
+			$ip = $r['ipaddress'] ?: $r['nname'];
+			if ($ip) {
+				$ips[] = ['id' => $r['nname'], 'ip' => $ip];
+			}
+		}
+
+		jsonResponse(['success' => true, 'blocked_ips' => $ips]);
+	}
+
+	if ($path === '/security/blocked-ips' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$ip = trim((string)($input['ip'] ?? ''));
+
+		if (!filter_var($ip, FILTER_VALIDATE_IP)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Valid IPv4 or IPv6 required'], 400);
+		}
+
+		$id = "block_" . md5($ip);
+		initProgram('admin');
+		$db = new Sqlite(null, 'blockedip');
+		$db->rawQuery("REPLACE INTO blockedip (nname, parent_clname, ipaddress) VALUES ('{$id}', 'client-admin', '{$ip}');");
+		@shell_exec("sudo iptables -A INPUT -s " . escapeshellarg($ip) . " -j DROP 2>/dev/null");
+
+		jsonResponse(['success' => true, 'message' => "IP {$ip} blocked successfully", 'ip' => $ip]);
+	}
+
+	if ($path === '/security/blocked-ips' && $method === 'DELETE') {
+		authenticateUser();
+		$input = getJsonInput();
+		$ip = trim((string)($input['ip'] ?? ''));
+
+		initProgram('admin');
+		$db = new Sqlite(null, 'blockedip');
+		$db->delRow('ipaddress', $ip);
+		$db->delRow('nname', "block_" . md5($ip));
+		@shell_exec("sudo iptables -D INPUT -s " . escapeshellarg($ip) . " -j DROP 2>/dev/null");
+
+		jsonResponse(['success' => true, 'message' => "IP {$ip} unblocked successfully"]);
+	}
+
+	// ==========================================
+	// 15. Server Backups & Snapshots
+	// ==========================================
+	if ($path === '/backups' && $method === 'GET') {
+		authenticateUser();
+		@mkdir('/home/kloxo/backups', 0755, true);
+		$files = glob('/home/kloxo/backups/*.tar.gz') ?: [];
+
+		$backups = [];
+		foreach ($files as $f) {
+			$backups[] = [
+				'filename' => basename($f),
+				'path' => $f,
+				'size_bytes' => filesize($f),
+				'size_formatted' => round(filesize($f) / (1024 * 1024), 2) . ' MB',
+				'created_at' => date('Y-m-d H:i:s', filemtime($f))
+			];
+		}
+
+		usort($backups, fn($a, $b) => strcmp($b['created_at'], $a['created_at']));
+
+		jsonResponse(['success' => true, 'backups' => $backups]);
+	}
+
+	if ($path === '/backups/create' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$type = (string)($input['type'] ?? 'all');
+		$timestamp = date('Y-m-d_His');
+		$filename = "backup_{$type}_{$timestamp}.tar.gz";
+		$dest = "/home/kloxo/backups/{$filename}";
+
+		@mkdir('/home/kloxo/backups', 0755, true);
+
+		if ($type === 'databases') {
+			$cmd = "sudo mysqldump -u root -p'Daya@2024' --all-databases 2>/dev/null | gzip > " . escapeshellarg($dest);
+		} else {
+			$cmd = "sudo tar -czf " . escapeshellarg($dest) . " /home/admin /home/kloxo/httpd 2>/dev/null";
+		}
+
+		@shell_exec($cmd);
+		@chown($dest, 'www-data');
+
+		$size = file_exists($dest) ? filesize($dest) : 0;
+
+		jsonResponse([
+			'success' => true,
+			'message' => "Backup archive {$filename} created successfully",
+			'filename' => $filename,
+			'size_bytes' => $size,
+			'size_formatted' => round($size / (1024 * 1024), 2) . ' MB'
+		]);
+	}
+
+	if ($path === '/backups' && $method === 'DELETE') {
+		authenticateUser();
+		$input = getJsonInput();
+		$filename = basename((string)($input['filename'] ?? ''));
+
+		if (empty($filename)) {
+			jsonResponse(['error' => 'Bad Request', 'message' => 'Filename required'], 400);
+		}
+
+		$target = "/home/kloxo/backups/{$filename}";
+		if (file_exists($target)) {
+			@unlink($target);
+		}
+
+		jsonResponse(['success' => true, 'message' => "Backup {$filename} deleted successfully"]);
+	}
+
+	// ==========================================
+	// 16. PHP Configuration Management
+	// ==========================================
+	if ($path === '/system/php-config' && $method === 'GET') {
+		authenticateUser();
+
+		jsonResponse([
+			'success' => true,
+			'php_version' => PHP_VERSION,
+			'directives' => [
+				'memory_limit' => ini_get('memory_limit') ?: '256M',
+				'upload_max_filesize' => ini_get('upload_max_filesize') ?: '64M',
+				'post_max_size' => ini_get('post_max_size') ?: '64M',
+				'max_execution_time' => ini_get('max_execution_time') ?: '300',
+				'max_input_time' => ini_get('max_input_time') ?: '300',
+				'display_errors' => ini_get('display_errors') ? 'On' : 'Off'
+			],
+			'extensions' => get_loaded_extensions()
+		]);
+	}
+
+	if ($path === '/system/php-config' && $method === 'POST') {
+		authenticateUser();
+		$input = getJsonInput();
+		$mem = preg_replace('/[^0-9MGmg]/', '', (string)($input['memory_limit'] ?? '256M'));
+		$upload = preg_replace('/[^0-9MGmg]/', '', (string)($input['upload_max_filesize'] ?? '64M'));
+		$post = preg_replace('/[^0-9MGmg]/', '', (string)($input['post_max_size'] ?? '64M'));
+		$exec = (int)($input['max_execution_time'] ?? 300);
+		$display = ($input['display_errors'] ?? 'Off') === 'On' ? 'On' : 'Off';
+
+		$iniContent = <<<INI
+; Mfklixo Panel Custom PHP Configuration
+memory_limit = {$mem}
+upload_max_filesize = {$upload}
+post_max_size = {$post}
+max_execution_time = {$exec}
+max_input_time = {$exec}
+display_errors = {$display}
+INI;
+
+		@file_put_contents('/etc/php/8.5/fpm/conf.d/99-kloxo-custom.ini', $iniContent);
+		@file_put_contents('/etc/php.ini', $iniContent);
+		@shell_exec("sudo systemctl restart kloxo-php 2>/dev/null");
+
+		jsonResponse(['success' => true, 'message' => 'PHP configuration updated and applied successfully']);
+	}
+
 	jsonResponse(['error' => 'Not Found', 'message' => "Endpoint {$method} {$path} does not exist"], 404);
 
 } catch (Throwable $e) {

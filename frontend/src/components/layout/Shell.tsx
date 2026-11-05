@@ -22,6 +22,11 @@ import {
   Users,
   Clock,
   Terminal,
+  Lock,
+  Shield,
+  Archive,
+  Sliders,
+  Layers,
 } from 'lucide-react';
 import { getStoredToken, setStoredToken } from '@/lib/api';
 
@@ -64,23 +69,33 @@ export default function Shell({ children }: ShellProps) {
         { name: 'Overview', href: '/', icon: LayoutDashboard },
         { name: 'Services', href: '/services', icon: Server },
         { name: 'Domains', href: '/domains', icon: Globe },
+        { name: 'DNS Zones', href: '/dns', icon: Layers },
         { name: 'Databases', href: '/databases', icon: Database },
       ],
     },
     {
-      title: 'Files & Communication',
+      title: 'Files & Mail',
       items: [
         { name: 'File Manager', href: '/files', icon: FolderTree },
         { name: 'Mail Accounts', href: '/mail', icon: Mail },
         { name: 'FTP Users', href: '/ftp', icon: Share2 },
+        { name: 'Backups', href: '/backups', icon: Archive },
       ],
     },
     {
-      title: 'System & Management',
+      title: 'Security & SSL',
+      items: [
+        { name: 'SSL Certificates', href: '/ssl', icon: Lock },
+        { name: 'Firewall & Security', href: '/security', icon: Shield },
+      ],
+    },
+    {
+      title: 'System & Server',
       items: [
         { name: 'Clients', href: '/clients', icon: Users },
         { name: 'Cron Tasks', href: '/cron', icon: Clock },
-        { name: 'Server Logs & PHP', href: '/logs', icon: Terminal },
+        { name: 'PHP Settings', href: '/php-config', icon: Sliders },
+        { name: 'Server Logs', href: '/logs', icon: Terminal },
       ],
     },
   ];
