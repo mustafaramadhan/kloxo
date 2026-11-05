@@ -197,8 +197,8 @@ export default function DashboardPage() {
   });
 
   const [switchProgram, setSwitchProgram] = useState<SwitchProgramConfig>({
-    web_engine: 'nginx',
-    available_web_engines: ['nginx', 'apache2', 'lighttpd'],
+    web_engine: 'apache_nginx',
+    available_web_engines: ['apache_nginx', 'nginx', 'apache2', 'lighttpd'],
     php_engine: 'php-fpm',
     available_php_engines: ['php-fpm', 'fastcgi', 'cgi'],
     dns_engine: 'bind9',
