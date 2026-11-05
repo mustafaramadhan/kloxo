@@ -336,7 +336,7 @@ try {
 
 		$vhostDir = "/home/kloxo/httpd";
 		if (!is_dir($vhostDir)) @mkdir($vhostDir, 0755, true);
-		$vhost = "server {\n    listen 80;\n    server_name {$domain} www.{$domain};\n    root {$docroot};\n    index index.php index.html;\n    location ~ \\.php$ {\n        include /etc/nginx/fastcgi_params;\n        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;\n        fastcgi_pass unix:/usr/local/lxlabs/kloxo/init/kloxo-phpcgi.sock;\n    }\n}\n";
+		$vhost = "server {\n    listen 80;\n    server_name {$domain} www.{$domain};\n    root {$docroot};\n    index index.php index.html;\n    location / {\n        try_files \$uri \$uri/ /index.php?\$args;\n    }\n    location ~ \\.php$ {\n        include /etc/nginx/fastcgi_params;\n        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;\n        fastcgi_pass unix:/run/php/php-fpm.sock;\n    }\n}\n";
 		@file_put_contents("{$vhostDir}/{$domain}.conf", $vhost);
 		@shell_exec("sudo systemctl reload nginx 2>/dev/null");
 
@@ -1599,7 +1599,7 @@ INI;
 	}
 
 	location ~ \.php$ {
-		fastcgi_pass unix:/var/run/kloxo-php-fpm.sock;
+		fastcgi_pass unix:/run/php/php-fpm.sock;
 		fastcgi_index index.php;
 		include fastcgi_params;
 		fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
