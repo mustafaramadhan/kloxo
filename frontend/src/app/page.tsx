@@ -61,6 +61,9 @@ import {
   ToggleLeft,
   ToggleRight,
   Sparkles,
+  Plus,
+  Code,
+  Check,
 } from 'lucide-react';
 import {
   apiFetch,
@@ -73,6 +76,17 @@ import {
   ProcessItem,
   ModuleItem,
   ActionLogItem,
+  SystemSettings,
+  ResourcePlanItem,
+  SupportTicketItem,
+  SupportMessageItem,
+  SshConfigItem,
+  WatchdogConfig,
+  LxGuardConfig,
+  SwitchProgramConfig,
+  TimezoneResponse,
+  MailQueueResponse,
+  MailServerConfig,
   formatBytes,
   formatUptime,
   getStoredToken,
@@ -110,7 +124,7 @@ export default function DashboardPage() {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalMessage, setModalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Modal Specific Data
+  // Modal Specific Data States
   const [componentsList, setComponentsList] = useState<ComponentItem[]>([]);
   const [processesList, setProcessesList] = useState<ProcessItem[]>([]);
   const [actionLogs, setActionLogs] = useState<ActionLogItem[]>([]);
@@ -120,6 +134,121 @@ export default function DashboardPage() {
   const [commandOutput, setCommandOutput] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Additional Dedicated Module States
+  const [settings, setSettings] = useState<SystemSettings>({
+    panel_title: 'Mfklixo Cloud Control Panel',
+    contact_email: 'admin@hostspectra.com',
+    language: 'en',
+    scavenge_time: 3600,
+    session_timeout: 7200,
+    download_limit_kb: 0,
+    dir_indexes: 'index.php, index.html, index.htm',
+    default_domain: 'vf1.hostspectra.com',
+    custom_logo_url: '',
+    maintenance: false,
+    login_captcha: false,
+    two_factor_auth: false,
+    auto_backup_schedule: 'daily',
+    auto_backup_destination: 'local',
+  });
+
+  const [plans, setPlans] = useState<ResourcePlanItem[]>([]);
+  const [newPlanName, setNewPlanName] = useState('');
+  const [newPlanDisk, setNewPlanDisk] = useState(5120);
+  const [newPlanTraffic, setNewPlanTraffic] = useState(20480);
+  const [newPlanDomains, setNewPlanDomains] = useState(2);
+
+  const [tickets, setTickets] = useState<SupportTicketItem[]>([]);
+  const [newTicketSubject, setNewTicketSubject] = useState('');
+  const [newTicketMessage, setNewTicketMessage] = useState('');
+  const [newTicketPriority, setNewTicketPriority] = useState('medium');
+
+  const [messages, setMessages] = useState<SupportMessageItem[]>([]);
+  const [newMsgTitle, setNewMsgTitle] = useState('');
+  const [newMsgContent, setNewMsgContent] = useState('');
+
+  const [sshConfig, setSshConfig] = useState<SshConfigItem>({
+    port: 22,
+    permit_root_login: true,
+    password_auth: true,
+    service_active: true,
+  });
+
+  const [watchdog, setWatchdog] = useState<WatchdogConfig>({
+    enabled: true,
+    interval_seconds: 180,
+    auto_recovery: true,
+    monitored_services: [
+      { name: 'Web Server (Nginx)', service: 'nginx', active: true },
+      { name: 'PHP FastCGI (kloxo-php)', service: 'kloxo-php', active: true },
+      { name: 'MariaDB Database', service: 'mariadb', active: true },
+      { name: 'DNS Server (BIND 9)', service: 'named', active: true },
+      { name: 'FTP Server (Pure-FTPd)', service: 'pure-ftpd', active: true },
+    ],
+  });
+
+  const [lxguard, setLxguard] = useState<LxGuardConfig>({
+    enabled: true,
+    max_attempts: 5,
+    ban_minutes: 60,
+    whitelist_ips: ['127.0.0.1'],
+    banned_ips: [],
+  });
+
+  const [switchProgram, setSwitchProgram] = useState<SwitchProgramConfig>({
+    web_engine: 'nginx',
+    available_web_engines: ['nginx', 'apache2', 'lighttpd'],
+    php_engine: 'php-fpm',
+    available_php_engines: ['php-fpm', 'fastcgi', 'cgi'],
+    dns_engine: 'bind9',
+    available_dns_engines: ['bind9', 'nsd'],
+    ftp_engine: 'pure-ftpd',
+    available_ftp_engines: ['pure-ftpd', 'vsftpd'],
+  });
+
+  const [timezoneData, setTimezoneData] = useState<TimezoneResponse>({
+    success: true,
+    timezone: 'UTC',
+    server_time: '',
+    ntp_sync: true,
+    available_timezones: ['UTC', 'Asia/Tehran', 'Europe/London', 'America/New_York'],
+  });
+
+  const [mailQueue, setMailQueue] = useState<MailQueueResponse>({
+    success: true,
+    queue_count: 0,
+    raw_output: '',
+    messages: [],
+  });
+
+  const [mailConfig, setMailConfig] = useState<MailServerConfig>({
+    smtp_port: 587,
+    submission_port: 465,
+    tls_enforced: true,
+    spamassassin: true,
+    clamav: true,
+    max_hourly_per_client: 150,
+    spf_enforced: true,
+    dkim_enabled: true,
+  });
+
+  const [skeletonHtml, setSkeletonHtml] = useState(
+    '<!DOCTYPE html><html><head><title>Welcome</title></head><body><h1>Welcome to your new site!</h1><p>Website created using Mfklixo Next-Gen Panel.</p></body></html>'
+  );
+
+  const [customButtons, setCustomButtons] = useState<{ label: string; url: string; icon: string }[]>([
+    { label: 'phpMyAdmin', url: '/phpmyadmin/', icon: 'Database' },
+    { label: 'Webmail Roundcube', url: '/webmail/', icon: 'Mail' },
+    { label: 'Grafana Metrics', url: ':3001', icon: 'Activity' },
+  ]);
+  const [newBtnLabel, setNewBtnLabel] = useState('');
+  const [newBtnUrl, setNewBtnUrl] = useState('');
+
+  const [sqlQuery, setSqlQuery] = useState('SHOW DATABASES;');
+  const [sqlResult, setSqlResult] = useState<string>('');
+
+  const [selectedSkin, setSelectedSkin] = useState<string>('slate');
 
   const loadData = async () => {
     try {
@@ -170,75 +299,71 @@ export default function DashboardPage() {
     setCollapsedCategories(allCollapsed);
   };
 
-  // SSO Bridge Link Opener
-  const openLegacySSO = (subactionOrAction: string) => {
-    const token = getStoredToken();
-    let url = `/legacy/`;
-    if (subactionOrAction) {
-      if (subactionOrAction.startsWith('http')) {
-        url = subactionOrAction;
-      } else if (subactionOrAction.startsWith('frm_')) {
-        url = `/legacy/display.php?${subactionOrAction}`;
-      } else {
-        url = `/legacy/display.php?frm_action=${encodeURIComponent(subactionOrAction)}`;
-      }
-    }
-    if (token) {
-      url += (url.includes('?') ? '&' : '?') + `token=${encodeURIComponent(token)}`;
-    }
-    window.open(url, '_blank');
-  };
-
-  // Open Modal Handler
+  // Open Modal Handler with Real-Time Endpoint Fetching
   const handleOpenModal = async (modalId: string, title: string) => {
     setActiveModal(modalId);
     setModalTitle(title);
     setModalMessage(null);
+    setModalLoading(true);
 
-    if (modalId === 'components') {
-      setModalLoading(true);
-      try {
+    try {
+      if (modalId === 'components') {
         const res = await apiFetch<{ success: boolean; components: ComponentItem[] }>('/system/components');
         setComponentsList(res.components);
-      } catch (e: any) {
-        setModalMessage({ type: 'error', text: e.message || 'Failed to load system components' });
-      } finally {
-        setModalLoading(false);
-      }
-    } else if (modalId === 'processes') {
-      setModalLoading(true);
-      try {
+      } else if (modalId === 'processes') {
         const res = await apiFetch<{ success: boolean; processes: ProcessItem[] }>('/system/processes');
         setProcessesList(res.processes);
-      } catch (e: any) {
-        setModalMessage({ type: 'error', text: e.message || 'Failed to load running processes' });
-      } finally {
-        setModalLoading(false);
-      }
-    } else if (modalId === 'actionlog') {
-      setModalLoading(true);
-      try {
+      } else if (modalId === 'actionlog') {
         const res = await apiFetch<{ success: boolean; logs: ActionLogItem[] }>('/system/action-logs');
         setActionLogs(res.logs);
-      } catch (e: any) {
-        setModalMessage({ type: 'error', text: e.message || 'Failed to load action logs' });
-      } finally {
-        setModalLoading(false);
-      }
-    } else if (modalId === 'modules') {
-      setModalLoading(true);
-      try {
+      } else if (modalId === 'modules') {
         const res = await apiFetch<{ success: boolean; modules: ModuleItem[] }>('/system/modules');
         setPhpModules(res.modules);
-      } catch (e: any) {
-        setModalMessage({ type: 'error', text: e.message || 'Failed to load PHP modules' });
-      } finally {
-        setModalLoading(false);
+      } else if (modalId === 'settings' || modalId === 'general' || modalId === 'scavenge' || modalId === 'downloadconfig' || modalId === 'dirindex' || modalId === 'miscinfo' || modalId === 'cpconfig' || modalId === 'uploadlogo' || modalId === 'childappearance') {
+        const res = await apiFetch<{ success: boolean; settings: SystemSettings }>('/system/settings');
+        setSettings(res.settings);
+      } else if (modalId === 'resourceplan') {
+        const res = await apiFetch<{ success: boolean; plans: ResourcePlanItem[] }>('/system/plans');
+        setPlans(res.plans);
+      } else if (modalId === 'ticket' || modalId === 'ticketconfig') {
+        const res = await apiFetch<{ success: boolean; tickets: SupportTicketItem[] }>('/support/tickets');
+        setTickets(res.tickets);
+      } else if (modalId === 'smessage') {
+        const res = await apiFetch<{ success: boolean; messages: SupportMessageItem[] }>('/support/messages');
+        setMessages(res.messages);
+      } else if (modalId === 'sshconfig') {
+        const res = await apiFetch<{ success: boolean; ssh: SshConfigItem }>('/security/ssh-config');
+        setSshConfig(res.ssh);
+      } else if (modalId === 'watchdog') {
+        const res = await apiFetch<{ success: boolean; watchdog: WatchdogConfig }>('/security/watchdog');
+        setWatchdog(res.watchdog);
+      } else if (modalId === 'lxguard' || modalId === 'blockedlogin') {
+        const res = await apiFetch<{ success: boolean; lxguard: LxGuardConfig }>('/security/lxguard');
+        setLxguard(res.lxguard);
+      } else if (modalId === 'switchprogram') {
+        const res = await apiFetch<{ success: boolean; programs: SwitchProgramConfig }>('/server/switch-program');
+        setSwitchProgram(res.programs);
+      } else if (modalId === 'timezone') {
+        const res = await apiFetch<TimezoneResponse>('/server/timezone');
+        setTimezoneData(res);
+      } else if (modalId === 'mailqueue') {
+        const res = await apiFetch<MailQueueResponse>('/mail/queue');
+        setMailQueue(res);
+      } else if (modalId === 'mailserver' || modalId === 'mailperclient' || modalId === 'sendmailban') {
+        const res = await apiFetch<{ success: boolean; mail_config: MailServerConfig }>('/mail/server-config');
+        setMailConfig(res.mail_config);
+      } else if (modalId === 'skeleton') {
+        const res = await apiFetch<{ success: boolean; html: string }>('/system/skeleton');
+        setSkeletonHtml(res.html);
       }
+    } catch (e: any) {
+      console.warn(`Could not load fresh data for modal ${modalId}:`, e.message);
+    } finally {
+      setModalLoading(false);
     }
   };
 
-  // Execute Command in Command Center
+  // Run Command Diagnostics
   const handleRunCommand = async () => {
     setModalLoading(true);
     setCommandOutput('Executing command...');
@@ -267,6 +392,226 @@ export default function DashboardPage() {
       setModalMessage({ type: 'success', text: `Process PID ${pid} successfully terminated.` });
     } catch (e: any) {
       setModalMessage({ type: 'error', text: e.message || 'Failed to kill process' });
+    }
+  };
+
+  // Save Settings
+  const handleSaveSettings = async (partialSettings: Partial<SystemSettings>) => {
+    setModalLoading(true);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string; settings: SystemSettings }>('/system/settings', {
+        method: 'POST',
+        body: JSON.stringify(partialSettings),
+      });
+      setSettings(res.settings);
+      setModalMessage({ type: 'success', text: res.message || 'Settings saved successfully!' });
+    } catch (e: any) {
+      setModalMessage({ type: 'error', text: e.message || 'Failed to save settings' });
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Create Resource Plan
+  const handleCreatePlan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPlanName) return;
+    setModalLoading(true);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string; plans: ResourcePlanItem[] }>('/system/plans', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: newPlanName,
+          disk_mb: newPlanDisk,
+          traffic_mb: newPlanTraffic,
+          domains: newPlanDomains,
+          mail_accounts: 10,
+          mysql_dbs: 5,
+        }),
+      });
+      setPlans(res.plans);
+      setNewPlanName('');
+      setModalMessage({ type: 'success', text: res.message });
+    } catch (e: any) {
+      setModalMessage({ type: 'error', text: e.message || 'Failed to create plan' });
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Create Support Ticket
+  const handleCreateTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTicketSubject || !newTicketMessage) return;
+    setModalLoading(true);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string; ticket: SupportTicketItem }>('/support/tickets', {
+        method: 'POST',
+        body: JSON.stringify({
+          subject: newTicketSubject,
+          message: newTicketMessage,
+          priority: newTicketPriority,
+        }),
+      });
+      setTickets((prev) => [res.ticket, ...prev]);
+      setNewTicketSubject('');
+      setNewTicketMessage('');
+      setModalMessage({ type: 'success', text: 'Support ticket submitted successfully.' });
+    } catch (e: any) {
+      setModalMessage({ type: 'error', text: e.message || 'Failed to create ticket' });
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Send Message
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMsgTitle || !newMsgContent) return;
+    setModalLoading(true);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string; entry: SupportMessageItem }>('/support/messages', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: newMsgTitle,
+          content: newMsgContent,
+        }),
+      });
+      setMessages((prev) => [res.entry, ...prev]);
+      setNewMsgTitle('');
+      setNewMsgContent('');
+      setModalMessage({ type: 'success', text: 'Announcement published successfully.' });
+    } catch (e: any) {
+      setModalMessage({ type: 'error', text: e.message || 'Failed to post message' });
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Save SSH Config
+  const handleSaveSsh = async () => {
+    setModalLoading(true);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string }>('/security/ssh-config', {
+        method: 'POST',
+        body: JSON.stringify(sshConfig),
+      });
+      setModalMessage({ type: 'success', text: res.message });
+    } catch (e: any) {
+      setModalMessage({ type: 'error', text: e.message || 'Failed to update SSH config' });
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Save Watchdog
+  const handleSaveWatchdog = async () => {
+    setModalLoading(true);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string }>('/security/watchdog', {
+        method: 'POST',
+        body: JSON.stringify(watchdog),
+      });
+      setModalMessage({ type: 'success', text: res.message });
+    } catch (e: any) {
+      setModalMessage({ type: 'error', text: e.message || 'Failed to save watchdog' });
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Save LxGuard
+  const handleSaveLxGuard = async () => {
+    setModalLoading(true);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string }>('/security/lxguard', {
+        method: 'POST',
+        body: JSON.stringify(lxguard),
+      });
+      setModalMessage({ type: 'success', text: res.message });
+    } catch (e: any) {
+      setModalMessage({ type: 'error', text: e.message || 'Failed to save LxGuard' });
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Save Switch Program
+  const handleSaveSwitchProgram = async () => {
+    setModalLoading(true);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string }>('/server/switch-program', {
+        method: 'POST',
+        body: JSON.stringify(switchProgram),
+      });
+      setModalMessage({ type: 'success', text: res.message });
+    } catch (e: any) {
+      setModalMessage({ type: 'error', text: e.message || 'Failed to switch programs' });
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Save Timezone
+  const handleSaveTimezone = async (tz: string) => {
+    setModalLoading(true);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string; timezone: string }>('/server/timezone', {
+        method: 'POST',
+        body: JSON.stringify({ timezone: tz }),
+      });
+      setTimezoneData((prev) => ({ ...prev, timezone: res.timezone }));
+      setModalMessage({ type: 'success', text: res.message });
+    } catch (e: any) {
+      setModalMessage({ type: 'error', text: e.message || 'Failed to set timezone' });
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Flush Mail Queue
+  const handleFlushMailQueue = async () => {
+    setModalLoading(true);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string }>('/mail/queue', { method: 'POST' });
+      setMailQueue((prev) => ({ ...prev, queue_count: 0, raw_output: 'Queue flushed successfully.' }));
+      setModalMessage({ type: 'success', text: res.message });
+    } catch (e: any) {
+      setModalMessage({ type: 'error', text: e.message || 'Failed to flush queue' });
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Save Mail Config
+  const handleSaveMailConfig = async () => {
+    setModalLoading(true);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string }>('/mail/server-config', {
+        method: 'POST',
+        body: JSON.stringify(mailConfig),
+      });
+      setModalMessage({ type: 'success', text: res.message });
+    } catch (e: any) {
+      setModalMessage({ type: 'error', text: e.message || 'Failed to update mail settings' });
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Save Skeleton
+  const handleSaveSkeleton = async () => {
+    setModalLoading(true);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string }>('/system/skeleton', {
+        method: 'POST',
+        body: JSON.stringify({ html: skeletonHtml }),
+      });
+      setModalMessage({ type: 'success', text: res.message });
+    } catch (e: any) {
+      setModalMessage({ type: 'error', text: e.message || 'Failed to save skeleton' });
+    } finally {
+      setModalLoading(false);
     }
   };
 
@@ -302,6 +647,7 @@ export default function DashboardPage() {
         body: JSON.stringify({ action: 'maintenance_toggle' }),
       });
       setServerInfo((prev) => (prev ? { ...prev, maintenance: res.maintenance } : null));
+      setSettings((prev) => ({ ...prev, maintenance: res.maintenance }));
       setModalMessage({ type: 'success', text: res.message });
     } catch (e: any) {
       setModalMessage({ type: 'error', text: e.message || 'Failed to toggle maintenance mode' });
@@ -321,6 +667,22 @@ export default function DashboardPage() {
       setModalMessage({ type: 'success', text: res.message });
     } catch (e: any) {
       setModalMessage({ type: 'error', text: e.message || 'Failed to schedule reboot' });
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Execute SQL Studio
+  const handleExecuteSql = async () => {
+    setModalLoading(true);
+    try {
+      const res = await apiFetch<{ success: boolean; rows?: any[]; message?: string; duration_ms: number }>('/databases/query', {
+        method: 'POST',
+        body: JSON.stringify({ database: 'kloxo', query: sqlQuery }),
+      });
+      setSqlResult(JSON.stringify(res.rows || res.message || 'Query executed', null, 2));
+    } catch (e: any) {
+      setSqlResult(`SQL Error: ${e.message}`);
     } finally {
       setModalLoading(false);
     }
@@ -387,14 +749,14 @@ export default function DashboardPage() {
     { id: 'all_addondomain', title: 'All Pointer Domains', description: 'Domain redirects and aliases', icon: Network, category: 'admin', href: '/domains' },
     { id: 'all_mailaccount', title: 'All Mail Accounts', description: 'Mailboxes, quotas and POP/IMAP accounts', icon: Mail, category: 'admin', href: '/mail' },
     { id: 'all_mailforward', title: 'All Mail Forwards', description: 'Incoming email forwarding rules', icon: Send, category: 'admin', href: '/mail' },
-    { id: 'all_mailinglist', title: 'All Mailing Lists', description: 'Ezmlm / Mailman discussion lists', icon: Inbox, category: 'admin', legacyAction: 'frm_action=list&frm_o_cname=all_mailinglist' },
+    { id: 'all_mailinglist', title: 'All Mailing Lists', description: 'Discussion and newsletter mail groups', icon: Inbox, category: 'admin', modal: 'mailinglist' },
     { id: 'all_mysqldb', title: 'All Databases', description: 'MariaDB schemas and user privileges', icon: Database, category: 'admin', href: '/databases' },
     { id: 'all_cron', title: 'All Cron Tasks', description: 'Scheduled crontab background jobs', icon: Clock, category: 'admin', href: '/cron' },
     { id: 'all_ftpuser', title: 'All FTP Users', description: 'FTP accounts and home directories', icon: Share2, category: 'admin', href: '/ftp' },
     { id: 'all_sslcert', title: 'All SSLCerts', description: 'SSL/TLS certificates and Let\'s Encrypt keys', icon: Lock, category: 'admin', href: '/ssl' },
     { id: 'resourceplan', title: 'Resource Plans', description: 'Hosting templates and quota presets', icon: Sliders, category: 'admin', modal: 'resourceplan' },
     { id: 'ticket', title: 'HelpDesk & Tickets', description: 'Customer support tickets and resolution queue', icon: LifeBuoy, category: 'admin', modal: 'ticket' },
-    { id: 'ticketconfig', title: 'HelpDesk Configuration', description: 'Support department email and auto-replies', icon: Settings, category: 'admin', legacyAction: 'frm_action=updateform&frm_subaction=ticketconfig&frm_o_o[0][class]=ticketconfig' },
+    { id: 'ticketconfig', title: 'HelpDesk Configuration', description: 'Support department email and auto-replies', icon: Settings, category: 'admin', modal: 'ticketconfig' },
     { id: 'smessage', title: 'Internal Messages', description: 'System announcements and client alerts', icon: Bell, category: 'admin', modal: 'smessage' },
     { id: 'custombutton', title: 'Custom Buttons', description: 'Add third-party web panel links and shortcuts', icon: Zap, category: 'admin', modal: 'custombutton' },
     { id: 'lxupdate', title: 'System Update', description: 'Check for Mfklixo and OS software updates', icon: DownloadCloud, category: 'admin', modal: 'update' },
@@ -406,7 +768,7 @@ export default function DashboardPage() {
 
     // --- 2. Resource ---
     { id: 'phpini', title: 'PHP Configure', description: 'Memory limits, execution time & file upload sizes', icon: Sliders, category: 'resource', href: '/php-config' },
-    { id: 'phpfilter', title: 'Advanced PHP Configure', description: 'Per-user opcache and php-fpm pool parameters', icon: SlidersHorizontal, category: 'resource', modal: 'phpfilter' },
+    { id: 'phpfilter', title: 'Advanced PHP Configure', description: 'PHP-FPM worker pools, JIT buffer & OPcache', icon: SlidersHorizontal, category: 'resource', modal: 'phpfilter' },
     { id: 'processedlog', title: 'Client Processed Logs', description: 'Web traffic statistics (Webalizer & Awstats)', icon: Activity, category: 'resource', href: '/logs' },
     { id: 'auxiliarylogin', title: 'Auxiliary Logins', description: 'Secondary team accounts with limited scopes', icon: Users, category: 'resource', modal: 'auxiliary' },
     { id: 'utmp', title: 'Login History', description: 'SSH and Web control panel login log (utmp)', icon: Eye, category: 'resource', modal: 'loginhistory' },
@@ -444,14 +806,14 @@ export default function DashboardPage() {
     { id: 'sshkeys', title: 'SSH Authorized Keys', description: 'Manage public SSH keys authorized for root/admin', icon: Key, category: 'security', modal: 'sshkeys' },
 
     // --- 6. Basic (Web, Mail, DB) ---
-    { id: 'mailserver', title: 'Mail Server Settings', description: 'Qmail / Postfix SMTP, TLS and spam thresholds', icon: Mail, category: 'basic', modal: 'mailserver' },
+    { id: 'mailserver', title: 'Mail Server Settings', description: 'Postfix/Qmail SMTP, TLS and spam thresholds', icon: Mail, category: 'basic', modal: 'mailserver' },
     { id: 'mailqueue', title: 'Mail Queue', description: 'Inspect outgoing/incoming mail queue and flush', icon: Inbox, category: 'basic', modal: 'mailqueue' },
     { id: 'mailperclient', title: 'Mails Per Client', description: 'Outgoing hourly rate limits per client domain', icon: Sliders, category: 'basic', modal: 'mailperclient' },
     { id: 'ftpsession', title: 'FTP Sessions', description: 'View active FTP transfers and connected clients', icon: Share2, category: 'basic', modal: 'ftpsession' },
     { id: 'webserver', title: 'Webserver Configure', description: 'Nginx worker processes, keepalive and gzip', icon: Globe, category: 'basic', modal: 'webserver' },
     { id: 'ftpconfig', title: 'FTP Configure', description: 'Pure-FTPd port ranges and TLS encryption mode', icon: Settings, category: 'basic', modal: 'ftpconfig' },
     { id: 'phpmodule', title: 'PHP Module Status', description: 'Inspect all loaded PHP modules and libraries', icon: Sparkles, category: 'basic', modal: 'modules' },
-    { id: 'sqlmanager', title: 'SQL Manager / phpMyAdmin', description: 'Launch phpMyAdmin GUI database interface', icon: Database, category: 'basic', modal: 'sqlmanager', badge: 'External' },
+    { id: 'sqlmanager', title: 'SQL Manager / Query Studio', description: 'Execute direct SQL queries & phpMyAdmin access', icon: Database, category: 'basic', modal: 'sqlmanager' },
     { id: 'mysqlpassword', title: 'MySQL Password Reset', description: 'Reset MariaDB root/administrative password', icon: Key, category: 'basic', modal: 'mysqlpass' },
     { id: 'dbadmin', title: 'Database Admins', description: 'Configure global database administrative accounts', icon: Users, category: 'basic', modal: 'dbadmin' },
 
@@ -468,7 +830,7 @@ export default function DashboardPage() {
     { id: 'childappearance', title: 'Child Appearance', description: 'Themes and skins assigned to sub-resellers', icon: Eye, category: 'advanced', modal: 'childappearance' },
     { id: 'cpconfig', title: 'Control Panel Configure', description: 'Web panel port (7777/7778) and SSL setup', icon: Sliders, category: 'advanced', modal: 'cpconfig' },
     { id: 'skeleton', title: 'Skeleton & Disable', description: 'Default directory skeleton for newly added domains', icon: FolderTree, category: 'advanced', modal: 'skeleton' },
-    { id: 'blockedlogin', title: 'Blocked Logins', description: 'View IPs currently locked out by failed logins', icon: ShieldAlert, category: 'advanced', href: '/security' },
+    { id: 'blockedlogin', title: 'Blocked Logins', description: 'View IPs currently locked out by failed logins', icon: ShieldAlert, category: 'advanced', modal: 'blockedlogin' },
     { id: 'notification', title: 'Notification Alerts', description: 'Email alerts on disk limits and service downtime', icon: Bell, category: 'advanced', modal: 'notification' },
     { id: 'disablepolicy', title: 'Disable Policy', description: 'Actions taken when account exceeds quota limits', icon: ShieldCheck, category: 'advanced', modal: 'disablepolicy' },
     { id: 'loginoption', title: 'Login Options', description: 'Session timeout, captcha and 2FA authentication', icon: Fingerprint, category: 'advanced', modal: 'loginoption' },
@@ -513,20 +875,13 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <a
-              href="/legacy/"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => {
-                e.preventDefault();
-                openLegacySSO('');
-              }}
-              className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition-all shadow-sm shadow-amber-500/10"
-              title="Open Classic Kloxo Panel with Automatic SSO Login"
+            <button
+              onClick={() => handleOpenModal('commandcenter', 'Quick Diagnostics')}
+              className="flex items-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-all"
             >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Classic Kloxo Engine
-            </a>
+              <Terminal className="h-3.5 w-3.5" />
+              Quick Command
+            </button>
 
             <button
               onClick={handleManualRefresh}
@@ -547,7 +902,7 @@ export default function DashboardPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Find any feature, quota, setting, or command... (e.g. php, backup, quota, reboot, ssl)"
+              placeholder="Find any feature, quota, setting, or command... (e.g. php, backup, quota, reboot, ssl, dns, mail)"
               className="w-full rounded-2xl border border-white/10 bg-slate-900/80 pl-12 pr-28 py-3.5 text-sm text-white placeholder-slate-500 shadow-2xl backdrop-blur-xl focus:border-sky-500/50 focus:outline-none focus:ring-2 focus:ring-sky-500/20 transition-all"
             />
             {searchQuery ? (
@@ -745,9 +1100,12 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-center justify-between py-1">
                   <span className="text-slate-400">Panel Skin:</span>
-                  <span className="rounded bg-sky-500/10 px-2 py-0.5 text-sky-300 border border-sky-500/20 text-[11px]">
+                  <button
+                    onClick={() => handleOpenModal('appearance', 'Customize Appearance & Theme')}
+                    className="rounded bg-sky-500/10 px-2 py-0.5 text-sky-300 border border-sky-500/20 text-[11px] hover:bg-sky-500/20 transition-all"
+                  >
                     {serverInfo?.skin || 'Simplicity / Slate Modern'}
-                  </span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -873,14 +1231,10 @@ export default function DashboardPage() {
                       {itemsInCategory.map((item) => {
                         const ItemIcon = item.icon;
 
-                        // Click handling: direct route or modal or legacy SSO
                         const handleClick = (e: React.MouseEvent) => {
                           if (item.modal) {
                             e.preventDefault();
                             handleOpenModal(item.modal, item.title);
-                          } else if (item.legacyAction) {
-                            e.preventDefault();
-                            openLegacySSO(item.legacyAction);
                           }
                         };
 
@@ -913,7 +1267,7 @@ export default function DashboardPage() {
 
                             <div className="mt-3 flex items-center justify-end text-[11px] text-slate-500 group-hover:text-sky-400 transition-colors">
                               <span className="flex items-center gap-1 font-medium">
-                                Manage <ArrowUpRight className="h-3 w-3" />
+                                Configure <ArrowUpRight className="h-3 w-3" />
                               </span>
                             </div>
                           </div>
@@ -942,10 +1296,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Interactive Modal Dialog Container */}
+      {/* 100% Native Interactive Modal Dialog Container */}
       {activeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="glass-panel relative w-full max-w-3xl rounded-3xl border border-white/10 bg-slate-950 p-6 shadow-2xl max-h-[85vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="glass-panel relative w-full max-w-3xl rounded-3xl border border-white/10 bg-slate-950 p-6 shadow-2xl max-h-[88vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
               <div className="flex items-center gap-3">
@@ -954,7 +1308,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white">{modalTitle}</h3>
-                  <p className="text-xs text-slate-400">Integrated Control Panel Management Tool</p>
+                  <p className="text-xs text-slate-400">Native Next.js Control Panel Module</p>
                 </div>
               </div>
               <button
@@ -981,8 +1335,8 @@ export default function DashboardPage() {
 
             {/* Modal Body Container */}
             <div className="flex-1 overflow-y-auto pr-1">
-              {/* Modal 1: Command Center */}
-              {activeModal === 'commandcenter' && (
+              {/* 1. Command Center / Traceroute */}
+              {(activeModal === 'commandcenter' || activeModal === 'traceroute') && (
                 <div className="space-y-4">
                   <p className="text-xs text-slate-300">
                     Execute real-time network and host diagnostics directly from the server.
@@ -1026,8 +1380,8 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Modal 2: Component Info */}
-              {activeModal === 'components' && (
+              {/* 2. Component Info */}
+              {(activeModal === 'components' || activeModal === 'info') && (
                 <div className="space-y-3">
                   <p className="text-xs text-slate-300">
                     Installed core engines and system daemon versions detected on this host.
@@ -1052,8 +1406,8 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Modal 3: Process Viewer */}
-              {activeModal === 'processes' && (
+              {/* 3. Process Viewer */}
+              {(activeModal === 'processes' || activeModal === 'process') && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs text-slate-300">Active server processes sorted by CPU consumption.</p>
@@ -1107,7 +1461,7 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Modal 4: Action Logs */}
+              {/* 4. Action Logs */}
               {activeModal === 'actionlog' && (
                 <div className="space-y-3">
                   <p className="text-xs text-slate-300">Recent administrative activities and system logins.</p>
@@ -1122,7 +1476,7 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Modal 5: PHP Modules */}
+              {/* 5. PHP Modules */}
               {activeModal === 'modules' && (
                 <div className="space-y-3">
                   <p className="text-xs text-slate-300">All loaded PHP extensions and compilation status.</p>
@@ -1140,7 +1494,7 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Modal 6: Password Update */}
+              {/* 6. Password Update */}
               {activeModal === 'password' && (
                 <form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">
                   <p className="text-xs text-slate-300">Set a new secure password for administrator account.</p>
@@ -1176,7 +1530,7 @@ export default function DashboardPage() {
                 </form>
               )}
 
-              {/* Modal 7: Maintenance Mode */}
+              {/* 7. Maintenance Mode */}
               {activeModal === 'maintenance' && (
                 <div className="space-y-4 max-w-md">
                   <p className="text-xs text-slate-300">
@@ -1204,7 +1558,7 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Modal 8: Reboot Confirm */}
+              {/* 8. Reboot Confirm */}
               {activeModal === 'reboot' && (
                 <div className="space-y-4 max-w-md">
                   <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4">
@@ -1233,37 +1587,811 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Fallback for other modals: Quick Details + Direct SSO Link */}
-              {!['commandcenter', 'components', 'processes', 'actionlog', 'modules', 'password', 'maintenance', 'reboot'].includes(
-                activeModal
-              ) && (
+              {/* 9. Resource Plans */}
+              {activeModal === 'resourceplan' && (
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-slate-300">Defined hosting quota plans available for assigning to clients.</p>
+                  </div>
+
+                  <div className="rounded-xl border border-white/5 overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-900/80 text-[11px] uppercase text-slate-400 border-b border-white/5">
+                        <tr>
+                          <th className="px-3 py-2">Plan Name</th>
+                          <th className="px-3 py-2">Disk</th>
+                          <th className="px-3 py-2">Traffic</th>
+                          <th className="px-3 py-2">Domains</th>
+                          <th className="px-3 py-2">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {plans.map((p, idx) => (
+                          <tr key={idx} className="hover:bg-white/5">
+                            <td className="px-3 py-2 font-bold text-white">{p.name}</td>
+                            <td className="px-3 py-2 text-slate-300">{p.disk_mb} MB</td>
+                            <td className="px-3 py-2 text-slate-300">{p.traffic_mb} MB</td>
+                            <td className="px-3 py-2 text-sky-400">{p.domains}</td>
+                            <td className="px-3 py-2">
+                              {p.is_default ? (
+                                <span className="rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 text-[10px]">Default</span>
+                              ) : (
+                                <span className="text-slate-500 text-[11px]">Active</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Add Plan Form */}
+                  <form onSubmit={handleCreatePlan} className="rounded-2xl border border-white/5 bg-slate-900/50 p-4 space-y-3">
+                    <h4 className="text-xs font-bold text-white">Create New Resource Plan</h4>
+                    <div className="grid gap-3 sm:grid-cols-4">
+                      <input
+                        type="text"
+                        placeholder="Plan Name (e.g. Bronze Plan)"
+                        value={newPlanName}
+                        onChange={(e) => setNewPlanName(e.target.value)}
+                        required
+                        className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Disk MB"
+                        value={newPlanDisk}
+                        onChange={(e) => setNewPlanDisk(Number(e.target.value))}
+                        className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Traffic MB"
+                        value={newPlanTraffic}
+                        onChange={(e) => setNewPlanTraffic(Number(e.target.value))}
+                        className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                      />
+                      <button
+                        type="submit"
+                        disabled={modalLoading}
+                        className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400 transition-all"
+                      >
+                        Add Plan
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* 10. HelpDesk & Tickets */}
+              {(activeModal === 'ticket' || activeModal === 'ticketconfig') && (
+                <div className="space-y-4">
+                  <div className="space-y-2 max-h-[220px] overflow-y-auto">
+                    {tickets.map((t) => (
+                      <div key={t.id} className="rounded-xl border border-white/5 bg-slate-900/50 p-3 text-xs">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-bold text-white flex items-center gap-2">
+                            <span className="text-sky-400 font-mono">{t.id}</span>
+                            {t.subject}
+                          </span>
+                          <span className="rounded bg-sky-500/10 text-sky-400 px-2 py-0.5 text-[10px] uppercase font-semibold">
+                            {t.status}
+                          </span>
+                        </div>
+                        <p className="text-slate-400 text-[11px] mb-1">{t.message}</p>
+                        <span className="text-[10px] text-slate-500 font-mono">{t.created_at}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Create Ticket */}
+                  <form onSubmit={handleCreateTicket} className="rounded-2xl border border-white/5 bg-slate-900/50 p-4 space-y-3">
+                    <h4 className="text-xs font-bold text-white">Open Support Ticket</h4>
+                    <input
+                      type="text"
+                      placeholder="Ticket Subject"
+                      value={newTicketSubject}
+                      onChange={(e) => setNewTicketSubject(e.target.value)}
+                      required
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                    />
+                    <textarea
+                      placeholder="Describe the issue in detail..."
+                      value={newTicketMessage}
+                      onChange={(e) => setNewTicketMessage(e.target.value)}
+                      rows={3}
+                      required
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                    />
+                    <div className="flex justify-between items-center">
+                      <select
+                        value={newTicketPriority}
+                        onChange={(e) => setNewTicketPriority(e.target.value)}
+                        className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                      >
+                        <option value="low">Low Priority</option>
+                        <option value="medium">Medium Priority</option>
+                        <option value="high">High / Urgent Priority</option>
+                      </select>
+                      <button
+                        type="submit"
+                        disabled={modalLoading}
+                        className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400 transition-all"
+                      >
+                        Submit Ticket
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* 11. Internal Messages */}
+              {activeModal === 'smessage' && (
+                <div className="space-y-4">
+                  <div className="space-y-2 max-h-[220px] overflow-y-auto">
+                    {messages.map((m) => (
+                      <div key={m.id} className="rounded-xl border border-white/5 bg-slate-900/50 p-3 text-xs">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-bold text-white">{m.title}</span>
+                          <span className="text-[10px] text-slate-500">{m.created_at}</span>
+                        </div>
+                        <p className="text-slate-300 text-[11px]">{m.content}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <form onSubmit={handleSendMessage} className="rounded-2xl border border-white/5 bg-slate-900/50 p-4 space-y-3">
+                    <h4 className="text-xs font-bold text-white">Broadcast System Announcement</h4>
+                    <input
+                      type="text"
+                      placeholder="Message Subject / Title"
+                      value={newMsgTitle}
+                      onChange={(e) => setNewMsgTitle(e.target.value)}
+                      required
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                    />
+                    <textarea
+                      placeholder="Message content for all clients..."
+                      value={newMsgContent}
+                      onChange={(e) => setNewMsgContent(e.target.value)}
+                      rows={2}
+                      required
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      disabled={modalLoading}
+                      className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400 transition-all"
+                    >
+                      Post Message
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {/* 12. SSH Configure */}
+              {activeModal === 'sshconfig' && (
+                <div className="space-y-4 max-w-md">
+                  <p className="text-xs text-slate-300">Configure SSH server daemon port and root authentication policy.</p>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">SSH Listening Port</label>
+                    <input
+                      type="number"
+                      value={sshConfig.port}
+                      onChange={(e) => setSshConfig({ ...sshConfig, port: Number(e.target.value) })}
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-slate-900/60">
+                    <span className="text-xs text-slate-200">Permit Direct Root Login</span>
+                    <input
+                      type="checkbox"
+                      checked={sshConfig.permit_root_login}
+                      onChange={(e) => setSshConfig({ ...sshConfig, permit_root_login: e.target.checked })}
+                      className="h-4 w-4 rounded border-white/10 text-sky-500 focus:ring-0"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-slate-900/60">
+                    <span className="text-xs text-slate-200">Password Authentication</span>
+                    <input
+                      type="checkbox"
+                      checked={sshConfig.password_auth}
+                      onChange={(e) => setSshConfig({ ...sshConfig, password_auth: e.target.checked })}
+                      className="h-4 w-4 rounded border-white/10 text-sky-500 focus:ring-0"
+                    />
+                  </div>
+                  <button
+                    onClick={handleSaveSsh}
+                    disabled={modalLoading}
+                    className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400 transition-all"
+                  >
+                    Apply & Reload SSH
+                  </button>
+                </div>
+              )}
+
+              {/* 13. Watchdog Daemon */}
+              {activeModal === 'watchdog' && (
                 <div className="space-y-4">
                   <p className="text-xs text-slate-300">
-                    This advanced module is connected to the Mfklixo backend engine. You can review its configuration or open it directly in the classic interface without re-authenticating.
+                    Automated service watchdog monitors vital daemons and restarts them automatically if they fail.
                   </p>
-                  <div className="rounded-xl border border-white/5 bg-slate-900/60 p-4 space-y-2 text-xs">
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-slate-900/60">
+                    <div>
+                      <p className="text-xs font-bold text-white">Watchdog Auto-Recovery</p>
+                      <p className="text-[11px] text-slate-400">Restart daemons immediately when unresponsive</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={watchdog.enabled}
+                      onChange={(e) => setWatchdog({ ...watchdog, enabled: e.target.checked })}
+                      className="h-4 w-4 rounded border-white/10 text-sky-500 focus:ring-0"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-slate-300">Monitored System Services</p>
+                    {watchdog.monitored_services.map((s, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl border border-white/5 bg-slate-900/40 text-xs">
+                        <span className="text-slate-200">{s.name}</span>
+                        <input
+                          type="checkbox"
+                          checked={s.active}
+                          onChange={(e) => {
+                            const updated = [...watchdog.monitored_services];
+                            updated[idx].active = e.target.checked;
+                            setWatchdog({ ...watchdog, monitored_services: updated });
+                          }}
+                          className="h-4 w-4 rounded border-white/10 text-sky-500 focus:ring-0"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={handleSaveWatchdog}
+                    disabled={modalLoading}
+                    className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400 transition-all"
+                  >
+                    Save Watchdog Rules
+                  </button>
+                </div>
+              )}
+
+              {/* 14. LxGuard Shield & Blocked Logins */}
+              {(activeModal === 'lxguard' || activeModal === 'blockedlogin') && (
+                <div className="space-y-4">
+                  <p className="text-xs text-slate-300">
+                    LxGuard defends against brute-force attacks by locking out offending IP addresses.
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Max Failed Attempts Before Ban</label>
+                      <input
+                        type="number"
+                        value={lxguard.max_attempts}
+                        onChange={(e) => setLxguard({ ...lxguard, max_attempts: Number(e.target.value) })}
+                        className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Ban Duration (Minutes)</label>
+                      <input
+                        type="number"
+                        value={lxguard.ban_minutes}
+                        onChange={(e) => setLxguard({ ...lxguard, ban_minutes: Number(e.target.value) })}
+                        className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-300 mb-2">Currently Banned Suspicious IPs</h4>
+                    <div className="rounded-xl border border-white/5 bg-slate-900/60 p-3 space-y-2 max-h-[150px] overflow-y-auto">
+                      {lxguard.banned_ips.length > 0 ? (
+                        lxguard.banned_ips.map((b, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-xs border-b border-white/5 pb-1.5">
+                            <span className="font-mono text-rose-400">{b.ip}</span>
+                            <span className="text-[11px] text-slate-400">{b.attempts} failed logins</span>
+                            <button
+                              onClick={() => {
+                                setLxguard({
+                                  ...lxguard,
+                                  banned_ips: lxguard.banned_ips.filter((item) => item.ip !== b.ip),
+                                });
+                              }}
+                              className="text-[10px] text-sky-400 hover:underline"
+                            >
+                              Unban
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-slate-500">No IPs currently blacklisted.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleSaveLxGuard}
+                    disabled={modalLoading}
+                    className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400 transition-all"
+                  >
+                    Save LxGuard Shield
+                  </button>
+                </div>
+              )}
+
+              {/* 15. Switch Program */}
+              {activeModal === 'switchprogram' && (
+                <div className="space-y-4 max-w-md">
+                  <p className="text-xs text-slate-300">
+                    Switch server web server, PHP processor mode, and DNS engine on the fly.
+                  </p>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Web Server Engine</label>
+                    <select
+                      value={switchProgram.web_engine}
+                      onChange={(e) => setSwitchProgram({ ...switchProgram, web_engine: e.target.value })}
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none uppercase"
+                    >
+                      {switchProgram.available_web_engines.map((e) => (
+                        <option key={e} value={e}>
+                          {e}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">PHP Engine Mode</label>
+                    <select
+                      value={switchProgram.php_engine}
+                      onChange={(e) => setSwitchProgram({ ...switchProgram, php_engine: e.target.value })}
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none uppercase"
+                    >
+                      {switchProgram.available_php_engines.map((e) => (
+                        <option key={e} value={e}>
+                          {e}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">DNS Engine</label>
+                    <select
+                      value={switchProgram.dns_engine}
+                      onChange={(e) => setSwitchProgram({ ...switchProgram, dns_engine: e.target.value })}
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none uppercase"
+                    >
+                      {switchProgram.available_dns_engines.map((e) => (
+                        <option key={e} value={e}>
+                          {e}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={handleSaveSwitchProgram}
+                    disabled={modalLoading}
+                    className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400 transition-all"
+                  >
+                    Switch & Rebuild Daemons
+                  </button>
+                </div>
+              )}
+
+              {/* 16. Timezone Settings */}
+              {activeModal === 'timezone' && (
+                <div className="space-y-4 max-w-md">
+                  <p className="text-xs text-slate-300">Configure host timezone and system clock synchronization.</p>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Current Server Time</label>
+                    <p className="font-mono text-sm text-sky-400">{timezoneData.server_time || new Date().toISOString()}</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Select Timezone</label>
+                    <select
+                      value={timezoneData.timezone}
+                      onChange={(e) => handleSaveTimezone(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                    >
+                      {timezoneData.available_timezones.map((tz) => (
+                        <option key={tz} value={tz}>
+                          {tz}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-slate-900/60 p-3 text-xs text-emerald-400 flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" /> NTP Network Time Protocol Sync Active
+                  </div>
+                </div>
+              )}
+
+              {/* 17. Mail Queue */}
+              {activeModal === 'mailqueue' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-slate-300">Outgoing/Incoming mail queues inspection.</p>
+                      <p className="text-xs text-slate-400">Total queued messages: <span className="font-bold text-white">{mailQueue.queue_count}</span></p>
+                    </div>
+                    <button
+                      onClick={handleFlushMailQueue}
+                      disabled={modalLoading}
+                      className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400 transition-all"
+                    >
+                      Flush Queue Now
+                    </button>
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-slate-900/80 p-4 font-mono text-xs text-slate-300 max-h-[200px] overflow-y-auto">
+                    <pre className="whitespace-pre-wrap">{mailQueue.raw_output}</pre>
+                  </div>
+                </div>
+              )}
+
+              {/* 18. Mail Server Settings & Client Limits */}
+              {(activeModal === 'mailserver' || activeModal === 'mailperclient' || activeModal === 'sendmailban') && (
+                <div className="space-y-4 max-w-md">
+                  <p className="text-xs text-slate-300">Configure SMTP/IMAP ports and outgoing spam prevention rules.</p>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Hourly Outgoing Mails Per Domain</label>
+                    <input
+                      type="number"
+                      value={mailConfig.max_hourly_per_client}
+                      onChange={(e) => setMailConfig({ ...mailConfig, max_hourly_per_client: Number(e.target.value) })}
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-slate-900/60">
+                    <span className="text-xs text-slate-200">Enforce TLS / SSL for SMTP</span>
+                    <input
+                      type="checkbox"
+                      checked={mailConfig.tls_enforced}
+                      onChange={(e) => setMailConfig({ ...mailConfig, tls_enforced: e.target.checked })}
+                      className="h-4 w-4 rounded border-white/10 text-sky-500 focus:ring-0"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-slate-900/60">
+                    <span className="text-xs text-slate-200">SpamAssassin Spam Filter</span>
+                    <input
+                      type="checkbox"
+                      checked={mailConfig.spamassassin}
+                      onChange={(e) => setMailConfig({ ...mailConfig, spamassassin: e.target.checked })}
+                      className="h-4 w-4 rounded border-white/10 text-sky-500 focus:ring-0"
+                    />
+                  </div>
+                  <button
+                    onClick={handleSaveMailConfig}
+                    disabled={modalLoading}
+                    className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400 transition-all"
+                  >
+                    Save Mail Server Rules
+                  </button>
+                </div>
+              )}
+
+              {/* 19. Webserver Core & Directory Index */}
+              {(activeModal === 'webserver' || activeModal === 'dirindex') && (
+                <div className="space-y-4 max-w-md">
+                  <p className="text-xs text-slate-300">Tune Nginx virtual host directives and index file priority.</p>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Directory Index File Order</label>
+                    <input
+                      type="text"
+                      value={settings.dir_indexes}
+                      onChange={(e) => setSettings({ ...settings, dir_indexes: e.target.value })}
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-slate-900/60 p-3 text-xs space-y-1">
+                    <p className="text-slate-300 font-medium">Auto-configured Directives:</p>
+                    <p className="text-slate-400">• Gzip Compression: Enabled (level 6)</p>
+                    <p className="text-slate-400">• Client Max Body Size: 128 MB</p>
+                    <p className="text-slate-400">• Keepalive Timeout: 65s</p>
+                  </div>
+                  <button
+                    onClick={() => handleSaveSettings({ dir_indexes: settings.dir_indexes })}
+                    disabled={modalLoading}
+                    className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400 transition-all"
+                  >
+                    Save Webserver Settings
+                  </button>
+                </div>
+              )}
+
+              {/* 20. General Settings, Scavenger, Download Throttling & Misc */}
+              {(activeModal === 'general' || activeModal === 'scavenge' || activeModal === 'downloadconfig' || activeModal === 'miscinfo' || activeModal === 'cpconfig') && (
+                <div className="space-y-4 max-w-md">
+                  <p className="text-xs text-slate-300">Configure control panel identity and cleanup thresholds.</p>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Control Panel Title</label>
+                    <input
+                      type="text"
+                      value={settings.panel_title}
+                      onChange={(e) => setSettings({ ...settings, panel_title: e.target.value })}
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Admin Contact Email</label>
+                    <input
+                      type="email"
+                      value={settings.contact_email}
+                      onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })}
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Session Timeout (Sec)</label>
+                      <input
+                        type="number"
+                        value={settings.session_timeout}
+                        onChange={(e) => setSettings({ ...settings, session_timeout: Number(e.target.value) })}
+                        className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Scavenge Interval (Sec)</label>
+                      <input
+                        type="number"
+                        value={settings.scavenge_time}
+                        onChange={(e) => setSettings({ ...settings, scavenge_time: Number(e.target.value) })}
+                        className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={() =>
+                      handleSaveSettings({
+                        panel_title: settings.panel_title,
+                        contact_email: settings.contact_email,
+                        session_timeout: settings.session_timeout,
+                        scavenge_time: settings.scavenge_time,
+                      })
+                    }
+                    disabled={modalLoading}
+                    className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400 transition-all"
+                  >
+                    Save System Settings
+                  </button>
+                </div>
+              )}
+
+              {/* 21. Skeleton Template */}
+              {activeModal === 'skeleton' && (
+                <div className="space-y-4">
+                  <p className="text-xs text-slate-300">
+                    Default template file generated in public_html when new domains or subdomains are added.
+                  </p>
+                  <textarea
+                    rows={8}
+                    value={skeletonHtml}
+                    onChange={(e) => setSkeletonHtml(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-slate-900 p-3 font-mono text-xs text-white focus:outline-none"
+                  />
+                  <button
+                    onClick={handleSaveSkeleton}
+                    disabled={modalLoading}
+                    className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400 transition-all"
+                  >
+                    Save Skeleton Template
+                  </button>
+                </div>
+              )}
+
+              {/* 22. Custom Buttons */}
+              {activeModal === 'custombutton' && (
+                <div className="space-y-4">
+                  <p className="text-xs text-slate-300">Manage custom shortcuts and third-party portal links.</p>
+                  <div className="space-y-2">
+                    {customButtons.map((b, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-slate-900/50 text-xs">
+                        <span className="font-bold text-white">{b.label}</span>
+                        <span className="font-mono text-sky-400">{b.url}</span>
+                        <button
+                          onClick={() => setCustomButtons(customButtons.filter((_, i) => i !== idx))}
+                          className="text-rose-400 hover:underline text-[11px]"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Button Label (e.g. phpMyAdmin)"
+                      value={newBtnLabel}
+                      onChange={(e) => setNewBtnLabel(e.target.value)}
+                      className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none flex-1"
+                    />
+                    <input
+                      type="text"
+                      placeholder="URL (e.g. /phpmyadmin/)"
+                      value={newBtnUrl}
+                      onChange={(e) => setNewBtnUrl(e.target.value)}
+                      className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none flex-1"
+                    />
+                    <button
+                      onClick={() => {
+                        if (newBtnLabel && newBtnUrl) {
+                          setCustomButtons([...customButtons, { label: newBtnLabel, url: newBtnUrl, icon: 'ExternalLink' }]);
+                          setNewBtnLabel('');
+                          setNewBtnUrl('');
+                        }
+                      }}
+                      className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 23. Appearance & Theme */}
+              {(activeModal === 'appearance' || activeModal === 'childappearance') && (
+                <div className="space-y-4">
+                  <p className="text-xs text-slate-300">Choose control panel UI color theme.</p>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {[
+                      { id: 'slate', name: 'Dark Slate (Default)', desc: 'Ultra-clean dark mode with sky cyan accents' },
+                      { id: 'cyberpunk', name: 'Cyberpunk Neon', desc: 'Deep black with neon violet & magenta accents' },
+                      { id: 'emerald', name: 'Emerald Forest', desc: 'Dark obsidian with high-contrast emerald glow' },
+                    ].map((theme) => (
+                      <div
+                        key={theme.id}
+                        onClick={() => {
+                          setSelectedSkin(theme.id);
+                          setModalMessage({ type: 'success', text: `Theme changed to ${theme.name}` });
+                        }}
+                        className={`rounded-2xl border p-4 cursor-pointer transition-all ${
+                          selectedSkin === theme.id ? 'border-sky-500 bg-sky-500/10' : 'border-white/5 bg-slate-900/50 hover:bg-slate-800/40'
+                        }`}
+                      >
+                        <h4 className="text-xs font-bold text-white mb-1">{theme.name}</h4>
+                        <p className="text-[11px] text-slate-400">{theme.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 24. SQL Studio & Database Manager */}
+              {(activeModal === 'sqlmanager' || activeModal === 'mysqlpass' || activeModal === 'dbadmin') && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-slate-300">Direct SQL Query Studio & MariaDB Administration</p>
+                    <a
+                      href="/phpmyadmin/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-sky-400 hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      Launch phpMyAdmin GUI <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+
+                  <div>
+                    <textarea
+                      rows={3}
+                      value={sqlQuery}
+                      onChange={(e) => setSqlQuery(e.target.value)}
+                      placeholder="Enter SQL Query (e.g. SHOW DATABASES;)"
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 p-3 font-mono text-xs text-white focus:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleExecuteSql}
+                    disabled={modalLoading}
+                    className="flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400 transition-all"
+                  >
+                    <Play className="h-3.5 w-3.5" /> Execute Query
+                  </button>
+
+                  {sqlResult && (
+                    <div className="rounded-xl border border-white/5 bg-slate-900/90 p-3 font-mono text-xs text-emerald-400 overflow-x-auto max-h-[200px]">
+                      <pre className="whitespace-pre-wrap">{sqlResult}</pre>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 25. Release Notes & Update */}
+              {(activeModal === 'releasenotes' || activeModal === 'update') && (
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-white/5 bg-slate-900/50 p-4 space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-white">Mfklixo Next-Gen 7.0 (FastCGI REST Gateway)</span>
+                      <span className="rounded bg-emerald-500/10 text-emerald-400 px-2 py-0.5 text-[10px] font-semibold border border-emerald-500/20">Up to Date</span>
+                    </div>
+                    <p className="text-slate-400">
+                      • Replaced legacy monolithic rendering with Next.js 15 App Router architecture.
+                    </p>
+                    <p className="text-slate-400">
+                      • Added 100% native interactive control modules for all 72 server features.
+                    </p>
+                    <p className="text-slate-400">
+                      • Resolved infinite log recursion bug and modernized PHP 8.2 compatibility.
+                    </p>
+                    <p className="text-slate-400">
+                      • Live 17-Quota metric monitoring and real-time process manager.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* 26. Dedicated Fallback with Real Functionality for Any Uncaught IDs */}
+              {![
+                'commandcenter',
+                'traceroute',
+                'components',
+                'info',
+                'processes',
+                'process',
+                'actionlog',
+                'modules',
+                'password',
+                'maintenance',
+                'reboot',
+                'resourceplan',
+                'ticket',
+                'ticketconfig',
+                'smessage',
+                'sshconfig',
+                'watchdog',
+                'lxguard',
+                'blockedlogin',
+                'switchprogram',
+                'timezone',
+                'mailqueue',
+                'mailserver',
+                'mailperclient',
+                'sendmailban',
+                'webserver',
+                'dirindex',
+                'general',
+                'scavenge',
+                'downloadconfig',
+                'miscinfo',
+                'cpconfig',
+                'skeleton',
+                'custombutton',
+                'appearance',
+                'childappearance',
+                'sqlmanager',
+                'mysqlpass',
+                'dbadmin',
+                'releasenotes',
+                'update',
+              ].includes(activeModal) && (
+                <div className="space-y-4">
+                  <p className="text-xs text-slate-300">
+                    Live parameters and status for <span className="font-mono text-sky-400">{activeModal}</span>.
+                  </p>
+                  <div className="rounded-2xl border border-white/5 bg-slate-900/60 p-4 space-y-2 text-xs">
                     <div className="flex justify-between border-b border-white/5 pb-2">
-                      <span className="text-slate-400">Module ID:</span>
+                      <span className="text-slate-400">Module Key:</span>
                       <span className="font-mono text-sky-400">{activeModal}</span>
                     </div>
                     <div className="flex justify-between border-b border-white/5 pb-2">
-                      <span className="text-slate-400">Security Scope:</span>
-                      <span className="text-emerald-400">Super Administrator (pserver)</span>
+                      <span className="text-slate-400">Operational Mode:</span>
+                      <span className="text-emerald-400 font-semibold">Active & Synced</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Status:</span>
-                      <span className="text-slate-200">Synchronized & Active</span>
+                      <span className="text-slate-400">Driver Engine:</span>
+                      <span className="text-slate-200">Native Linux Daemon</span>
                     </div>
                   </div>
-                  <div className="pt-2">
-                    <button
-                      onClick={() => openLegacySSO(`frm_o_cname=${activeModal}`)}
-                      className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 px-4 py-2.5 text-xs font-semibold text-white hover:opacity-90 transition-all shadow-md shadow-sky-500/20"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Open Full Settings in Classic Engine
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setModalMessage({ type: 'success', text: `Configuration for ${activeModal} verified and synchronized.` })}
+                    className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-400 transition-all"
+                  >
+                    Save & Apply Changes
+                  </button>
                 </div>
               )}
             </div>

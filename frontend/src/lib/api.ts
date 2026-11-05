@@ -261,6 +261,132 @@ export interface ModuleItem {
   active: boolean;
 }
 
+export interface SystemSettings {
+  panel_title: string;
+  contact_email: string;
+  language: string;
+  scavenge_time: number;
+  session_timeout: number;
+  download_limit_kb: number;
+  dir_indexes: string;
+  default_domain: string;
+  custom_logo_url: string;
+  maintenance: boolean;
+  login_captcha: boolean;
+  two_factor_auth: boolean;
+  auto_backup_schedule: string;
+  auto_backup_destination: string;
+}
+
+export interface ResourcePlanItem {
+  name: string;
+  disk_mb: number;
+  traffic_mb: number;
+  domains: number;
+  mail_accounts: number;
+  mysql_dbs: number;
+  is_default: boolean;
+}
+
+export interface SupportTicketItem {
+  id: string;
+  subject: string;
+  department: string;
+  priority: string;
+  status: string;
+  author: string;
+  created_at: string;
+  message: string;
+}
+
+export interface SupportMessageItem {
+  id: string;
+  title: string;
+  sender: string;
+  created_at: string;
+  content: string;
+}
+
+export interface SshConfigItem {
+  port: number;
+  permit_root_login: boolean;
+  password_auth: boolean;
+  service_active: boolean;
+}
+
+export interface WatchdogService {
+  name: string;
+  service: string;
+  active: boolean;
+}
+
+export interface WatchdogConfig {
+  enabled: boolean;
+  interval_seconds: number;
+  auto_recovery: boolean;
+  monitored_services: WatchdogService[];
+}
+
+export interface LxGuardBannedIp {
+  ip: string;
+  attempts: number;
+  banned_at: string;
+}
+
+export interface LxGuardConfig {
+  enabled: boolean;
+  max_attempts: number;
+  ban_minutes: number;
+  whitelist_ips: string[];
+  banned_ips: LxGuardBannedIp[];
+}
+
+export interface SwitchProgramConfig {
+  web_engine: string;
+  available_web_engines: string[];
+  php_engine: string;
+  available_php_engines: string[];
+  dns_engine: string;
+  available_dns_engines: string[];
+  ftp_engine: string;
+  available_ftp_engines: string[];
+}
+
+export interface TimezoneResponse {
+  success: boolean;
+  timezone: string;
+  server_time: string;
+  ntp_sync: boolean;
+  available_timezones: string[];
+}
+
+export interface MailQueueMessage {
+  id: string;
+  sender: string;
+  recipient: string;
+  size_kb: number;
+  status: string;
+  time: string;
+}
+
+export interface MailQueueResponse {
+  success: boolean;
+  queue_count: number;
+  raw_output: string;
+  messages: MailQueueMessage[];
+}
+
+export interface MailServerConfig {
+  smtp_port: number;
+  submission_port: number;
+  tls_enforced: boolean;
+  spamassassin: boolean;
+  clamav: boolean;
+  max_hourly_per_client: number;
+  spf_enforced: boolean;
+  dkim_enabled: boolean;
+}
+
 export function getStoredToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('mfklixo_token');
