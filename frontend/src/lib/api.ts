@@ -427,9 +427,21 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     throw new Error('Unauthorized');
   }
 
-  const data = await res.json();
+  const text = await res.text();
+  let data: any = {};
+  if (text && text.trim().length > 0) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      if (!res.ok) {
+        throw new Error(`Server returned HTTP ${res.status}: ${res.statusText}`);
+      }
+      throw new Error(`Invalid response format from server`);
+    }
+  }
+
   if (!res.ok) {
-    throw new Error(data.message || data.error || 'API Request failed');
+    throw new Error(data.message || data.error || `Request failed with status ${res.status}`);
   }
 
   return data;

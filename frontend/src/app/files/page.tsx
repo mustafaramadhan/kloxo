@@ -197,7 +197,15 @@ export default function FileManagerPage() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = {};
+      if (text && text.trim().length > 0) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error('Upload response could not be parsed');
+        }
+      }
       if (!res.ok) throw new Error(data.message || 'Upload failed');
 
       setMessage({ text: `File "${uploadFile.name}" uploaded successfully`, success: true });

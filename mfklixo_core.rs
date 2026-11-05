@@ -15,7 +15,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 
@@ -72,7 +72,10 @@ async fn main() {
         .route("/api/v1/mail/queue", get(get_mail_queue).post(flush_mail_queue))
         .route("/api/v1/mail/server-config", get(get_mail_config).post(save_mail_config))
         .route("/api/v1/system/skeleton", get(get_skeleton).post(save_skeleton))
+        .route("/api/v1/system/services", get(system_services_handler))
+        .route("/api/v1/system/services/action", post(services_action_handler))
         .route("/api/v1/server/action", post(server_action_handler))
+        .fallback(not_found_handler)
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)
@@ -670,6 +673,99 @@ async fn server_action_handler(Json(payload): Json<ActionPayload>) -> Json<serde
         }
         _ => Json(serde_json::json!({"error": "Unknown action"})),
     }
+}
+
+#[derive(Serialize)]
+struct CoreServiceItem {
+    service: String,
+    title: String,
+    active: bool,
+    state: String,
+}
+
+#[derive(Serialize)]
+struct CoreServicesResponse {
+    success: bool,
+    services: Vec<CoreServiceItem>,
+}
+
+async fn system_services_handler() -> Json<CoreServicesResponse> {
+    let monitored = [
+        ("nginx", "Nginx Web Server"),
+        ("apache2", "Apache Web Server"),
+        ("mariadb", "MariaDB SQL Server"),
+        ("php8.5-fpm", "PHP FastCGI Daemon"),
+        ("mfklixo-core", "Mfklixo Rust Core Daemon"),
+        ("kloxo-dashboard", "Next.js Modern Dashboard"),
+        ("named", "BIND9 DNS Server"),
+        ("ssh", "SSH Server"),
+    ];
+
+    let mut services = Vec::new();
+    for (name, title) in monitored {
+        let output = Command::new("systemctl")
+            .args(["is-active", name])
+            .output();
+        let state = match output {
+            Ok(o) => String::from_utf8_lossy(&o.stdout).trim().to_string(),
+            Err(_) => "unknown".to_string(),
+        };
+        let is_active = state == "active";
+        services.push(CoreServiceItem {
+            service: name.to_string(),
+            title: title.to_string(),
+            active: is_active,
+            state: if state.is_empty() { "inactive".to_string() } else { state },
+        });
+    }
+
+    Json(CoreServicesResponse {
+        success: true,
+        services,
+    })
+}
+
+#[derive(Deserialize)]
+struct CoreServiceActionRequest {
+    service: String,
+    action: String,
+}
+
+async fn services_action_handler(Json(payload): Json<CoreServiceActionRequest>) -> Json<serde_json::Value> {
+    let allowed_services = ["nginx", "apache2", "mariadb", "php8.5-fpm", "mfklixo-core", "kloxo-dashboard", "named", "ssh"];
+    let allowed_actions = ["restart", "start", "stop"];
+
+    if !allowed_services.contains(&payload.service.as_str()) || !allowed_actions.contains(&payload.action.as_str()) {
+        return Json(serde_json::json!({"error": "Bad Request", "message": "Invalid service or action"}));
+    }
+
+    let output = Command::new("sudo")
+        .args(["systemctl", &payload.action, &payload.service])
+        .output();
+
+    match output {
+        Ok(out) => Json(serde_json::json!({
+            "success": out.status.success(),
+            "service": payload.service,
+            "action": payload.action,
+            "output": String::from_utf8_lossy(&out.stdout).to_string() + &String::from_utf8_lossy(&out.stderr)
+        })),
+        Err(e) => Json(serde_json::json!({
+            "success": false,
+            "error": e.to_string()
+        })),
+    }
+}
+
+async fn not_found_handler(uri: axum::http::Uri) -> (axum::http::StatusCode, Json<serde_json::Value>) {
+    (
+        axum::http::StatusCode::NOT_FOUND,
+        Json(serde_json::json!({
+            "error": "Not Found",
+            "message": format!("Endpoint {} not found in Rust core", uri.path()),
+            "status": 404
+        }))
+    )
 }
 
 // Background Watchdog Daemon

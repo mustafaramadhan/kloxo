@@ -24,7 +24,15 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password }),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = {};
+      if (text && text.trim().length > 0) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error('Server returned an invalid response format.');
+        }
+      }
       if (!res.ok) {
         throw new Error(data.message || 'Invalid username or password');
       }
