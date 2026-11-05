@@ -199,6 +199,68 @@ export interface SqlQueryResult {
   message?: string;
 }
 
+export interface ServerInfo {
+  home_dir: string;
+  contact_email: string;
+  username: string;
+  default_domain: string;
+  last_login_ip: string;
+  current_login_ip: string;
+  last_login_time: string;
+  skin: string;
+  maintenance?: boolean;
+}
+
+export interface QuotaItem {
+  key: string;
+  title: string;
+  used: number;
+  max: number | string;
+  unit: string;
+  category: string;
+}
+
+export interface QuotasResponse {
+  success: boolean;
+  server_info: ServerInfo;
+  quotas: QuotaItem[];
+}
+
+export interface ComponentItem {
+  name: string;
+  version: string;
+  status: string;
+  type: string;
+}
+
+export interface ProcessItem {
+  pid: number;
+  user: string;
+  cpu: number;
+  mem: number;
+  stat: string;
+  time: string;
+  command: string;
+}
+
+export interface CommandCenterResponse {
+  success: boolean;
+  tool: string;
+  target: string;
+  output: string;
+}
+
+export interface ActionLogItem {
+  log: string;
+  timestamp: string;
+}
+
+export interface ModuleItem {
+  name: string;
+  version: string;
+  active: boolean;
+}
+
 export function getStoredToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('mfklixo_token');
