@@ -784,12 +784,12 @@ export default function DashboardPage() {
     { id: 'phpini', title: 'PHP Configure', description: 'Memory limits, execution time & file upload sizes', icon: Sliders, category: 'resource', href: '/php-config' },
     { id: 'phpfilter', title: 'Advanced PHP Configure', description: 'PHP versions, OPcache, active modules toggle & custom INI', icon: SlidersHorizontal, category: 'resource', href: '/php-advanced' },
     { id: 'processedlog', title: 'Client Processed Logs', description: 'Web traffic statistics (Webalizer & Awstats)', icon: Activity, category: 'resource', href: '/logs' },
-    { id: 'auxiliarylogin', title: 'Auxiliary Logins', description: 'Secondary team accounts with limited scopes', icon: Users, category: 'resource', modal: 'auxiliary' },
-    { id: 'utmp', title: 'Login History', description: 'SSH and Web control panel login log (utmp)', icon: Eye, category: 'resource', modal: 'loginhistory' },
-    { id: 'sshauthorizedkey', title: 'Shell Access Keys', description: 'Public RSA/ED25519 keys for SSH login', icon: Terminal, category: 'resource', modal: 'sshkeys' },
+    { id: 'auxiliarylogin', title: 'Auxiliary Logins', description: 'Secondary team accounts with limited scopes', icon: Users, category: 'resource', href: '/clients' },
+    { id: 'utmp', title: 'Login History', description: 'SSH and Web control panel login audit log (utmp)', icon: Eye, category: 'resource', href: '/logs' },
+    { id: 'sshauthorizedkey', title: 'Shell Access Keys', description: 'Public RSA/ED25519 keys for SSH login', icon: Terminal, category: 'resource', href: '/security' },
     { id: 'dnstemplate', title: 'DNS Templates', description: 'Pre-configured zone records for new domains', icon: Layers, category: 'resource', href: '/dns' },
     { id: 'backup', title: 'Backup & Restore', description: 'Full and partial site archives and restoration', icon: Archive, category: 'resource', href: '/backups' },
-    { id: 'ipaddress', title: 'IP Addresses', description: 'Public IPv4 and IPv6 network interfaces', icon: Network, category: 'resource', modal: 'ipaddresses' },
+    { id: 'ipaddress', title: 'IP Addresses', description: 'Public IPv4 and IPv6 network interfaces', icon: Network, category: 'resource', href: '/services' },
     { id: 'sslcert', title: 'SSL Certificates', description: 'Manage and install SSL certificates for domains', icon: Lock, category: 'resource', href: '/ssl' },
 
     // --- 3. Domain ---
