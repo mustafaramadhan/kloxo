@@ -276,6 +276,37 @@ if [ ! -f /usr/share/roundcube/index.php ]; then
 fi
 chown -R www-data:www-data /usr/share/phpmyadmin /var/lib/phpmyadmin /usr/share/roundcube 2>/dev/null || true
 
+# Apache configuration for phpMyAdmin & Webmail
+if [ -d /etc/apache2/conf-available ]; then
+    cat << 'EOF' > /etc/apache2/conf-available/phpmyadmin.conf
+Alias /phpmyadmin /usr/share/phpmyadmin
+<Directory /usr/share/phpmyadmin>
+    Options SymLinksIfOwnerMatch
+    DirectoryIndex index.php
+    AllowOverride All
+    Require all granted
+    <FilesMatch \.php$>
+        SetHandler "proxy:unix:/run/php/php-fpm.sock|fcgi://localhost"
+    </FilesMatch>
+</Directory>
+EOF
+
+    cat << 'EOF' > /etc/apache2/conf-available/roundcube.conf
+Alias /webmail /usr/share/roundcube
+<Directory /usr/share/roundcube>
+    Options +FollowSymLinks
+    DirectoryIndex index.php
+    AllowOverride All
+    Require all granted
+    <FilesMatch \.php$>
+        SetHandler "proxy:unix:/run/php/php-fpm.sock|fcgi://localhost"
+    </FilesMatch>
+</Directory>
+EOF
+    a2enconf phpmyadmin roundcube 2>/dev/null || true
+    systemctl reload apache2 2>/dev/null || true
+fi
+
 # Build and enable Next.js Modern Dashboard
 if [ -d "$INSTALL_DIR/frontend" ] && command -v npm >/dev/null 2>&1; then
     echo -e "${GREEN}[*] Building Next.js Modern Dashboard...${NC}"
@@ -318,16 +349,20 @@ fi
 echo -e "${BLUE}===============================================================================${NC}"
 echo -e "${GREEN}[SUCCESS] Mfklixo installation completed successfully!${NC}"
 echo -e "${BLUE}===============================================================================${NC}"
-echo -e "You can access your control panel at:"
-echo -e "  HTTP:  ${GREEN}http://${SERVER_IP}:7778/${NC}"
-echo -e "  HTTPS: ${GREEN}https://${SERVER_IP}:7777/${NC}"
+echo -e "Control Panel & Services:"
+echo -e "  Modern Dashboard (HTTPS): ${GREEN}https://${SERVER_IP}:7777/${NC}"
+echo -e "  Dashboard (HTTP):         ${GREEN}http://${SERVER_IP}:7778/${NC}"
+echo -e "  phpMyAdmin:               ${GREEN}http://${SERVER_IP}/phpmyadmin/${NC}  or  ${GREEN}https://${SERVER_IP}:7777/phpmyadmin/${NC}"
+echo -e "  Roundcube Webmail:        ${GREEN}http://${SERVER_IP}/webmail/${NC}     or  ${GREEN}https://${SERVER_IP}:7777/webmail/${NC}"
+echo -e "  Rust Core REST API:       ${GREEN}http://127.0.0.1:7788/api/v1/${NC}"
 echo
 echo -e "Default Admin Credentials:"
 echo -e "  Username: ${YELLOW}admin${NC}"
 echo -e "  Password: ${YELLOW}admin${NC}"
 echo
-echo -e "Useful Commands:"
-echo -e "  Service Status:         ${BLUE}systemctl status kloxo-web${NC}"
+echo -e "Management Commands:"
+echo -e "  Core Daemon Status:     ${BLUE}systemctl status mfklixo-core kloxo-web${NC}"
+echo -e "  Hosted Web Services:    ${BLUE}systemctl status nginx apache2 mariadb${NC}"
 echo -e "  Select MariaDB version: ${BLUE}sh /usr/local/lxlabs/kloxo/pscript/mariadb-upgrade 10.11${NC}"
 echo -e "  Switch PHP branch:      ${BLUE}sh /usr/local/lxlabs/kloxo/pscript/set-php-branch php82${NC}"
 echo -e "  Restart Web:            ${BLUE}sh /usr/local/lxlabs/kloxo/pscript/restart-web -y${NC}"
