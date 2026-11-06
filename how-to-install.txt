@@ -1,103 +1,160 @@
 ===============================================================================
-                       Mfklixo (Modern Kloxo-MR)
-                       Installation & Setup Guide
+                       Mfklixo (Next-Gen Cloud Panel)
+                       Installation & Quickstart Guide
 ===============================================================================
 
-This guide explains how to install and setup Mfklixo on modern Linux distributions,
-including Ubuntu / Debian as well as RHEL / CentOS / AlmaLinux / Rocky Linux.
+Mfklixo is a high-performance modern web hosting control panel combining:
+  • Rust Core Daemon (mfklixo-core) with high-speed Axum REST API (Port 7788)
+  • Next.js 15 Dark-Mode Glassmorphism Dashboard (Port 3000 via Nginx 7777)
+  • Reverse-Proxy Web Server: Nginx (80/443) -> Apache 2.4 (8080)
+  • Database: MariaDB 10.11+ LTS with phpMyAdmin 5.2.2 web studio
+  • Mail Suite: Postfix + Dovecot + Roundcube Webmail 1.6.10
+  • Multi-PHP Manager: Version switcher, native module toggle & php.ini editor
+
+Repository: https://github.com/feizezadeh/Mfklixo
+Branch:     modernize-kloxo
 
 -------------------------------------------------------------------------------
-1. Pre-installation Requirements
+1. Fast Automated Installation (Recommended)
 -------------------------------------------------------------------------------
 
-A clean, fresh server installation is strongly recommended.
-Run the commands below with root privileges.
+On a clean Ubuntu 22.04 / 24.04 LTS or Debian 12 server:
 
-A. On Ubuntu / Debian:
-----------------------
-    apt-get update -y && apt-get upgrade -y
-    apt-get install -y git curl wget zip unzip tar systemd \
-                       php-cli php-fpm php-mysql php-mbstring php-xml \
-                       mariadb-server nginx apache2
+    curl -fsSL https://raw.githubusercontent.com/feizezadeh/Mfklixo/modernize-kloxo/install.sh | sudo bash
 
-B. On RHEL / CentOS / AlmaLinux / Rocky Linux:
-----------------------------------------------
-    yum update -y
-    yum install -y git curl wget zip unzip yum-utils epel-release \
-                   systemd mariadb-server nginx httpd
+The installer will automatically:
+  1. Install system prerequisites (Rust, Node.js 20, Nginx, Apache, MariaDB, PHP)
+  2. Build and install mfklixo-core Rust daemon
+  3. Deploy Next.js modern control panel
+  4. Install phpMyAdmin 5.2.2 and Roundcube Webmail 1.6.10
+  5. Setup dual-access routing (Port 80/443 domains + Port 7777 control panel)
+  6. Enable and start all Systemd service daemons
 
 -------------------------------------------------------------------------------
-2. Cloning & Setting up Mfklixo
+2. Manual Step-by-Step Installation
 -------------------------------------------------------------------------------
 
-    mkdir -p /usr/local/lxlabs
+Step 1: Install System Packages
+--------------------------------
+On Ubuntu / Debian:
+    sudo apt-get update -y
+    sudo apt-get install -y git curl wget tar gzip zip unzip build-essential \
+                            mariadb-server nginx apache2 libapache2-mod-php \
+                            php-cli php-fpm php-mysql php-mbstring php-xml \
+                            php-curl php-zip php-intl php-gd composer
+
+Step 2: Install Node.js 20 LTS & Rust Toolchain
+------------------------------------------------
+    # Node.js 20
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+    sudo apt-get install -y nodejs
+
+    # Rust
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    source "$HOME/.cargo/env"
+
+Step 3: Clone Repository
+------------------------
+    sudo mkdir -p /usr/local/lxlabs
     cd /usr/local/lxlabs
-    git clone -b modernize-kloxo https://github.com/feizezadeh/Mfklixo.git kloxo
+    sudo git clone -b modernize-kloxo https://github.com/feizezadeh/Mfklixo.git kloxo
     cd /usr/local/lxlabs/kloxo
 
--------------------------------------------------------------------------------
-3. Initial Configuration & Service Initialization
--------------------------------------------------------------------------------
+Step 4: Build & Install Rust Core Daemon
+----------------------------------------
+    cargo build --release
+    sudo cp target/release/mfklixo-core /usr/local/lxlabs/kloxo/bin/mfklixo-core
+    sudo chmod +x /usr/local/lxlabs/kloxo/bin/mfklixo-core
 
-A. Database Setup (MariaDB):
-----------------------------
-    # Start and enable MariaDB
-    systemctl enable mariadb
-    systemctl start mariadb
+    # Install Systemd service
+    sudo cp kloxo/init/mfklixo-core.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now mfklixo-core.service
 
-    # Optional: Select specific MariaDB version (e.g. 10.11 or 11.4 LTS)
-    sh /usr/local/lxlabs/kloxo/pscript/mariadb-upgrade 10.11
+Step 5: Build & Install Next.js Dashboard
+-----------------------------------------
+    cd /usr/local/lxlabs/kloxo/frontend
+    npm install
+    npm run build
 
-B. Web Server Setup:
---------------------
-    # Choose your preferred web server stack:
+    # Install Dashboard Systemd service
+    sudo cp ../kloxo/init/kloxo-dashboard.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now kloxo-dashboard.service
 
-    # 1) Dual Proxy: Apache (Backend) + Nginx (Frontend) [Recommended]
-    sh /usr/local/lxlabs/kloxo/pscript/switchserver --class=web --driver=apache_nginx
+Step 6: Install phpMyAdmin 5.2.2
+--------------------------------
+    sudo mkdir -p /usr/share/phpmyadmin
+    curl -sL https://files.phpmyadmin.net/phpMyAdmin/5.2.2/phpMyAdmin-5.2.2-all-languages.tar.gz \
+      | sudo tar -xz -C /usr/share/phpmyadmin --strip-components=1
 
-    # 2) Standalone Nginx:
-    sh /usr/local/lxlabs/kloxo/pscript/switchserver --class=web --driver=nginx
+    # Link Apache configuration
+    sudo cp /usr/local/lxlabs/kloxo/kloxo/init/phpmyadmin.conf /etc/apache2/conf-available/
+    sudo a2enconf phpmyadmin
+    sudo systemctl reload apache2
 
-    # 3) Standalone Apache:
-    sh /usr/local/lxlabs/kloxo/pscript/switchserver --class=web --driver=apache
+Step 7: Install Roundcube Webmail 1.6.10
+----------------------------------------
+    sudo mkdir -p /usr/share/roundcube
+    curl -sL https://github.com/roundcube/roundcubemail/releases/download/1.6.10/roundcubemail-1.6.10-complete.tar.gz \
+      | sudo tar -xz -C /usr/share/roundcube --strip-components=1
 
-C. Generate Initial Configs & Restart Services:
------------------------------------------------
-    sh /usr/local/lxlabs/kloxo/bin/fix/fixweb.php --target=defaults
-    sh /usr/local/lxlabs/kloxo/pscript/restart-web -y
-
--------------------------------------------------------------------------------
-4. Accessing the Panel
--------------------------------------------------------------------------------
-
-Once services are running, access the control panel via browser:
-
-    URL:      http://<YOUR_SERVER_IP>:7778/
-    or SSL:   https://<YOUR_SERVER_IP>:7777/
-
-    Default Username: admin
-    Default Password: (set during initialization or reset via script)
-
-To reset the admin password if needed:
-    php /usr/local/lxlabs/kloxo/bin/common/misc/reset-mysql-root-password.php
+    # Link Apache configuration
+    sudo cp /usr/local/lxlabs/kloxo/kloxo/init/roundcube.conf /etc/apache2/conf-available/
+    sudo a2enconf roundcube
+    sudo systemctl reload apache2
 
 -------------------------------------------------------------------------------
-5. Handy Maintenance Commands
+3. Accessing the Control Panel & Web Tools
 -------------------------------------------------------------------------------
 
-- Switch PHP Branch:
-    sh /usr/local/lxlabs/kloxo/pscript/set-php-branch php82
+Once installation completes, all services are available:
 
-- Upgrade / Switch MariaDB:
-    sh /usr/local/lxlabs/kloxo/pscript/mariadb-upgrade 11.4
+  • Modern Control Panel:
+      https://<YOUR_SERVER_IP>:7777/
+      Default Username: admin
+      Default Password: (generated during installation or set in client table)
 
-- Fix Web Configurations:
-    sh /usr/local/lxlabs/kloxo/bin/fix/fixweb.php
+  • phpMyAdmin MariaDB Manager:
+      Direct Web URL:   http://<YOUR_SERVER_IP>/phpmyadmin/
+      Panel Secure URL: https://<YOUR_SERVER_IP>:7777/phpmyadmin/
 
-- Restart All Web Services:
-    sh /usr/local/lxlabs/kloxo/pscript/restart-web -y
+  • Roundcube Webmail:
+      Direct Web URL:   http://<YOUR_SERVER_IP>/webmail/
+      Panel Secure URL: https://<YOUR_SERVER_IP>:7777/webmail/
 
-- Restart Database:
-    sh /usr/local/lxlabs/kloxo/pscript/restart-mysql
+  • Advanced PHP Configure:
+      https://<YOUR_SERVER_IP>:7777/php-advanced
+      (PHP version switcher, live module toggle, OPcache & custom php.ini editor)
 
+  • REST API Gateway:
+      https://<YOUR_SERVER_IP>:7777/api/v1/
+
+-------------------------------------------------------------------------------
+4. Systemd Daemons & Service Management
+-------------------------------------------------------------------------------
+
+Check status of all Mfklixo daemons:
+    sudo systemctl status mfklixo-core.service      # Rust Backend Core (Port 7788)
+    sudo systemctl status kloxo-dashboard.service    # Next.js Frontend (Port 3000)
+    sudo systemctl status kloxo-web.service          # Nginx Gateway (Port 7777)
+    sudo systemctl status nginx                      # Public Web Proxy (Port 80/443)
+    sudo systemctl status apache2                    # Web Backend (Port 8080)
+    sudo systemctl status mariadb                    # Database Server
+
+Restart all Mfklixo stack:
+    sudo systemctl restart mfklixo-core kloxo-dashboard kloxo-web nginx apache2
+
+-------------------------------------------------------------------------------
+5. Decommissioning Old Legacy Core
+-------------------------------------------------------------------------------
+
+Mfklixo completely eliminates the ancient PHP 5/lxphp core.
+Ensure old services are permanently disabled:
+    sudo systemctl stop kloxo-php kloxo-wrap 2>/dev/null || true
+    sudo systemctl disable kloxo-php kloxo-wrap 2>/dev/null || true
+    sudo rm -f /etc/systemd/system/kloxo-php.service /etc/systemd/system/kloxo-wrap.service
+    sudo systemctl daemon-reload
+
+All operations now execute through the high-performance Rust daemon on port 7788.
 ===============================================================================

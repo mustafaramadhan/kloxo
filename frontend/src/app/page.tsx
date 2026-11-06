@@ -759,11 +759,12 @@ export default function DashboardPage() {
     // --- 1. Administration ---
     { id: 'all_client', title: 'All Clients', description: 'Customer accounts, reseller roles and limits', icon: Users, category: 'admin', href: '/clients', badge: 'Active' },
     { id: 'all_domain', title: 'All Domains', description: 'Primary virtual hosts and document roots', icon: Globe, category: 'admin', href: '/domains' },
-    { id: 'all_addondomain', title: 'All Pointer Domains', description: 'Domain redirects and aliases', icon: Network, category: 'admin', href: '/domains' },
+    { id: 'all_addondomain', title: 'Subdomains', description: 'Create and route blog, app, or api subdomains', icon: Network, category: 'admin', href: '/subdomains', badge: 'Active' },
     { id: 'all_mailaccount', title: 'All Mail Accounts', description: 'Mailboxes, quotas and POP/IMAP accounts', icon: Mail, category: 'admin', href: '/mail' },
     { id: 'all_mailforward', title: 'All Mail Forwards', description: 'Incoming email forwarding rules', icon: Send, category: 'admin', href: '/mail' },
-    { id: 'all_mailinglist', title: 'All Mailing Lists', description: 'Discussion and newsletter mail groups', icon: Inbox, category: 'admin', modal: 'mailinglist' },
+    { id: 'all_webmail', title: 'Roundcube Webmail', description: 'Webmail interface for managing and sending emails', icon: Mail, category: 'admin', href: '/webmail/', badge: 'v1.6' },
     { id: 'all_mysqldb', title: 'All Databases', description: 'MariaDB schemas and user privileges', icon: Database, category: 'admin', href: '/databases' },
+    { id: 'all_pma', title: 'phpMyAdmin Studio', description: 'phpMyAdmin 5.2.2 MariaDB web manager', icon: Database, category: 'admin', href: '/phpmyadmin/', badge: 'v5.2' },
     { id: 'all_cron', title: 'All Cron Tasks', description: 'Scheduled crontab background jobs', icon: Clock, category: 'admin', href: '/cron' },
     { id: 'all_ftpuser', title: 'All FTP Users', description: 'FTP accounts and home directories', icon: Share2, category: 'admin', href: '/ftp' },
     { id: 'all_sslcert', title: 'All SSLCerts', description: 'SSL/TLS certificates and Let\'s Encrypt keys', icon: Lock, category: 'admin', href: '/ssl' },
@@ -825,8 +826,9 @@ export default function DashboardPage() {
     { id: 'ftpsession', title: 'FTP Sessions', description: 'View active FTP transfers and connected clients', icon: Share2, category: 'basic', modal: 'ftpsession' },
     { id: 'webserver', title: 'Webserver Configure', description: 'Nginx worker processes, keepalive and gzip', icon: Globe, category: 'basic', modal: 'webserver' },
     { id: 'ftpconfig', title: 'FTP Configure', description: 'Pure-FTPd port ranges and TLS encryption mode', icon: Settings, category: 'basic', modal: 'ftpconfig' },
-    { id: 'phpmodule', title: 'PHP Module Status', description: 'Inspect all loaded PHP modules and libraries', icon: Sparkles, category: 'basic', modal: 'modules' },
-    { id: 'sqlmanager', title: 'SQL Manager / Query Studio', description: 'Execute direct SQL queries & phpMyAdmin access', icon: Database, category: 'basic', modal: 'sqlmanager' },
+    { id: 'phpmodule', title: 'PHP Module Status', description: 'Inspect and toggle loaded PHP extensions', icon: Sparkles, category: 'basic', href: '/php-advanced' },
+    { id: 'sqlmanager', title: 'phpMyAdmin Studio', description: 'Direct phpMyAdmin 5.2.2 MariaDB database management', icon: Database, category: 'basic', href: '/phpmyadmin/', badge: 'v5.2' },
+    { id: 'webmail_portal', title: 'Roundcube Webmail', description: 'Launch webmail inbox and compose messages', icon: Mail, category: 'basic', href: '/webmail/', badge: 'v1.6' },
     { id: 'mysqlpassword', title: 'MySQL Password Reset', description: 'Reset MariaDB root/administrative password', icon: Key, category: 'basic', modal: 'mysqlpass' },
     { id: 'dbadmin', title: 'Database Admins', description: 'Configure global database administrative accounts', icon: Users, category: 'basic', modal: 'dbadmin' },
 
@@ -888,12 +890,40 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              onClick={() => handleOpenModal('commandcenter', 'Quick Diagnostics')}
+            <a
+              href="/phpmyadmin/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition-all shadow-sm"
+            >
+              <Database className="h-3.5 w-3.5" />
+              phpMyAdmin
+            </a>
+
+            <a
+              href="/webmail/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3.5 py-2 text-xs font-semibold text-indigo-300 hover:bg-indigo-500/20 transition-all shadow-sm"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Webmail
+            </a>
+
+            <Link
+              href="/php-advanced"
               className="flex items-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-all"
             >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Advanced PHP
+            </Link>
+
+            <button
+              onClick={() => handleOpenModal('commandcenter', 'Quick Diagnostics')}
+              className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/60 px-3.5 py-2 text-xs font-medium text-slate-200 hover:bg-white/10 transition-all"
+            >
               <Terminal className="h-3.5 w-3.5" />
-              Quick Command
+              Terminal
             </button>
 
             <button
@@ -1287,6 +1317,24 @@ export default function DashboardPage() {
                         );
 
                         if (item.href) {
+                          const isExt =
+                            item.href.startsWith('/phpmyadmin') ||
+                            item.href.startsWith('/webmail') ||
+                            item.href.startsWith('http');
+
+                          if (isExt) {
+                            return (
+                              <a
+                                key={item.id}
+                                href={item.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {CardContent}
+                              </a>
+                            );
+                          }
+
                           return (
                             <Link key={item.id} href={item.href}>
                               {CardContent}

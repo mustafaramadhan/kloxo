@@ -93,6 +93,13 @@ export default function Shell({ children }: ShellProps) {
       ],
     },
     {
+      title: 'Web Apps & Portals',
+      items: [
+        { name: 'phpMyAdmin', href: '/phpmyadmin/', icon: Database, external: true, badge: 'v5.2' },
+        { name: 'Roundcube Webmail', href: '/webmail/', icon: Mail, external: true, badge: 'v1.6' },
+      ],
+    },
+    {
       title: 'Security & SSL',
       items: [
         { name: 'SSL Certificates', href: '/ssl', icon: Lock },
@@ -151,48 +158,60 @@ export default function Shell({ children }: ShellProps) {
               <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                 {group.title}
               </div>
-              {group.items.map((item) => {
+              {group.items.map((item: any) => {
                 const Icon = item.icon;
                 const active = pathname === item.href;
+                const isExternal = item.external || item.href.startsWith('/phpmyadmin') || item.href.startsWith('/webmail') || item.href.startsWith('http');
+
+                if (isExternal) {
+                  return (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-all border border-transparent hover:border-white/5"
+                    >
+                      <span className="flex items-center gap-3">
+                        <Icon className="h-4 w-4 text-slate-400" />
+                        {item.name}
+                      </span>
+                      {item.badge ? (
+                        <span className="rounded bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-sky-400 border border-sky-500/20">
+                          {item.badge}
+                        </span>
+                      ) : (
+                        <ExternalLink className="h-3.5 w-3.5 text-slate-500" />
+                      )}
+                    </a>
+                  );
+                }
+
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={() => setSidebarOpen(false)}
-                    className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all ${
+                    className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all ${
                       active
                         ? 'bg-gradient-to-r from-sky-500/20 to-indigo-500/20 text-sky-400 border border-sky-500/30 shadow-sm'
                         : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
                     }`}
                   >
-                    <Icon className={`h-4 w-4 ${active ? 'text-sky-400' : 'text-slate-400'}`} />
-                    {item.name}
+                    <span className="flex items-center gap-3">
+                      <Icon className={`h-4 w-4 ${active ? 'text-sky-400' : 'text-slate-400'}`} />
+                      {item.name}
+                    </span>
+                    {item.badge && (
+                      <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-slate-300">
+                        {item.badge}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
             </div>
           ))}
-
-          <div className="pt-2">
-            <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-              Legacy Support
-            </div>
-            <a
-              href="/legacy/"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={handleLegacyClick}
-              className="flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-all border border-transparent hover:border-white/5"
-            >
-              <span className="flex items-center gap-3">
-                <ExternalLink className="h-4 w-4 text-amber-400" />
-                Legacy Panel
-              </span>
-              <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-300">
-                Classic
-              </span>
-            </a>
-          </div>
         </nav>
 
         {/* User Card in bottom of sidebar */}
@@ -236,17 +255,27 @@ export default function Shell({ children }: ShellProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
+            <div className="hidden lg:flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
               REST API v1.0
             </div>
             <a
-              href="/legacy/"
-              onClick={handleLegacyClick}
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20 transition-colors"
+              href="/phpmyadmin/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition-colors shadow-sm"
             >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Classic View
+              <Database className="h-3.5 w-3.5" />
+              phpMyAdmin
+            </a>
+            <a
+              href="/webmail/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-indigo-500/20 bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold text-indigo-300 hover:bg-indigo-500/20 transition-colors shadow-sm"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Webmail
             </a>
           </div>
         </header>
