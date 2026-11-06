@@ -2566,7 +2566,67 @@ async fn clients_create(
     let pass_hash = bcrypt::hash(&payload.password, bcrypt::DEFAULT_COST)
         .map_err(|e| ApiError::Internal(e.to_string()))?;
 
-    let _ = fs::create_dir_all(state.cfg.home_base_dir.join(&payload.username));
+    // 1. Create Linux system user and home directory in Ubuntu
+    let user_exists = Command::new("id")
+        .arg(&payload.username)
+        .output()
+        .await
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    let home_path = state.cfg.home_base_dir.join(&payload.username);
+
+    if !user_exists {
+        let group_exists = Command::new("getent")
+            .args(["group", &payload.username])
+            .output()
+            .await
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+
+        let mut useradd = Command::new("useradd");
+        useradd.args(["-m", "-s", "/bin/bash", "-d", &home_path.to_string_lossy()]);
+        if group_exists {
+            useradd.args(["-g", &payload.username]);
+        } else {
+            useradd.arg("-U");
+        }
+        useradd.arg(&payload.username);
+        let _ = useradd.output().await;
+    }
+
+    // 2. Set system password for SSH/FTP/SFTP authentication
+    if !payload.password.is_empty() {
+        if let Ok(mut child) = Command::new("chpasswd").stdin(std::process::Stdio::piped()).spawn() {
+            if let Some(mut stdin) = child.stdin.take() {
+                use tokio::io::AsyncWriteExt;
+                let _ = stdin.write_all(format!("{}:{}\n", payload.username, payload.password).as_bytes()).await;
+            }
+            let _ = child.wait().await;
+        }
+    }
+
+    // 3. Ensure home, public_html, and standard directories exist
+    let pub_html = home_path.join("public_html");
+    let ssl_dir = home_path.join("ssl");
+    let logs_dir = home_path.join("logs");
+    let _ = fs::create_dir_all(&pub_html);
+    let _ = fs::create_dir_all(&ssl_dir);
+    let _ = fs::create_dir_all(&logs_dir);
+
+    // 4. Set ownership and permissions for user and webserver
+    let _ = Command::new("chown")
+        .args(["-R", &format!("{}:{}", payload.username, payload.username), &home_path.to_string_lossy()])
+        .output()
+        .await;
+
+    let _ = Command::new("chmod").args(["755", &home_path.to_string_lossy()]).output().await;
+    let _ = Command::new("chmod").args(["755", &pub_html.to_string_lossy()]).output().await;
+
+    let _ = Command::new("usermod")
+        .args(["-aG", "www-data", &payload.username])
+        .output()
+        .await;
 
     sqlx::query(
         "REPLACE INTO client (nname, parent_clname, password, realpass, cttype, contactemail, status)
@@ -2618,6 +2678,15 @@ async fn clients_delete(
         .bind(&username)
         .execute(&state.db)
         .await?;
+
+    // Delete Linux system user and home directory in Ubuntu
+    if username != "admin" && username != "root" && username != "ubuntu" {
+        let _ = Command::new("userdel")
+            .args(["-r", "-f", &username])
+            .output()
+            .await;
+        let _ = fs::remove_dir_all(state.cfg.home_base_dir.join(&username));
+    }
 
     Ok(Json(json!({
         "success": true,
