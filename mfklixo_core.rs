@@ -3309,20 +3309,22 @@ async fn ssl_certificates_create(
 
     match mode {
         "letsencrypt" => {
-            let doc_root = format!("/home/kloxo/client/admin/{}", domain);
-            let _ = tokio::fs::create_dir_all(&doc_root).await;
+            let webroot = "/var/www/html";
+            let acme_dir = Path::new(webroot).join(".well-known/acme-challenge");
+            let _ = tokio::fs::create_dir_all(&acme_dir).await;
+            let _ = Command::new("chmod").args(["-R", "755", webroot]).output().await;
 
             let mut args = vec![
                 "certonly".to_string(),
                 "--webroot".to_string(),
                 "-w".to_string(),
-                doc_root,
+                webroot.to_string(),
                 "-d".to_string(),
                 domain.clone(),
                 "--agree-tos".to_string(),
                 "--non-interactive".to_string(),
             ];
-            if payload.include_www.unwrap_or(true) && !domain.starts_with("www.") {
+            if payload.include_www.unwrap_or(false) && !domain.starts_with("www.") {
                 args.push("-d".to_string());
                 args.push(format!("www.{}", domain));
             }
@@ -3337,7 +3339,7 @@ async fn ssl_certificates_create(
                 .args(&args)
                 .output()
                 .await
-                .map_err(|e| ApiError::SystemExec(format!("Failed to execute certbot: {}", e)))?;
+                .map_err(|e| ApiError::BadRequest(format!("Failed to execute certbot: {}", e)))?;
 
             let le_live = Path::new("/etc/letsencrypt/live").join(&domain);
             if le_live.join("fullchain.pem").exists() && le_live.join("privkey.pem").exists() {
@@ -3346,11 +3348,15 @@ async fn ssl_certificates_create(
             } else {
                 let err_msg = String::from_utf8_lossy(&output.stderr);
                 let out_msg = String::from_utf8_lossy(&output.stdout);
-                return Err(ApiError::SystemExec(format!(
-                    "Let's Encrypt validation failed. Make sure {} resolves to this server.\nDetails: {}\n{}",
-                    domain,
-                    out_msg.trim(),
-                    err_msg.trim()
+                let combined = format!("{}\n{}", out_msg.trim(), err_msg.trim());
+                let first_err = combined
+                    .lines()
+                    .find(|l| l.contains("Error") || l.contains("error") || l.contains("Detail:") || l.contains("failed"))
+                    .unwrap_or("DNS A record does not match server IP or challenge failed");
+
+                return Err(ApiError::BadRequest(format!(
+                    "Let's Encrypt validation failed: {}. (Ensure domain's DNS A record points to this server IP)",
+                    first_err.trim()
                 )));
             }
         }

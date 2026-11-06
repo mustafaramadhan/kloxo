@@ -35,7 +35,7 @@ export default function SslPage() {
   const [certname, setCertname] = useState('');
 
   // Let's Encrypt specific
-  const [includeWww, setIncludeWww] = useState(true);
+  const [includeWww, setIncludeWww] = useState(false);
   const [contactEmail, setContactEmail] = useState('admin@' + (domains[0]?.domain || 'domain.com'));
   const [forceHttps, setForceHttps] = useState(true);
 
