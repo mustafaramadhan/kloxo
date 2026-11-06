@@ -354,7 +354,43 @@ export default function DnsPage() {
 
             {/* Quick Add Form */}
             <form onSubmit={handleAddRecord} className="mt-4 p-4 rounded-2xl bg-slate-950/60 border border-white/5 space-y-3 flex-shrink-0">
-              <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Add Resource Record</div>
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Add Resource Record</div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecType('A');
+                      setRecHostname('*');
+                      setRecValue('18.222.232.63');
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-purple-500/30 bg-purple-500/10 px-2 py-1 text-[11px] font-medium text-purple-300 hover:bg-purple-500/20 transition-all"
+                  >
+                    ⚡ 1-Click Wildcard (*)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecType('A');
+                      setRecHostname('@');
+                      setRecValue('18.222.232.63');
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-[11px] font-medium text-sky-300 hover:bg-sky-500/20 transition-all"
+                  >
+                    🌐 Root (@)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecType('TXT');
+                      setRecHostname('_acme-challenge');
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] font-medium text-amber-300 hover:bg-amber-500/20 transition-all"
+                  >
+                    🔒 ACME TXT
+                  </button>
+                </div>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
                 <div>
                   <label className="block text-[11px] text-slate-400 mb-1">Type</label>
@@ -370,10 +406,11 @@ export default function DnsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">Host (@, www, etc.)</label>
+                  <label className="block text-[11px] text-slate-400 mb-1">Host (@, *, www)</label>
                   <input
                     type="text"
                     required
+                    placeholder="@ or * or sub"
                     value={recHostname}
                     onChange={(e) => setRecHostname(e.target.value)}
                     className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 font-mono text-xs text-white focus:border-sky-500 focus:outline-none"
@@ -420,22 +457,32 @@ export default function DnsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {records.map((r) => (
-                      <tr key={r.id} className="hover:bg-white/[0.02]">
-                        <td className="px-4 py-2.5 font-bold text-sky-400">{r.type}</td>
-                        <td className="px-4 py-2.5 font-mono text-slate-200">{r.hostname}</td>
-                        <td className="px-4 py-2.5 font-mono text-slate-400 max-w-xs truncate">{r.value}</td>
-                        <td className="px-4 py-2.5 text-slate-500">{r.ttl}s</td>
-                        <td className="px-4 py-2.5 text-right">
-                          <button
-                            onClick={() => handleDeleteRecord(r.id)}
-                            className="text-rose-400 hover:text-rose-300 p-1 rounded hover:bg-rose-500/10"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {records.map((r) => {
+                      const isWild = r.hostname === '*' || r.hostname?.startsWith('*.') || r.is_wildcard;
+                      return (
+                        <tr key={r.id} className="hover:bg-white/[0.02]">
+                          <td className="px-4 py-2.5 font-bold text-sky-400">{r.type}</td>
+                          <td className="px-4 py-2.5 font-mono text-slate-200">
+                            <span className="font-semibold">{r.hostname}</span>
+                            {isWild && (
+                              <span className="ml-2 inline-flex items-center rounded-md bg-purple-500/20 border border-purple-500/30 px-1.5 py-0.5 text-[10px] font-bold text-purple-300">
+                                Wildcard (*.{activeZone})
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2.5 font-mono text-slate-400 max-w-xs truncate">{r.value}</td>
+                          <td className="px-4 py-2.5 text-slate-500">{r.ttl}s</td>
+                          <td className="px-4 py-2.5 text-right">
+                            <button
+                              onClick={() => handleDeleteRecord(r.id)}
+                              className="text-rose-400 hover:text-rose-300 p-1 rounded hover:bg-rose-500/10"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}

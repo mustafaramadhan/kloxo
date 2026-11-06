@@ -126,6 +126,7 @@ export interface DnsRecordItem {
   value: string;
   priority?: number;
   ttl: number;
+  is_wildcard?: boolean;
 }
 
 export interface SslCertItem {
@@ -139,6 +140,7 @@ export interface SslCertItem {
   expires_at?: string;
   days_left?: number;
   is_letsencrypt?: boolean;
+  is_wildcard?: boolean;
 }
 
 export interface CustomBuildComponent {

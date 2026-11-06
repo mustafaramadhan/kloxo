@@ -36,6 +36,7 @@ export default function SslPage() {
 
   // Let's Encrypt specific
   const [includeWww, setIncludeWww] = useState(false);
+  const [isWildcard, setIsWildcard] = useState(false);
   const [contactEmail, setContactEmail] = useState('admin@' + (domains[0]?.domain || 'domain.com'));
   const [forceHttps, setForceHttps] = useState(true);
 
@@ -91,6 +92,7 @@ export default function SslPage() {
           domain: selectedDomain.trim(),
           certname: certname.trim() || `cert_${selectedDomain.trim()}`,
           include_www: includeWww,
+          is_wildcard: isWildcard,
           contact_email: contactEmail.trim(),
           force_https: forceHttps,
           crt: crtText,
@@ -256,7 +258,14 @@ export default function SslPage() {
                               <Lock className="h-4 w-4" />
                             </div>
                             <div>
-                              <span className="font-mono text-sm block">{c.domain}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm block">{c.domain}</span>
+                                {(c.is_wildcard || c.domain.startsWith('*.')) && (
+                                  <span className="rounded bg-purple-500/20 border border-purple-500/30 px-1.5 py-0.2 text-[10px] font-bold text-purple-300">
+                                    Wildcard (*.{c.domain})
+                                  </span>
+                                )}
+                              </div>
                               <span className="text-[11px] text-slate-500">{c.certname}</span>
                             </div>
                           </div>
@@ -431,7 +440,27 @@ export default function SslPage() {
                     />
                   </div>
 
-                  <div className="space-y-2 pt-1">
+                  <div className="space-y-2.5 pt-1">
+                    <label className="flex items-start gap-2.5 p-3 rounded-xl border border-purple-500/20 bg-purple-500/5 cursor-pointer hover:bg-purple-500/10 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={isWildcard}
+                        onChange={(e) => setIsWildcard(e.target.checked)}
+                        className="mt-0.5 rounded border-white/10 bg-slate-950 text-purple-500 focus:ring-purple-500"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-white">Wildcard SSL Certificate (*.{selectedDomain})</span>
+                          <span className="rounded bg-purple-500/20 border border-purple-500/30 px-1.5 py-0.5 text-[10px] font-bold text-purple-300">
+                            Wildcard
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Secures root domain ({selectedDomain}) and ALL subdomains (*.{selectedDomain}, e.g. api, app, blog, mail).
+                        </p>
+                      </div>
+                    </label>
+
                     <label className="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer">
                       <input
                         type="checkbox"

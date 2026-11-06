@@ -592,10 +592,11 @@ pub mod sys {
         if d.is_empty() || d.len() > 253 {
             return Err(ApiError::BadRequest("Invalid domain length".to_string()));
         }
-        let valid = d
+        let stripped = d.strip_prefix("*.").unwrap_or(d);
+        let valid = stripped
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '.');
-        if !valid || d.starts_with('.') || d.starts_with('-') || d.contains("..") {
+        if !valid || stripped.starts_with('.') || stripped.starts_with('-') || stripped.contains("..") {
             return Err(ApiError::BadRequest("Invalid domain format".to_string()));
         }
         Ok(())
@@ -3033,8 +3034,10 @@ async fn dns_zones_create(
     let zone_file = state.cfg.kloxo_dns_dir.join(format!("{}.json", payload.domain));
     if !zone_file.exists() {
         let default_records = json!([
-            { "id": "rec-1", "type": "A", "hostname": "@", "value": "127.0.0.1", "ttl": ttl, "priority": 0 },
-            { "id": "rec-2", "type": "CNAME", "hostname": "www", "value": payload.domain, "ttl": ttl, "priority": 0 }
+            { "id": "rec-1", "type": "A", "hostname": "@", "value": "18.222.232.63", "ttl": ttl, "priority": 0, "is_wildcard": false },
+            { "id": "rec-2", "type": "CNAME", "hostname": "www", "value": payload.domain, "ttl": ttl, "priority": 0, "is_wildcard": false },
+            { "id": "rec-3", "type": "A", "hostname": "*", "value": "18.222.232.63", "ttl": ttl, "priority": 0, "is_wildcard": true },
+            { "id": "rec-4", "type": "MX", "hostname": "@", "value": format!("mail.{}", payload.domain), "ttl": ttl, "priority": 10, "is_wildcard": false }
         ]);
         let _ = sys::write_json_store(&zone_file, &default_records);
     }
@@ -3084,7 +3087,18 @@ async fn dns_records_list(
 ) -> ApiResult<Value> {
     sys::validate_domain(&query.zone)?;
     let zone_file = state.cfg.kloxo_dns_dir.join(format!("{}.json", query.zone));
-    let records: Vec<Value> = sys::read_json_store(&zone_file, Vec::new());
+    let raw_records: Vec<Value> = sys::read_json_store(&zone_file, Vec::new());
+    let records: Vec<Value> = raw_records
+        .into_iter()
+        .map(|mut r| {
+            let host = r.get("hostname").and_then(|v| v.as_str()).unwrap_or("");
+            let is_wc = host == "*" || host.starts_with("*.");
+            if let Some(obj) = r.as_object_mut() {
+                obj.insert("is_wildcard".to_string(), json!(is_wc));
+            }
+            r
+        })
+        .collect();
 
     Ok(Json(json!({
         "success": true,
@@ -3114,13 +3128,16 @@ async fn dns_records_create(
     let zone_file = state.cfg.kloxo_dns_dir.join(format!("{}.json", payload.zone));
     let mut records: Vec<Value> = sys::read_json_store(&zone_file, Vec::new());
 
+    let host = payload.hostname.trim();
+    let is_wc = host == "*" || host.starts_with("*.");
     let new_rec = json!({
         "id": format!("rec-{}", random_alphanumeric(8)),
         "type": payload.rec_type.to_uppercase(),
-        "hostname": payload.hostname,
-        "value": payload.value,
+        "hostname": host,
+        "value": payload.value.trim(),
         "priority": payload.priority.unwrap_or(10),
-        "ttl": payload.ttl.unwrap_or(3600)
+        "ttl": payload.ttl.unwrap_or(3600),
+        "is_wildcard": is_wc
     });
     records.push(new_rec.clone());
     sys::write_json_store(&zone_file, &records)?;
@@ -3159,13 +3176,15 @@ async fn dns_records_delete(
     })))
 }
 
-async fn get_cert_details(crt_path: &Path, domain: &str) -> (String, String, i64, bool) {
+async fn get_cert_details(crt_path: &Path, domain: &str) -> (String, String, i64, bool, bool) {
     let mut issuer = "Self-Signed".to_string();
     let mut expires_at = "Active (365 days)".to_string();
     let days_left = 365;
     let mut is_letsencrypt = false;
+    let mut is_wildcard = domain.starts_with("*.");
 
-    let le_live = Path::new("/etc/letsencrypt/live").join(domain);
+    let clean_domain = domain.trim_start_matches("*.");
+    let le_live = Path::new("/etc/letsencrypt/live").join(clean_domain);
     if le_live.join("fullchain.pem").exists() {
         is_letsencrypt = true;
         issuer = "Let's Encrypt Authority".to_string();
@@ -3173,7 +3192,7 @@ async fn get_cert_details(crt_path: &Path, domain: &str) -> (String, String, i64
 
     if crt_path.exists() {
         if let Ok(out) = Command::new("openssl")
-            .args(["x509", "-in", crt_path.to_str().unwrap_or(""), "-noout", "-issuer", "-enddate"])
+            .args(["x509", "-in", crt_path.to_str().unwrap_or(""), "-noout", "-issuer", "-enddate", "-subject"])
             .output()
             .await
         {
@@ -3181,7 +3200,7 @@ async fn get_cert_details(crt_path: &Path, domain: &str) -> (String, String, i64
             for line in text.lines() {
                 if line.starts_with("issuer=") {
                     let iss = line.trim_start_matches("issuer=").trim();
-                    if iss.contains("Let's Encrypt") || iss.contains("R3") || iss.contains("E1") {
+                    if iss.contains("Let's Encrypt") || iss.contains("R3") || iss.contains("E1") || iss.contains("YE1") {
                         is_letsencrypt = true;
                         issuer = "Let's Encrypt Authority".to_string();
                     } else if !is_letsencrypt {
@@ -3189,12 +3208,14 @@ async fn get_cert_details(crt_path: &Path, domain: &str) -> (String, String, i64
                     }
                 } else if line.starts_with("notAfter=") {
                     expires_at = line.trim_start_matches("notAfter=").trim().to_string();
+                } else if line.contains("CN = *.") || line.contains("CN=*.") {
+                    is_wildcard = true;
                 }
             }
         }
     }
 
-    (issuer, expires_at, days_left, is_letsencrypt)
+    (issuer, expires_at, days_left, is_letsencrypt, is_wildcard)
 }
 
 #[derive(Deserialize)]
@@ -3203,6 +3224,7 @@ struct SslCertificateCreatePayload {
     domain: String,
     certname: Option<String>,
     include_www: Option<bool>,
+    is_wildcard: Option<bool>,
     contact_email: Option<String>,
     #[allow(dead_code)]
     force_https: Option<bool>,
@@ -3242,7 +3264,7 @@ async fn ssl_certificates_list(
         let crt_path = state.cfg.kloxo_ssl_dir.join(format!("{}.crt", domain));
         let has_crt = crt_path.exists();
         let has_key = state.cfg.kloxo_ssl_dir.join(format!("{}.key", domain)).exists();
-        let (issuer, expires_at, days_left, is_letsencrypt) = get_cert_details(&crt_path, &domain).await;
+        let (issuer, expires_at, days_left, is_letsencrypt, is_wildcard) = get_cert_details(&crt_path, &domain).await;
 
         seen_domains.insert(domain.clone());
         certificates.push(json!({
@@ -3256,6 +3278,7 @@ async fn ssl_certificates_list(
             "expires_at": expires_at,
             "days_left": days_left,
             "is_letsencrypt": is_letsencrypt,
+            "is_wildcard": is_wildcard,
         }));
     }
 
@@ -3267,7 +3290,7 @@ async fn ssl_certificates_list(
                 let has_crt = crt_path.exists();
                 let has_key = state.cfg.kloxo_ssl_dir.join(format!("{}.key", dom)).exists();
                 if has_crt || has_key {
-                    let (issuer, expires_at, days_left, is_letsencrypt) = get_cert_details(&crt_path, &dom).await;
+                    let (issuer, expires_at, days_left, is_letsencrypt, is_wildcard) = get_cert_details(&crt_path, &dom).await;
                     certificates.push(json!({
                         "id": format!("cert_{}", dom),
                         "certname": format!("cert_{}", dom),
@@ -3279,6 +3302,7 @@ async fn ssl_certificates_list(
                         "expires_at": expires_at,
                         "days_left": days_left,
                         "is_letsencrypt": is_letsencrypt,
+                        "is_wildcard": is_wildcard,
                     }));
                 }
             }
@@ -3302,32 +3326,38 @@ async fn ssl_certificates_create(
     }
     let certname = payload.certname.as_deref().filter(|s| !s.is_empty()).unwrap_or(&domain);
     let mode = payload.mode.as_deref().unwrap_or("letsencrypt");
+    let is_wc = payload.is_wildcard.unwrap_or(false) || domain.starts_with("*.");
+    let clean_domain = domain.trim_start_matches("*.").to_string();
 
     let _ = fs::create_dir_all(&state.cfg.kloxo_ssl_dir);
-    let cert_file = state.cfg.kloxo_ssl_dir.join(format!("{}.crt", domain));
-    let key_file = state.cfg.kloxo_ssl_dir.join(format!("{}.key", domain));
+    let cert_file = state.cfg.kloxo_ssl_dir.join(format!("{}.crt", clean_domain));
+    let key_file = state.cfg.kloxo_ssl_dir.join(format!("{}.key", clean_domain));
 
     match mode {
         "letsencrypt" => {
-            let webroot = "/var/www/html";
-            let acme_dir = Path::new(webroot).join(".well-known/acme-challenge");
-            let _ = tokio::fs::create_dir_all(&acme_dir).await;
-            let _ = Command::new("chmod").args(["-R", "755", webroot]).output().await;
+            if is_wc {
+                let auth_hook = "/usr/local/lxlabs/kloxo/bin/certbot-dns-auth.sh";
+                let clean_hook = "/usr/local/lxlabs/kloxo/bin/certbot-dns-cleanup.sh";
 
-            let build_args = |include_w: bool| {
                 let mut args = vec![
                     "certonly".to_string(),
-                    "--webroot".to_string(),
-                    "-w".to_string(),
-                    webroot.to_string(),
+                    "--manual".to_string(),
+                    "--preferred-challenges".to_string(),
+                    "dns".to_string(),
                     "-d".to_string(),
-                    domain.clone(),
+                    clean_domain.clone(),
+                    "-d".to_string(),
+                    format!("*.{}", clean_domain),
                     "--agree-tos".to_string(),
                     "--non-interactive".to_string(),
                 ];
-                if include_w && !domain.starts_with("www.") {
-                    args.push("-d".to_string());
-                    args.push(format!("www.{}", domain));
+                if Path::new(auth_hook).exists() {
+                    args.push("--manual-auth-hook".to_string());
+                    args.push(auth_hook.to_string());
+                }
+                if Path::new(clean_hook).exists() {
+                    args.push("--manual-cleanup-hook".to_string());
+                    args.push(clean_hook.to_string());
                 }
                 if let Some(email) = payload.contact_email.as_deref().filter(|e| !e.trim().is_empty()) {
                     args.push("--email".to_string());
@@ -3335,59 +3365,123 @@ async fn ssl_certificates_create(
                 } else {
                     args.push("--register-unsafely-without-email".to_string());
                 }
-                args
-            };
 
-            let try_with_www = payload.include_www.unwrap_or(false);
-            let mut output = Command::new("certbot")
-                .args(&build_args(try_with_www))
-                .output()
-                .await
-                .map_err(|e| ApiError::BadRequest(format!("Failed to execute certbot: {}", e)))?;
-
-            let le_live = Path::new("/etc/letsencrypt/live").join(&domain);
-            if !le_live.join("fullchain.pem").exists() && try_with_www {
-                // Retry without www in case www doesn't have a DNS record
-                output = Command::new("certbot")
-                    .args(&build_args(false))
+                let output = Command::new("certbot")
+                    .args(&args)
                     .output()
                     .await
                     .map_err(|e| ApiError::BadRequest(format!("Failed to execute certbot: {}", e)))?;
-            }
 
-            if le_live.join("fullchain.pem").exists() && le_live.join("privkey.pem").exists() {
-                let _ = tokio::fs::copy(le_live.join("fullchain.pem"), &cert_file).await;
-                let _ = tokio::fs::copy(le_live.join("privkey.pem"), &key_file).await;
+                let le_live = Path::new("/etc/letsencrypt/live").join(&clean_domain);
+                if le_live.join("fullchain.pem").exists() && le_live.join("privkey.pem").exists() {
+                    let _ = tokio::fs::copy(le_live.join("fullchain.pem"), &cert_file).await;
+                    let _ = tokio::fs::copy(le_live.join("privkey.pem"), &key_file).await;
+                } else {
+                    let err_msg = String::from_utf8_lossy(&output.stderr);
+                    let out_msg = String::from_utf8_lossy(&output.stdout);
+                    let combined = format!("{}\n{}", out_msg.trim(), err_msg.trim());
+                    let first_err = combined
+                        .lines()
+                        .find(|l| l.contains("Error") || l.contains("error") || l.contains("Detail:") || l.contains("failed"))
+                        .unwrap_or("DNS TXT challenge failed. Note that Let's Encrypt Wildcard requires DNS-01 delegation.");
+
+                    return Err(ApiError::BadRequest(format!(
+                        "Let's Encrypt Wildcard issuance failed: {}. (Wildcard certificates require DNS-01 TXT record validation)",
+                        first_err.trim()
+                    )));
+                }
             } else {
-                let err_msg = String::from_utf8_lossy(&output.stderr);
-                let out_msg = String::from_utf8_lossy(&output.stdout);
-                let combined = format!("{}\n{}", out_msg.trim(), err_msg.trim());
-                let first_err = combined
-                    .lines()
-                    .find(|l| l.contains("Error") || l.contains("error") || l.contains("Detail:") || l.contains("failed"))
-                    .unwrap_or("DNS A record does not match server IP or challenge failed");
+                let webroot = "/var/www/html";
+                let acme_dir = Path::new(webroot).join(".well-known/acme-challenge");
+                let _ = tokio::fs::create_dir_all(&acme_dir).await;
+                let _ = Command::new("chmod").args(["-R", "755", webroot]).output().await;
 
-                return Err(ApiError::BadRequest(format!(
-                    "Let's Encrypt validation failed: {}. (Ensure domain's DNS A record points to this server IP)",
-                    first_err.trim()
-                )));
+                let build_args = |include_w: bool| {
+                    let mut args = vec![
+                        "certonly".to_string(),
+                        "--webroot".to_string(),
+                        "-w".to_string(),
+                        webroot.to_string(),
+                        "-d".to_string(),
+                        clean_domain.clone(),
+                        "--agree-tos".to_string(),
+                        "--non-interactive".to_string(),
+                    ];
+                    if include_w && !clean_domain.starts_with("www.") {
+                        args.push("-d".to_string());
+                        args.push(format!("www.{}", clean_domain));
+                    }
+                    if let Some(email) = payload.contact_email.as_deref().filter(|e| !e.trim().is_empty()) {
+                        args.push("--email".to_string());
+                        args.push(email.trim().to_string());
+                    } else {
+                        args.push("--register-unsafely-without-email".to_string());
+                    }
+                    args
+                };
+
+                let try_with_www = payload.include_www.unwrap_or(false);
+                let mut output = Command::new("certbot")
+                    .args(&build_args(try_with_www))
+                    .output()
+                    .await
+                    .map_err(|e| ApiError::BadRequest(format!("Failed to execute certbot: {}", e)))?;
+
+                let le_live = Path::new("/etc/letsencrypt/live").join(&clean_domain);
+                if !le_live.join("fullchain.pem").exists() && try_with_www {
+                    // Retry without www in case www doesn't have a DNS record
+                    output = Command::new("certbot")
+                        .args(&build_args(false))
+                        .output()
+                        .await
+                        .map_err(|e| ApiError::BadRequest(format!("Failed to execute certbot: {}", e)))?;
+                }
+
+                if le_live.join("fullchain.pem").exists() && le_live.join("privkey.pem").exists() {
+                    let _ = tokio::fs::copy(le_live.join("fullchain.pem"), &cert_file).await;
+                    let _ = tokio::fs::copy(le_live.join("privkey.pem"), &key_file).await;
+                } else {
+                    let err_msg = String::from_utf8_lossy(&output.stderr);
+                    let out_msg = String::from_utf8_lossy(&output.stdout);
+                    let combined = format!("{}\n{}", out_msg.trim(), err_msg.trim());
+                    let first_err = combined
+                        .lines()
+                        .find(|l| l.contains("Error") || l.contains("error") || l.contains("Detail:") || l.contains("failed"))
+                        .unwrap_or("DNS A record does not match server IP or challenge failed");
+
+                    return Err(ApiError::BadRequest(format!(
+                        "Let's Encrypt validation failed: {}. (Ensure domain's DNS A record points to this server IP)",
+                        first_err.trim()
+                    )));
+                }
             }
         }
         "self_signed" => {
-            let status = Command::new("openssl")
-                .args([
-                    "req", "-x509", "-nodes", "-days", "365",
-                    "-newkey", "rsa:2048",
-                    "-keyout", key_file.to_str().unwrap_or(""),
-                    "-out", cert_file.to_str().unwrap_or(""),
-                    "-subj", &format!("/C=IR/ST=Tehran/L=Tehran/O=Mfklixo Cloud/OU=Hosting/CN={}", domain)
-                ])
+            let subj = if is_wc {
+                format!("/C=IR/ST=Tehran/L=Tehran/O=Mfklixo Cloud/OU=Hosting/CN=*.{}", clean_domain)
+            } else {
+                format!("/C=IR/ST=Tehran/L=Tehran/O=Mfklixo Cloud/OU=Hosting/CN={}", clean_domain)
+            };
+
+            let mut cmd = Command::new("openssl");
+            cmd.args([
+                "req", "-x509", "-nodes", "-days", "365",
+                "-newkey", "rsa:2048",
+                "-keyout", key_file.to_str().unwrap_or(""),
+                "-out", cert_file.to_str().unwrap_or(""),
+                "-subj", &subj,
+            ]);
+            if is_wc {
+                cmd.args(["-addext", &format!("subjectAltName=DNS:*.{},DNS:{}", clean_domain, clean_domain)]);
+            }
+
+            let status = cmd
                 .status()
                 .await
                 .map_err(|e| ApiError::SystemExec(e.to_string()))?;
 
             if !status.success() {
-                return Err(ApiError::SystemExec("OpenSSL failed to generate self-signed certificate".to_string()));
+                return Err(ApiError::SystemExec("OpenSSL failed to generate certificate".to_string()));
             }
         }
         "custom" => {
@@ -3403,9 +3497,9 @@ async fn ssl_certificates_create(
     }
 
     let _ = sqlx::query("INSERT OR REPLACE INTO sslcert (nname, certname, parent_domain, upload_status) VALUES (?, ?, ?, 'active')")
-        .bind(&domain)
+        .bind(&clean_domain)
         .bind(certname)
-        .bind(&domain)
+        .bind(&clean_domain)
         .execute(&state.db)
         .await;
 
@@ -3414,7 +3508,7 @@ async fn ssl_certificates_create(
 
     Ok(Json(json!({
         "success": true,
-        "message": format!("SSL certificate for {} configured and active", domain)
+        "message": format!("SSL certificate for {} configured and active{}", clean_domain, if is_wc { " (Wildcard: *.)" } else { "" })
     })))
 }
 
