@@ -3314,34 +3314,47 @@ async fn ssl_certificates_create(
             let _ = tokio::fs::create_dir_all(&acme_dir).await;
             let _ = Command::new("chmod").args(["-R", "755", webroot]).output().await;
 
-            let mut args = vec![
-                "certonly".to_string(),
-                "--webroot".to_string(),
-                "-w".to_string(),
-                webroot.to_string(),
-                "-d".to_string(),
-                domain.clone(),
-                "--agree-tos".to_string(),
-                "--non-interactive".to_string(),
-            ];
-            if payload.include_www.unwrap_or(false) && !domain.starts_with("www.") {
-                args.push("-d".to_string());
-                args.push(format!("www.{}", domain));
-            }
-            if let Some(email) = payload.contact_email.as_deref().filter(|e| !e.trim().is_empty()) {
-                args.push("--email".to_string());
-                args.push(email.trim().to_string());
-            } else {
-                args.push("--register-unsafely-without-email".to_string());
-            }
+            let build_args = |include_w: bool| {
+                let mut args = vec![
+                    "certonly".to_string(),
+                    "--webroot".to_string(),
+                    "-w".to_string(),
+                    webroot.to_string(),
+                    "-d".to_string(),
+                    domain.clone(),
+                    "--agree-tos".to_string(),
+                    "--non-interactive".to_string(),
+                ];
+                if include_w && !domain.starts_with("www.") {
+                    args.push("-d".to_string());
+                    args.push(format!("www.{}", domain));
+                }
+                if let Some(email) = payload.contact_email.as_deref().filter(|e| !e.trim().is_empty()) {
+                    args.push("--email".to_string());
+                    args.push(email.trim().to_string());
+                } else {
+                    args.push("--register-unsafely-without-email".to_string());
+                }
+                args
+            };
 
-            let output = Command::new("certbot")
-                .args(&args)
+            let try_with_www = payload.include_www.unwrap_or(false);
+            let mut output = Command::new("certbot")
+                .args(&build_args(try_with_www))
                 .output()
                 .await
                 .map_err(|e| ApiError::BadRequest(format!("Failed to execute certbot: {}", e)))?;
 
             let le_live = Path::new("/etc/letsencrypt/live").join(&domain);
+            if !le_live.join("fullchain.pem").exists() && try_with_www {
+                // Retry without www in case www doesn't have a DNS record
+                output = Command::new("certbot")
+                    .args(&build_args(false))
+                    .output()
+                    .await
+                    .map_err(|e| ApiError::BadRequest(format!("Failed to execute certbot: {}", e)))?;
+            }
+
             if le_live.join("fullchain.pem").exists() && le_live.join("privkey.pem").exists() {
                 let _ = tokio::fs::copy(le_live.join("fullchain.pem"), &cert_file).await;
                 let _ = tokio::fs::copy(le_live.join("privkey.pem"), &key_file).await;
