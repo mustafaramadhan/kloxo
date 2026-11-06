@@ -175,6 +175,32 @@ export interface PhpConfigResponse {
   extensions: string[];
 }
 
+export interface PhpVersionsResponse {
+  success: boolean;
+  active: string;
+  installed: string[];
+  supported: string[];
+}
+
+export interface PhpModuleItem {
+  name: string;
+  enabled: boolean;
+  file?: string;
+}
+
+export interface PhpModulesResponse {
+  success: boolean;
+  version: string;
+  count: number;
+  modules: PhpModuleItem[];
+}
+
+export interface PhpIniResponse {
+  success: boolean;
+  version: string;
+  content: string;
+}
+
 export interface SubdomainItem {
   subdomain: string;
   parent_domain: string;

@@ -26,6 +26,7 @@ import {
   Shield,
   Archive,
   Sliders,
+  SlidersHorizontal,
   Layers,
 } from 'lucide-react';
 import { getStoredToken, setStoredToken } from '@/lib/api';
@@ -103,7 +104,8 @@ export default function Shell({ children }: ShellProps) {
       items: [
         { name: 'Clients', href: '/clients', icon: Users },
         { name: 'Cron Tasks', href: '/cron', icon: Clock },
-        { name: 'PHP Settings', href: '/php-config', icon: Sliders },
+        { name: 'PHP Directives', href: '/php-config', icon: Sliders },
+        { name: 'Advanced PHP', href: '/php-advanced', icon: SlidersHorizontal },
         { name: 'Server Logs', href: '/logs', icon: Terminal },
       ],
     },

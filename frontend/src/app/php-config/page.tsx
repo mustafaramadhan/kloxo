@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import Shell from '@/components/layout/Shell';
 import { apiFetch, PhpConfigResponse } from '@/lib/api';
-import { Sliders, RefreshCw, CheckCircle2, AlertCircle, Save, Cpu, Box, Search } from 'lucide-react';
+import { Sliders, SlidersHorizontal, RefreshCw, CheckCircle2, AlertCircle, Save, Cpu, Box, Search } from 'lucide-react';
 
 export default function PhpConfigPage() {
   const [phpVersion, setPhpVersion] = useState<string>('');
@@ -87,6 +88,13 @@ export default function PhpConfigPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <Link
+              href="/php-advanced"
+              className="inline-flex items-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-2 text-sm font-medium text-sky-300 hover:bg-sky-500/20 transition-colors"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Advanced PHP Configure
+            </Link>
             <button
               onClick={fetchConfig}
               disabled={loading}

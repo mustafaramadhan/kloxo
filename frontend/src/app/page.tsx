@@ -768,7 +768,7 @@ export default function DashboardPage() {
 
     // --- 2. Resource ---
     { id: 'phpini', title: 'PHP Configure', description: 'Memory limits, execution time & file upload sizes', icon: Sliders, category: 'resource', href: '/php-config' },
-    { id: 'phpfilter', title: 'Advanced PHP Configure', description: 'PHP-FPM worker pools, JIT buffer & OPcache', icon: SlidersHorizontal, category: 'resource', modal: 'phpfilter' },
+    { id: 'phpfilter', title: 'Advanced PHP Configure', description: 'PHP versions, OPcache, active modules toggle & custom INI', icon: SlidersHorizontal, category: 'resource', href: '/php-advanced' },
     { id: 'processedlog', title: 'Client Processed Logs', description: 'Web traffic statistics (Webalizer & Awstats)', icon: Activity, category: 'resource', href: '/logs' },
     { id: 'auxiliarylogin', title: 'Auxiliary Logins', description: 'Secondary team accounts with limited scopes', icon: Users, category: 'resource', modal: 'auxiliary' },
     { id: 'utmp', title: 'Login History', description: 'SSH and Web control panel login log (utmp)', icon: Eye, category: 'resource', modal: 'loginhistory' },
