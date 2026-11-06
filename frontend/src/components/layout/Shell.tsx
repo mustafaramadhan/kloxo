@@ -28,6 +28,7 @@ import {
   Sliders,
   SlidersHorizontal,
   Layers,
+  Wrench,
 } from 'lucide-react';
 import { getStoredToken, setStoredToken } from '@/lib/api';
 
@@ -109,6 +110,7 @@ export default function Shell({ children }: ShellProps) {
     {
       title: 'System & Server',
       items: [
+        { name: 'CustomBuild', href: '/custombuild', icon: Wrench, badge: 'DirectAdmin' },
         { name: 'Clients', href: '/clients', icon: Users },
         { name: 'Cron Tasks', href: '/cron', icon: Clock },
         { name: 'PHP Directives', href: '/php-config', icon: Sliders },

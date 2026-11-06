@@ -135,6 +135,39 @@ export interface SslCertItem {
   upload_status: string;
   has_crt: boolean;
   has_key: boolean;
+  issuer?: string;
+  expires_at?: string;
+  days_left?: number;
+  is_letsencrypt?: boolean;
+}
+
+export interface CustomBuildComponent {
+  name: string;
+  title: string;
+  installed_version: string;
+  latest_version: string;
+  status: 'active' | 'available' | 'needs_update';
+  category: 'web' | 'php' | 'database' | 'mail' | 'apps' | 'tools';
+  description: string;
+}
+
+export interface CustomBuildStatusResponse {
+  success: boolean;
+  components: CustomBuildComponent[];
+  active_web_engine: string;
+  active_php_version: string;
+  active_database: string;
+}
+
+export interface CustomBuildOptions {
+  webserver: string;
+  php1_release: string;
+  php1_mode: string;
+  mariadb_version: string;
+  phpmyadmin: boolean;
+  roundcube: boolean;
+  modsecurity: boolean;
+  autoupdate: boolean;
 }
 
 export interface FirewallRuleItem {

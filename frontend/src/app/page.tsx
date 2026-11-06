@@ -800,6 +800,7 @@ export default function DashboardPage() {
     { id: 'traceroute', title: 'Traceroute & Ping', description: 'Interactive network route diagnosis tool', icon: Radio, category: 'domain', modal: 'commandcenter' },
 
     // --- 4. Server (pserver) ---
+    { id: 'custombuild', title: 'CustomBuild Studio', description: 'DirectAdmin-style stack compiler, version updater & VirtualHost conf rewriter', icon: Wrench, category: 'server', href: '/custombuild', badge: 'DirectAdmin' },
     { id: 'service', title: 'Services Daemon', description: 'Start, stop, restart and monitor background services', icon: Server, category: 'server', href: '/services' },
     { id: 'process', title: 'Process Viewer', description: 'Live top CPU and Memory processes with kill switch', icon: Activity, category: 'server', modal: 'processes' },
     { id: 'componentinfo', title: 'Component Info', description: 'Versions of Nginx, PHP, MariaDB, Bind and OS', icon: Info, category: 'server', modal: 'components' },

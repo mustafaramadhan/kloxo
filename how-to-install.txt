@@ -10,6 +10,8 @@ Mfklixo is a high-performance modern web hosting control panel combining:
   • Database: MariaDB 10.11+ LTS with phpMyAdmin 5.2.2 web studio
   • Mail Suite: Postfix + Dovecot + Roundcube Webmail 1.6.10
   • Multi-PHP Manager: Version switcher, native module toggle & php.ini editor
+  • Automated SSL Engine: Let's Encrypt 1-Click issuance, auto-renewals & custom certs
+  • DirectAdmin CustomBuild Studio: Software stack recompiler, options.conf & conf rewriter
 
 Repository: https://github.com/feizezadeh/Mfklixo
 Branch:     modernize-kloxo
@@ -41,7 +43,8 @@ On Ubuntu / Debian:
     sudo apt-get install -y git curl wget tar gzip zip unzip build-essential \
                             mariadb-server nginx apache2 libapache2-mod-php \
                             php-cli php-fpm php-mysql php-mbstring php-xml \
-                            php-curl php-zip php-intl php-gd composer
+                            php-curl php-zip php-intl php-gd composer \
+                            certbot python3-certbot-nginx python3-certbot-apache
 
 Step 2: Install Node.js 20 LTS & Rust Toolchain
 ------------------------------------------------
@@ -157,4 +160,22 @@ Ensure old services are permanently disabled:
     sudo systemctl daemon-reload
 
 All operations now execute through the high-performance Rust daemon on port 7788.
+
+-------------------------------------------------------------------------------
+6. DirectAdmin-Style CustomBuild & Let's Encrypt SSL
+-------------------------------------------------------------------------------
+
+Mfklixo features a native DirectAdmin-style CustomBuild stack engine:
+  • Web Interface:
+      Navigate to: https://<YOUR_SERVER_IP>:7777/custombuild
+      - Live component versions vs latest releases (Nginx, Apache, PHP, MariaDB, etc.)
+      - options.conf stack configuration (/usr/local/lxlabs/kloxo/etc/custombuild.json)
+      - 1-Click build actions: Update Versions, Rewrite Confs, Build Stack
+      - Real-time build log streaming console
+
+  • SSL & Let's Encrypt Management:
+      Navigate to: https://<YOUR_SERVER_IP>:7777/ssl
+      - 1-Click Let's Encrypt automated issuance with www alias & HTTP->HTTPS force
+      - Auto-renewal status tracking and 1-Click renewal button
+      - Self-signed certificate generator & custom PEM/CRT/KEY installer
 ===============================================================================
