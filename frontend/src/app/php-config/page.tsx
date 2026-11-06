@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Shell from '@/components/layout/Shell';
 import { apiFetch, PhpConfigResponse } from '@/lib/api';
-import { Sliders, SlidersHorizontal, RefreshCw, CheckCircle2, AlertCircle, Save, Cpu, Box, Search } from 'lucide-react';
+import { Sliders, SlidersHorizontal, RefreshCw, CheckCircle2, AlertCircle, Save, Cpu, Box, Search, ExternalLink } from 'lucide-react';
 
 export default function PhpConfigPage() {
   const [phpVersion, setPhpVersion] = useState<string>('');
@@ -260,6 +260,12 @@ export default function PhpConfigPage() {
                 <Box className="h-5 w-5 text-indigo-400" />
                 <h3 className="text-md font-bold text-white">Active Modules ({extensions.length})</h3>
               </div>
+              <Link
+                href="/php-advanced"
+                className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1 font-medium transition-colors"
+              >
+                Manage & Install <ExternalLink className="h-3 w-3" />
+              </Link>
             </div>
 
             <div className="my-3 flex-shrink-0">

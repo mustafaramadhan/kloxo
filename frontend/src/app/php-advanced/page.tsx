@@ -28,6 +28,10 @@ import {
   Sliders,
   ShieldCheck,
   Power,
+  Download,
+  Sparkles,
+  Filter,
+  Package,
 } from 'lucide-react';
 
 export default function AdvancedPhpPage() {
@@ -41,7 +45,10 @@ export default function AdvancedPhpPage() {
   // Modules State
   const [modules, setModules] = useState<PhpModuleItem[]>([]);
   const [modSearch, setModSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'disabled' | 'not_installed'>('all');
   const [togglingModule, setTogglingModule] = useState<string | null>(null);
+  const [batchInstalling, setBatchInstalling] = useState(false);
 
   // INI State
   const [iniContent, setIniContent] = useState<string>('');
@@ -121,13 +128,13 @@ export default function AdvancedPhpPage() {
     }
   };
 
-  // Toggle Module
+  // Toggle or Install Module
   const handleToggleModule = async (modName: string, currentStatus: boolean) => {
     setTogglingModule(modName);
     setMessage(null);
     try {
       const nextState = !currentStatus;
-      const res = await apiFetch<{ success: boolean; message: string; module: string; enabled: boolean }>('/php/modules/toggle', {
+      const res = await apiFetch<{ success: boolean; message: string; module: string; enabled: boolean; installed?: boolean }>('/php/modules/toggle', {
         method: 'POST',
         body: JSON.stringify({
           module: modName,
@@ -138,13 +145,35 @@ export default function AdvancedPhpPage() {
 
       // Update state locally
       setModules((prev) =>
-        prev.map((m) => (m.name === modName ? { ...m, enabled: nextState } : m))
+        prev.map((m) => (m.name === modName ? { ...m, enabled: nextState, installed: true } : m))
       );
       setMessage({ text: res.message || `Module ${modName} updated`, success: true });
     } catch (err: any) {
       setMessage({ text: err.message || `Failed to toggle module ${modName}`, success: false });
     } finally {
       setTogglingModule(null);
+    }
+  };
+
+  // Batch Install Standard Modules
+  const handleBatchInstall = async (modList: string[]) => {
+    setBatchInstalling(true);
+    setMessage(null);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string }>('/php/modules/batch-install', {
+        method: 'POST',
+        body: JSON.stringify({
+          version: selectedVersion,
+          modules: modList,
+        }),
+      });
+      setMessage({ text: res.message || 'Modules installed and activated successfully', success: true });
+      const mRes = await apiFetch<PhpModulesResponse>(`/php/modules?version=${encodeURIComponent(selectedVersion)}`);
+      setModules(mRes.modules || []);
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to install modules batch', success: false });
+    } finally {
+      setBatchInstalling(false);
     }
   };
 
@@ -211,10 +240,29 @@ opcache.fast_shutdown=1
     }
   };
 
-  const filteredModules = modules.filter((m) =>
-    m.name.toLowerCase().includes(modSearch.toLowerCase())
-  );
+  const categories = ['all', ...Array.from(new Set(modules.map((m) => m.category || 'General').filter(Boolean)))];
+
+  const filteredModules = modules.filter((m) => {
+    const q = modSearch.toLowerCase();
+    const matchesSearch =
+      !modSearch ||
+      m.name.toLowerCase().includes(q) ||
+      (m.description && m.description.toLowerCase().includes(q)) ||
+      (m.category && m.category.toLowerCase().includes(q));
+
+    const matchesCategory = selectedCategory === 'all' || (m.category || 'General') === selectedCategory;
+
+    const matchesStatus =
+      selectedStatus === 'all' ||
+      (selectedStatus === 'active' && m.enabled) ||
+      (selectedStatus === 'disabled' && m.installed && !m.enabled) ||
+      (selectedStatus === 'not_installed' && !m.installed && !m.builtin);
+
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
+
   const enabledCount = modules.filter((m) => m.enabled).length;
+  const installedCount = modules.filter((m) => m.installed || m.builtin).length;
 
   return (
     <Shell>
@@ -330,11 +378,12 @@ opcache.fast_shutdown=1
             <div>
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Modules Status</span>
               <p className="text-xl font-bold text-white mt-0.5">
-                {enabledCount} <span className="text-xs text-slate-400 font-normal">/ {modules.length} Enabled</span>
+                {enabledCount} <span className="text-xs text-emerald-400 font-semibold">Active</span>{' '}
+                <span className="text-xs text-slate-400 font-normal">/ {installedCount} Installed / {modules.length} Catalog</span>
               </p>
             </div>
             <span className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 text-xs font-semibold text-indigo-400">
-              Native phpenmod
+              Native phpenmod & apt
             </span>
           </div>
         </div>
@@ -486,76 +535,239 @@ opcache.fast_shutdown=1
         {/* Tab 2: Modules & Extensions */}
         {activeTab === 'modules' && (
           <div className="space-y-6">
-            <div className="rounded-3xl border border-white/5 bg-slate-900/50 backdrop-blur-2xl p-6 shadow-2xl">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-white/5 mb-6 gap-4">
+            {/* Quick 1-Click Recommended Web Stack Banner */}
+            <div className="rounded-3xl border border-sky-500/20 bg-gradient-to-r from-sky-950/40 via-indigo-950/30 to-purple-950/20 backdrop-blur-2xl p-6 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                    <Sparkles className="h-4 w-4" />
+                  </span>
+                  <h3 className="text-base font-bold text-white">
+                    Recommended Web & CMS Stack (1-Click Setup)
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                  Quickly installs and enables all standard modules required for WordPress, Laravel, Excel/XLSX exports, and API services: <code className="text-sky-300 font-mono">zip (ZipArchive)</code>, <code className="text-sky-300 font-mono">gd</code>, <code className="text-sky-300 font-mono">intl</code>, <code className="text-sky-300 font-mono">soap</code>, <code className="text-sky-300 font-mono">bcmath</code>, <code className="text-sky-300 font-mono">sqlite3</code>, <code className="text-sky-300 font-mono">redis</code>, and <code className="text-sky-300 font-mono">imagick</code>.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleBatchInstall(['zip', 'gd', 'intl', 'soap', 'bcmath', 'sqlite3', 'redis', 'imagick'])}
+                disabled={batchInstalling}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-sky-500/20 hover:from-sky-400 hover:to-indigo-500 transition-all disabled:opacity-50 whitespace-nowrap flex-shrink-0"
+              >
+                <Download className={`h-4 w-4 ${batchInstalling ? 'animate-bounce' : ''}`} />
+                {batchInstalling ? 'Installing Stack...' : 'Install & Enable Recommended Stack'}
+              </button>
+            </div>
+
+            {/* Modules Filter & Search Container */}
+            <div className="rounded-3xl border border-white/5 bg-slate-900/50 backdrop-blur-2xl p-6 shadow-2xl space-y-5">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-white/5">
                 <div>
                   <h2 className="text-lg font-bold text-white flex items-center gap-2">
                     <Box className="h-5 w-5 text-indigo-400" />
                     PHP Modules & Extensions Manager (PHP {selectedVersion})
                   </h2>
                   <p className="text-xs text-slate-400 mt-1">
-                    Toggle individual PHP extensions dynamically with <code className="text-sky-300">phpenmod</code> and <code className="text-sky-300">phpdismod</code>.
+                    Manage, install, and toggle all PHP extensions dynamically with <code className="text-sky-300">phpenmod</code>, <code className="text-sky-300">phpdismod</code>, and OS package management.
                   </p>
                 </div>
 
-                <div className="w-full sm:w-72">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-                    <input
-                      type="text"
-                      placeholder="Search modules (e.g. mysqli, curl, zip)..."
-                      value={modSearch}
-                      onChange={(e) => setModSearch(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-slate-950 pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none"
-                    />
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Status Filter */}
+                  <div className="inline-flex rounded-xl bg-slate-950 p-1 border border-white/10 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStatus('all')}
+                      className={`px-3 py-1 rounded-lg font-medium transition-all ${
+                        selectedStatus === 'all'
+                          ? 'bg-sky-500 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      All ({modules.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStatus('active')}
+                      className={`px-3 py-1 rounded-lg font-medium transition-all ${
+                        selectedStatus === 'active'
+                          ? 'bg-emerald-500 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Active ({enabledCount})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStatus('disabled')}
+                      className={`px-3 py-1 rounded-lg font-medium transition-all ${
+                        selectedStatus === 'disabled'
+                          ? 'bg-amber-500 text-slate-950 font-semibold shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Disabled ({modules.filter((m) => m.installed && !m.enabled).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStatus('not_installed')}
+                      className={`px-3 py-1 rounded-lg font-medium transition-all ${
+                        selectedStatus === 'not_installed'
+                          ? 'bg-slate-700 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Available ({modules.filter((m) => !m.installed && !m.builtin).length})
+                    </button>
+                  </div>
+
+                  {/* Search Bar */}
+                  <div className="w-full sm:w-64">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                      <input
+                        type="text"
+                        placeholder="Search modules (e.g. zip, gd, redis)..."
+                        value={modSearch}
+                        onChange={(e) => setModSearch(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-slate-950 pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:border-sky-500 focus:outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
+              {/* Category Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mr-1 flex items-center gap-1">
+                  <Filter className="h-3 w-3" /> Categories:
+                </span>
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-medium whitespace-nowrap transition-colors ${
+                      selectedCategory === cat
+                        ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                        : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 border border-transparent'
+                    }`}
+                  >
+                    {cat === 'all' ? 'All Categories' : cat}
+                  </button>
+                ))}
+              </div>
+
+              {/* Module Cards Grid */}
               {loading ? (
-                <div className="p-12 text-center text-slate-400 animate-pulse">Loading modules...</div>
+                <div className="p-16 text-center text-slate-400 animate-pulse">Loading PHP modules catalog...</div>
               ) : filteredModules.length === 0 ? (
-                <div className="p-12 text-center text-slate-500 text-sm">No modules found matching &quot;{modSearch}&quot;</div>
+                <div className="p-16 text-center text-slate-500 text-sm">
+                  No modules found matching &quot;{modSearch}&quot; (Category: {selectedCategory}, Status: {selectedStatus})
+                </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {filteredModules.map((mod) => {
                     const isBusy = togglingModule === mod.name;
+                    const isInstalled = mod.installed || mod.builtin;
 
                     return (
                       <div
                         key={mod.name}
-                        className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
+                        className={`flex flex-col justify-between p-4 rounded-2xl border transition-all ${
                           mod.enabled
-                            ? 'border-emerald-500/20 bg-emerald-500/5 hover:border-emerald-500/30'
-                            : 'border-white/5 bg-slate-950/40 hover:border-white/10 opacity-70'
+                            ? 'border-emerald-500/25 bg-emerald-950/10 hover:border-emerald-500/40 shadow-sm'
+                            : isInstalled
+                            ? 'border-amber-500/20 bg-amber-950/10 hover:border-amber-500/30'
+                            : 'border-white/5 bg-slate-950/40 hover:border-white/15 opacity-80'
                         }`}
                       >
-                        <div className="flex flex-col pr-2">
-                          <span className="font-mono text-xs font-semibold text-white">
-                            {mod.name}
-                          </span>
-                          <span className="text-[10px] text-slate-500 truncate max-w-[140px]">
-                            {mod.file || `${mod.name}.ini`}
-                          </span>
+                        <div>
+                          {/* Header: Name + Category + Status Badge */}
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex flex-col">
+                              <span className="font-mono text-sm font-bold text-white tracking-wide">
+                                {mod.name}
+                              </span>
+                              {mod.category && (
+                                <span className="text-[10px] text-indigo-400 font-medium">
+                                  {mod.category}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Status Badge */}
+                            {mod.builtin ? (
+                              <span className="rounded-lg bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 text-[10px] font-semibold text-sky-400">
+                                Core Built-in
+                              </span>
+                            ) : mod.enabled ? (
+                              <span className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                Active
+                              </span>
+                            ) : isInstalled ? (
+                              <span className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
+                                Disabled
+                              </span>
+                            ) : (
+                              <span className="rounded-lg bg-slate-800 border border-slate-700 px-2 py-0.5 text-[10px] font-medium text-slate-400">
+                                Not Installed
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Description */}
+                          <p className="text-[11px] text-slate-400 line-clamp-2 min-h-[32px] mb-3">
+                            {mod.description || 'PHP extension module'}
+                          </p>
                         </div>
 
-                        {/* Interactive Toggle Switch */}
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={mod.enabled}
-                          disabled={isBusy}
-                          onClick={() => handleToggleModule(mod.name, mod.enabled)}
-                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            mod.enabled ? 'bg-sky-500' : 'bg-slate-800'
-                          } ${isBusy ? 'opacity-50 cursor-wait' : ''}`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                              mod.enabled ? 'translate-x-5' : 'translate-x-0'
-                            }`}
-                          />
-                        </button>
+                        {/* Action Row */}
+                        <div className="pt-3 border-t border-white/5 flex items-center justify-between">
+                          <span className="font-mono text-[10px] text-slate-500 truncate max-w-[120px]">
+                            {mod.package || mod.file || `${mod.name}.ini`}
+                          </span>
+
+                          {mod.builtin ? (
+                            <span className="text-[10px] text-slate-500 italic">Always Active</span>
+                          ) : !isInstalled ? (
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() => handleToggleModule(mod.name, false)}
+                              className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow hover:from-sky-400 hover:to-indigo-500 transition-all disabled:opacity-50"
+                            >
+                              <Download className={`h-3 w-3 ${isBusy ? 'animate-bounce' : ''}`} />
+                              {isBusy ? 'Installing...' : 'Install & Enable'}
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-slate-400 font-medium">
+                                {mod.enabled ? 'Enabled' : 'Disabled'}
+                              </span>
+                              <button
+                                type="button"
+                                role="switch"
+                                aria-checked={mod.enabled}
+                                disabled={isBusy}
+                                onClick={() => handleToggleModule(mod.name, mod.enabled)}
+                                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                  mod.enabled ? 'bg-sky-500' : 'bg-slate-800'
+                                } ${isBusy ? 'opacity-50 cursor-wait' : ''}`}
+                              >
+                                <span
+                                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                                    mod.enabled ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}

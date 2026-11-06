@@ -1462,6 +1462,12 @@ pub struct PhpModuleTogglePayload {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct PhpModuleBatchPayload {
+    pub version: Option<String>,
+    pub modules: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct PhpSwitchVersionPayload {
     pub version: String,
 }
@@ -1538,6 +1544,50 @@ async fn php_switch_version(claims: Claims, Json(payload): Json<PhpSwitchVersion
     })))
 }
 
+struct KnownPhpModule {
+    name: &'static str,
+    category: &'static str,
+    description: &'static str,
+}
+
+const KNOWN_PHP_MODULES: &[KnownPhpModule] = &[
+    KnownPhpModule { name: "zip", category: "Compression", description: "ZipArchive & compressed zip files (Required for Excel/XLSX, Word/DOCX)" },
+    KnownPhpModule { name: "gd", category: "Graphics", description: "GD Image Library (Thumbnails, captcha, watermarks, resizing)" },
+    KnownPhpModule { name: "imagick", category: "Graphics", description: "ImageMagick library wrapper for high-res photo and PDF rendering" },
+    KnownPhpModule { name: "curl", category: "Networking", description: "cURL HTTP client for external API requests & webhooks" },
+    KnownPhpModule { name: "mbstring", category: "Text & Encoding", description: "Multibyte string support for UTF-8, Persian, Arabic, and international text" },
+    KnownPhpModule { name: "intl", category: "Localization", description: "Internationalization functions (ICU: dates, numbers, currency, locale formatting)" },
+    KnownPhpModule { name: "xml", category: "XML & Web", description: "DOM, SimpleXML, XMLReader, XMLWriter & XSL document processing" },
+    KnownPhpModule { name: "soap", category: "XML & Web", description: "SOAP client and server protocol for enterprise web services" },
+    KnownPhpModule { name: "bcmath", category: "Math & Crypto", description: "Arbitrary precision arithmetic for financial, banking, and crypto calculations" },
+    KnownPhpModule { name: "gmp", category: "Math & Crypto", description: "GNU Multiple Precision arithmetic for high-speed large numbers" },
+    KnownPhpModule { name: "mysql", category: "Database", description: "MySQL & MariaDB database support bundle (mysqli, pdo_mysql)" },
+    KnownPhpModule { name: "mysqli", category: "Database", description: "MySQL Improved driver for MariaDB and MySQL databases" },
+    KnownPhpModule { name: "pdo_mysql", category: "Database", description: "PHP Data Objects (PDO) driver for MySQL and MariaDB" },
+    KnownPhpModule { name: "sqlite3", category: "Database", description: "SQLite3 embedded database engine and PDO driver" },
+    KnownPhpModule { name: "pdo_sqlite", category: "Database", description: "PHP Data Objects (PDO) driver for SQLite3 databases" },
+    KnownPhpModule { name: "pgsql", category: "Database", description: "PostgreSQL relational database client and driver" },
+    KnownPhpModule { name: "pdo_pgsql", category: "Database", description: "PHP Data Objects (PDO) driver for PostgreSQL" },
+    KnownPhpModule { name: "redis", category: "Cache & NoSQL", description: "Redis in-memory data store client for fast caching and sessions" },
+    KnownPhpModule { name: "memcached", category: "Cache & NoSQL", description: "Memcached distributed memory object caching system" },
+    KnownPhpModule { name: "mongodb", category: "Cache & NoSQL", description: "MongoDB official driver for document databases" },
+    KnownPhpModule { name: "opcache", category: "Performance", description: "Zend OPcache bytecode caching and opcode optimizer" },
+    KnownPhpModule { name: "bz2", category: "Compression", description: "Bzip2 high-compression archive reading and writing" },
+    KnownPhpModule { name: "zlib", category: "Compression", description: "Zlib, Gzip and Deflate data compression" },
+    KnownPhpModule { name: "sodium", category: "Security", description: "Modern, easy-to-use Libsodium cryptographic library" },
+    KnownPhpModule { name: "openssl", category: "Security", description: "OpenSSL cryptography, certificate verification and SSL/TLS streams" },
+    KnownPhpModule { name: "readline", category: "System", description: "Readline interactive terminal input interface" },
+    KnownPhpModule { name: "ldap", category: "Networking", description: "Lightweight Directory Access Protocol client for corporate authentication" },
+    KnownPhpModule { name: "tidy", category: "XML & Web", description: "HTML Tidy clean up and repair for HTML/XHTML documents" },
+    KnownPhpModule { name: "uuid", category: "Utilities", description: "Universally Unique Identifier (UUID v1/v4) generation" },
+    KnownPhpModule { name: "yaml", category: "Utilities", description: "YAML 1.1 parser and emitter for configuration files" },
+    KnownPhpModule { name: "xdebug", category: "Development", description: "Xdebug step debugger, profiler, and code coverage tool" },
+    KnownPhpModule { name: "apcu", category: "Cache & NoSQL", description: "APC User Cache for in-memory key-value data caching" },
+    KnownPhpModule { name: "amqp", category: "Networking", description: "Advanced Message Queuing Protocol (RabbitMQ) client" },
+    KnownPhpModule { name: "msgpack", category: "Utilities", description: "MessagePack fast binary serialization format" },
+    KnownPhpModule { name: "igbinary", category: "Utilities", description: "Igbinary drop-in replacement for standard PHP serializer" },
+];
+
 /// `GET /api/v1/php/modules`
 async fn php_modules_list(Query(q): Query<PhpVersionQuery>, _claims: Claims) -> ApiResult<Value> {
     let ver = q.version.unwrap_or_else(|| "8.5".to_string());
@@ -1545,7 +1595,20 @@ async fn php_modules_list(Query(q): Query<PhpVersionQuery>, _claims: Claims) -> 
     let apache_conf_d = PathBuf::from(format!("/etc/php/{}/apache2/conf.d", ver));
     let fpm_conf_d = PathBuf::from(format!("/etc/php/{}/fpm/conf.d", ver));
 
-    let mut modules = Vec::new();
+    // Get loaded modules from php -m
+    let mut cli_loaded = std::collections::HashSet::new();
+    if let Ok(output) = Command::new("php").arg("-m").output().await {
+        for line in String::from_utf8_lossy(&output.stdout).lines() {
+            let l = line.trim().to_lowercase();
+            if !l.is_empty() && !l.starts_with('[') {
+                cli_loaded.insert(l);
+            }
+        }
+    }
+
+    let mut found_mods: std::collections::HashMap<String, serde_json::Value> = std::collections::HashMap::new();
+
+    // 1. Scan mods-available
     if let Ok(entries) = fs::read_dir(&mods_available) {
         for entry in entries.flatten() {
             let filename = entry.file_name().to_string_lossy().to_string();
@@ -1558,20 +1621,81 @@ async fn php_modules_list(Query(q): Query<PhpVersionQuery>, _claims: Claims) -> 
                     .map(|e_list| e_list.flatten().any(|e| e.file_name().to_string_lossy().ends_with(&filename)))
                     .unwrap_or(false);
 
-                modules.push(json!({
+                let is_cli = cli_loaded.contains(&mod_name.to_lowercase());
+                let is_enabled = enabled_apache || enabled_fpm || is_cli;
+
+                found_mods.insert(mod_name.clone(), json!({
                     "name": mod_name,
                     "file": filename,
-                    "enabled": enabled_apache || enabled_fpm
+                    "installed": true,
+                    "enabled": is_enabled,
+                    "builtin": false,
+                    "category": "General",
+                    "description": "Installed PHP extension module"
                 }));
             }
         }
     }
-    modules.sort_by(|a, b| a["name"].as_str().cmp(&b["name"].as_str()));
+
+    // 2. Scan cli_loaded for built-in or compiled-in modules
+    for mod_name in &cli_loaded {
+        if !found_mods.contains_key(mod_name) {
+            found_mods.insert(mod_name.clone(), json!({
+                "name": mod_name,
+                "file": "builtin",
+                "installed": true,
+                "enabled": true,
+                "builtin": true,
+                "category": "Core & Built-in",
+                "description": "Compiled directly into PHP runtime binary"
+            }));
+        }
+    }
+
+    // 3. Merge KNOWN_PHP_MODULES catalog
+    for km in KNOWN_PHP_MODULES {
+        let key = km.name.to_string();
+        if let Some(existing) = found_mods.get_mut(&key) {
+            existing["category"] = json!(km.category);
+            existing["description"] = json!(km.description);
+        } else {
+            let pkg_name = format!("php{}-{}", ver, km.name);
+            let ini_file = format!("{}.ini", km.name);
+            let is_cli = cli_loaded.contains(&km.name.to_lowercase());
+
+            found_mods.insert(key.clone(), json!({
+                "name": km.name,
+                "file": ini_file,
+                "installed": is_cli,
+                "enabled": is_cli,
+                "builtin": false,
+                "category": km.category,
+                "description": km.description,
+                "package": pkg_name
+            }));
+        }
+    }
+
+    let mut modules: Vec<serde_json::Value> = found_mods.into_values().collect();
+    modules.sort_by(|a, b| {
+        let cat_a = a["category"].as_str().unwrap_or("");
+        let cat_b = b["category"].as_str().unwrap_or("");
+        cat_a.cmp(cat_b).then_with(|| {
+            let name_a = a["name"].as_str().unwrap_or("");
+            let name_b = b["name"].as_str().unwrap_or("");
+            name_a.cmp(name_b)
+        })
+    });
+
+    let active_count = modules.iter().filter(|m| m["enabled"].as_bool().unwrap_or(false)).count();
+    let installed_count = modules.iter().filter(|m| m["installed"].as_bool().unwrap_or(false)).count();
 
     Ok(Json(json!({
         "success": true,
         "version": ver,
         "count": modules.len(),
+        "active_count": active_count,
+        "installed_count": installed_count,
         "modules": modules
     })))
 }
@@ -1584,16 +1708,55 @@ async fn php_modules_toggle(claims: Claims, Json(payload): Json<PhpModuleToggleP
     let ver = payload.version.unwrap_or_else(|| "8.5".to_string());
     let mod_name = payload.module.trim().to_string();
 
-    let cmd_name = if payload.enable { "phpenmod" } else { "phpdismod" };
-    let output = Command::new(cmd_name)
-        .args(["-v", &ver, &mod_name])
-        .output()
-        .await
-        .map_err(|e| ApiError::Internal(format!("Failed to execute {}: {}", cmd_name, e)))?;
+    if payload.enable {
+        // Check if module ini exists under /etc/php/{ver}/mods-available/
+        let ini_path = PathBuf::from(format!("/etc/php/{}/mods-available/{}.ini", ver, mod_name));
+        if !ini_path.exists() {
+            // Need to install the package first
+            let pkg_suffix = match mod_name.as_str() {
+                "mysqli" | "pdo_mysql" | "mysqlnd" => "mysql",
+                "sqlite3" | "pdo_sqlite" => "sqlite3",
+                "pgsql" | "pdo_pgsql" => "pgsql",
+                other => other,
+            };
+            let pkg = format!("php{}-{}", ver, pkg_suffix);
+            let generic_pkg = format!("php-{}", pkg_suffix);
 
-    if !output.status.success() {
-        let err = String::from_utf8_lossy(&output.stderr);
-        return Err(ApiError::BadRequest(format!("{} error: {}", cmd_name, err)));
+            let mut install_cmd = Command::new("apt-get");
+            install_cmd.args(["install", "-y", &pkg]);
+            let res = install_cmd.output().await;
+            let success = match res {
+                Ok(out) => out.status.success(),
+                Err(_) => false,
+            };
+
+            if !success {
+                // Try generic package
+                let _ = Command::new("apt-get").args(["install", "-y", &generic_pkg]).output().await;
+            }
+        }
+
+        let output = Command::new("phpenmod")
+            .args(["-v", &ver, &mod_name])
+            .output()
+            .await
+            .map_err(|e| ApiError::Internal(format!("Failed to execute phpenmod: {}", e)))?;
+
+        if !output.status.success() {
+            let err = String::from_utf8_lossy(&output.stderr);
+            return Err(ApiError::BadRequest(format!("phpenmod error: {}", err)));
+        }
+    } else {
+        let output = Command::new("phpdismod")
+            .args(["-v", &ver, &mod_name])
+            .output()
+            .await
+            .map_err(|e| ApiError::Internal(format!("Failed to execute phpdismod: {}", e)))?;
+
+        if !output.status.success() {
+            let err = String::from_utf8_lossy(&output.stderr);
+            return Err(ApiError::BadRequest(format!("phpdismod error: {}", err)));
+        }
     }
 
     let _ = Command::new("systemctl").args(["reload", "apache2"]).output().await;
@@ -1604,6 +1767,55 @@ async fn php_modules_toggle(claims: Claims, Json(payload): Json<PhpModuleToggleP
         "message": format!("Module {} successfully {}", mod_name, if payload.enable { "enabled" } else { "disabled" }),
         "module": mod_name,
         "enabled": payload.enable,
+        "installed": true,
+        "version": ver
+    })))
+}
+
+/// `POST /api/v1/php/modules/batch-install`
+async fn php_modules_batch_install(claims: Claims, Json(payload): Json<PhpModuleBatchPayload>) -> ApiResult<Value> {
+    if !claims.is_superadmin() {
+        return Err(ApiError::Forbidden("Superadmin role required".to_string()));
+    }
+    let ver = payload.version.unwrap_or_else(|| "8.5".to_string());
+    if payload.modules.is_empty() {
+        return Err(ApiError::BadRequest("No modules specified for installation".to_string()));
+    }
+
+    let mut pkgs = Vec::new();
+    for m in &payload.modules {
+        let clean = m.trim().to_lowercase();
+        let pkg = match clean.as_str() {
+            "mysqli" | "mysqlnd" | "pdo_mysql" | "mysql" => format!("php{}-mysql", ver),
+            "sqlite3" | "pdo_sqlite" => format!("php{}-sqlite3", ver),
+            "pgsql" | "pdo_pgsql" => format!("php{}-pgsql", ver),
+            other => format!("php{}-{}", ver, other),
+        };
+        if !pkgs.contains(&pkg) {
+            pkgs.push(pkg);
+        }
+    }
+
+    let mut cmd = Command::new("apt-get");
+    cmd.arg("install").arg("-y").args(&pkgs);
+    let output = cmd.output().await.map_err(|e| ApiError::Internal(format!("apt-get failed: {}", e)))?;
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        return Err(ApiError::Internal(format!("Failed to install packages: {}", err)));
+    }
+
+    // Enable all
+    for m in &payload.modules {
+        let _ = Command::new("phpenmod").args(["-v", &ver, m.trim()]).output().await;
+    }
+
+    let _ = Command::new("systemctl").args(["reload", "apache2"]).output().await;
+    let _ = Command::new("systemctl").args(["reload", &format!("php{}-fpm", ver)]).output().await;
+
+    Ok(Json(json!({
+        "success": true,
+        "message": format!("Successfully installed and enabled {} module(s)", payload.modules.len()),
+        "modules": payload.modules,
         "version": ver
     })))
 }
@@ -4972,6 +5184,7 @@ fn build_v1_router() -> Router<AppState> {
         .route("/php/switch-version", post(php_switch_version))
         .route("/php/modules", get(php_modules_list))
         .route("/php/modules/toggle", post(php_modules_toggle))
+        .route("/php/modules/batch-install", post(php_modules_batch_install))
         .route("/php/ini", get(php_ini_get).post(php_ini_post))
         // Settings, Plans, Skeleton, Tickets & Messages
         .route("/system/settings", get(system_settings_get).post(system_settings_save))

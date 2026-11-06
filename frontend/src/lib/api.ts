@@ -220,6 +220,11 @@ export interface PhpVersionsResponse {
 export interface PhpModuleItem {
   name: string;
   enabled: boolean;
+  installed?: boolean;
+  builtin?: boolean;
+  category?: string;
+  description?: string;
+  package?: string;
   file?: string;
 }
 
@@ -227,6 +232,8 @@ export interface PhpModulesResponse {
   success: boolean;
   version: string;
   count: number;
+  active_count?: number;
+  installed_count?: number;
   modules: PhpModuleItem[];
 }
 
