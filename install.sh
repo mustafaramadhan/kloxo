@@ -257,8 +257,6 @@ fi
 
 # Install systemd service unit files
 cp -f "$INSTALL_DIR/init/kloxo-web.service" /etc/systemd/system/kloxo-web.service
-cp -f "$INSTALL_DIR/init/kloxo-php.service" /etc/systemd/system/kloxo-php.service
-cp -f "$INSTALL_DIR/init/kloxo-wrap.service" /etc/systemd/system/kloxo-wrap.service
 if [ -f "$INSTALL_DIR/init/mfklixo-core.service" ]; then
     cp -f "$INSTALL_DIR/init/mfklixo-core.service" /etc/systemd/system/mfklixo-core.service
 fi
@@ -266,6 +264,17 @@ if [ -f "$INSTALL_DIR/init/kloxo-dashboard.service" ]; then
     cp -f "$INSTALL_DIR/init/kloxo-dashboard.service" /etc/systemd/system/kloxo-dashboard.service
 fi
 chmod 644 /etc/systemd/system/kloxo-*.service /etc/systemd/system/mfklixo-*.service 2>/dev/null || true
+
+# Setup phpMyAdmin & Roundcube Webmail on Apache Engine
+echo -e "${GREEN}[*] Setting up phpMyAdmin & Roundcube Webmail...${NC}"
+mkdir -p /usr/share/phpmyadmin /var/lib/phpmyadmin/tmp /usr/share/roundcube
+if [ ! -f /usr/share/phpmyadmin/index.php ]; then
+    curl -sL https://files.phpmyadmin.net/phpMyAdmin/5.2.2/phpMyAdmin-5.2.2-all-languages.tar.gz | tar -xz -C /usr/share/phpmyadmin --strip-components=1 2>/dev/null || true
+fi
+if [ ! -f /usr/share/roundcube/index.php ]; then
+    curl -sL https://github.com/roundcube/roundcubemail/releases/download/1.6.10/roundcubemail-1.6.10-complete.tar.gz | tar -xz -C /usr/share/roundcube --strip-components=1 2>/dev/null || true
+fi
+chown -R www-data:www-data /usr/share/phpmyadmin /var/lib/phpmyadmin /usr/share/roundcube 2>/dev/null || true
 
 # Build and enable Next.js Modern Dashboard
 if [ -d "$INSTALL_DIR/frontend" ] && command -v npm >/dev/null 2>&1; then
@@ -280,14 +289,12 @@ if [ -d "$INSTALL_DIR/frontend" ] && command -v npm >/dev/null 2>&1; then
 fi
 
 systemctl daemon-reload
-systemctl enable kloxo-php.service kloxo-web.service kloxo-wrap.service || true
+systemctl enable kloxo-web.service || true
 if [ -f /etc/systemd/system/mfklixo-core.service ]; then
     systemctl enable --now mfklixo-core.service || true
     systemctl restart mfklixo-core.service || true
 fi
-systemctl restart kloxo-php.service || true
 systemctl restart kloxo-web.service || true
-systemctl restart kloxo-wrap.service || true
 
 # Setup Apache + Nginx dual reverse proxy for hosted domains
 if [ -f "$INSTALL_DIR/pscript/switchserver" ]; then

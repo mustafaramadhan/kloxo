@@ -1445,6 +1445,242 @@ async fn system_phpinfo(_claims: Claims) -> ApiResult<Value> {
 }
 
 // ============================================================================
+// 6.1 PHP VERSIONS & MODULES MANAGEMENT
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+pub struct PhpVersionQuery {
+    pub version: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PhpModuleTogglePayload {
+    pub version: Option<String>,
+    pub module: String,
+    pub enable: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PhpSwitchVersionPayload {
+    pub version: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PhpIniPayload {
+    pub version: Option<String>,
+    pub memory_limit: Option<String>,
+    pub upload_max_filesize: Option<String>,
+    pub post_max_size: Option<String>,
+    pub max_execution_time: Option<String>,
+    pub display_errors: Option<String>,
+    pub date_timezone: Option<String>,
+}
+
+/// `GET /api/v1/php/versions`
+async fn php_versions_list(_claims: Claims) -> ApiResult<Value> {
+    let mut installed = Vec::new();
+    if let Ok(entries) = fs::read_dir("/etc/php") {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) {
+                installed.push(name);
+            }
+        }
+    }
+    installed.sort();
+
+    let active = if let Ok(output) = Command::new("php").arg("-r").arg("echo PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;").output().await {
+        let v = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if v.is_empty() {
+            installed.first().cloned().unwrap_or_else(|| "8.5".to_string())
+        } else {
+            v
+        }
+    } else {
+        installed.first().cloned().unwrap_or_else(|| "8.5".to_string())
+    };
+
+    Ok(Json(json!({
+        "success": true,
+        "active": active,
+        "installed": installed,
+        "supported": ["7.4", "8.0", "8.1", "8.2", "8.3", "8.4", "8.5"]
+    })))
+}
+
+/// `POST /api/v1/php/switch-version`
+async fn php_switch_version(claims: Claims, Json(payload): Json<PhpSwitchVersionPayload>) -> ApiResult<Value> {
+    if !claims.is_superadmin() {
+        return Err(ApiError::Forbidden("Superadmin role required".to_string()));
+    }
+    let ver = payload.version.trim();
+    if !Path::new(&format!("/etc/php/{}", ver)).exists() {
+        return Err(ApiError::BadRequest(format!("PHP version {} is not installed", ver)));
+    }
+
+    let bin = format!("/usr/bin/php{}", ver);
+    if Path::new(&bin).exists() {
+        let _ = Command::new("update-alternatives").args(["--set", "php", &bin]).output().await;
+    }
+
+    let sock = format!("/run/php/php{}-fpm.sock", ver);
+    if Path::new(&sock).exists() {
+        let _ = Command::new("ln").args(["-sf", &sock, "/run/php/php-fpm.sock"]).output().await;
+    }
+
+    let _ = Command::new("systemctl").args(["reload", "apache2"]).output().await;
+
+    Ok(Json(json!({
+        "success": true,
+        "message": format!("Switched default PHP version to {}", ver),
+        "version": ver
+    })))
+}
+
+/// `GET /api/v1/php/modules`
+async fn php_modules_list(Query(q): Query<PhpVersionQuery>, _claims: Claims) -> ApiResult<Value> {
+    let ver = q.version.unwrap_or_else(|| "8.5".to_string());
+    let mods_available = PathBuf::from(format!("/etc/php/{}/mods-available", ver));
+    let apache_conf_d = PathBuf::from(format!("/etc/php/{}/apache2/conf.d", ver));
+    let fpm_conf_d = PathBuf::from(format!("/etc/php/{}/fpm/conf.d", ver));
+
+    let mut modules = Vec::new();
+    if let Ok(entries) = fs::read_dir(&mods_available) {
+        for entry in entries.flatten() {
+            let filename = entry.file_name().to_string_lossy().to_string();
+            if filename.ends_with(".ini") {
+                let mod_name = filename.trim_end_matches(".ini").to_string();
+                let enabled_apache = fs::read_dir(&apache_conf_d)
+                    .map(|e_list| e_list.flatten().any(|e| e.file_name().to_string_lossy().ends_with(&filename)))
+                    .unwrap_or(false);
+                let enabled_fpm = fs::read_dir(&fpm_conf_d)
+                    .map(|e_list| e_list.flatten().any(|e| e.file_name().to_string_lossy().ends_with(&filename)))
+                    .unwrap_or(false);
+
+                modules.push(json!({
+                    "name": mod_name,
+                    "file": filename,
+                    "enabled": enabled_apache || enabled_fpm
+                }));
+            }
+        }
+    }
+    modules.sort_by(|a, b| a["name"].as_str().cmp(&b["name"].as_str()));
+
+    Ok(Json(json!({
+        "success": true,
+        "version": ver,
+        "count": modules.len(),
+        "modules": modules
+    })))
+}
+
+/// `POST /api/v1/php/modules/toggle`
+async fn php_modules_toggle(claims: Claims, Json(payload): Json<PhpModuleTogglePayload>) -> ApiResult<Value> {
+    if !claims.is_superadmin() {
+        return Err(ApiError::Forbidden("Superadmin role required".to_string()));
+    }
+    let ver = payload.version.unwrap_or_else(|| "8.5".to_string());
+    let mod_name = payload.module.trim().to_string();
+
+    let cmd_name = if payload.enable { "phpenmod" } else { "phpdismod" };
+    let output = Command::new(cmd_name)
+        .args(["-v", &ver, &mod_name])
+        .output()
+        .await
+        .map_err(|e| ApiError::Internal(format!("Failed to execute {}: {}", cmd_name, e)))?;
+
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        return Err(ApiError::BadRequest(format!("{} error: {}", cmd_name, err)));
+    }
+
+    let _ = Command::new("systemctl").args(["reload", "apache2"]).output().await;
+    let _ = Command::new("systemctl").args(["reload", &format!("php{}-fpm", ver)]).output().await;
+
+    Ok(Json(json!({
+        "success": true,
+        "message": format!("Module {} successfully {}", mod_name, if payload.enable { "enabled" } else { "disabled" }),
+        "module": mod_name,
+        "enabled": payload.enable,
+        "version": ver
+    })))
+}
+
+/// `GET /api/v1/php/ini`
+async fn php_ini_get(Query(q): Query<PhpVersionQuery>, _claims: Claims) -> ApiResult<Value> {
+    let ver = q.version.unwrap_or_else(|| "8.5".to_string());
+    let ini_path = PathBuf::from(format!("/etc/php/{}/apache2/conf.d/99-kloxo-custom.ini", ver));
+    let content = fs::read_to_string(&ini_path).unwrap_or_default();
+
+    let get_val = |key: &str, def: &str| -> String {
+        for line in content.lines() {
+            let line = line.trim();
+            if let Some((k, v)) = line.split_once('=') {
+                if k.trim().eq_ignore_ascii_case(key) {
+                    return v.trim().to_string();
+                }
+            }
+        }
+        def.to_string()
+    };
+
+    Ok(Json(json!({
+        "success": true,
+        "version": ver,
+        "ini": {
+            "memory_limit": get_val("memory_limit", "512M"),
+            "upload_max_filesize": get_val("upload_max_filesize", "128M"),
+            "post_max_size": get_val("post_max_size", "128M"),
+            "max_execution_time": get_val("max_execution_time", "300"),
+            "display_errors": get_val("display_errors", "Off"),
+            "date_timezone": get_val("date.timezone", "UTC")
+        }
+    })))
+}
+
+/// `POST /api/v1/php/ini`
+async fn php_ini_post(claims: Claims, Json(payload): Json<PhpIniPayload>) -> ApiResult<Value> {
+    if !claims.is_superadmin() {
+        return Err(ApiError::Forbidden("Superadmin role required".to_string()));
+    }
+    let ver = payload.version.unwrap_or_else(|| "8.5".to_string());
+    let ini_path = PathBuf::from(format!("/etc/php/{}/apache2/conf.d/99-kloxo-custom.ini", ver));
+    let fpm_ini = PathBuf::from(format!("/etc/php/{}/fpm/conf.d/99-kloxo-custom.ini", ver));
+
+    let memory = payload.memory_limit.unwrap_or_else(|| "512M".to_string());
+    let upload = payload.upload_max_filesize.unwrap_or_else(|| "128M".to_string());
+    let post = payload.post_max_size.unwrap_or_else(|| "128M".to_string());
+    let time = payload.max_execution_time.unwrap_or_else(|| "300".to_string());
+    let errors = payload.display_errors.unwrap_or_else(|| "Off".to_string());
+    let tz = payload.date_timezone.unwrap_or_else(|| "UTC".to_string());
+
+    let ini_content = format!(
+        "; Mfklixo Managed Custom PHP Settings\nmemory_limit = {}\nupload_max_filesize = {}\npost_max_size = {}\nmax_execution_time = {}\ndisplay_errors = {}\ndate.timezone = {}\n",
+        memory, upload, post, time, errors, tz
+    );
+
+    if let Some(parent) = ini_path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let _ = fs::write(&ini_path, &ini_content);
+
+    if let Some(parent) = fpm_ini.parent() {
+        let _ = fs::create_dir_all(parent);
+        let _ = fs::write(&fpm_ini, &ini_content);
+    }
+
+    let _ = Command::new("systemctl").args(["reload", "apache2"]).output().await;
+    let _ = Command::new("systemctl").args(["reload", &format!("php{}-fpm", ver)]).output().await;
+
+    Ok(Json(json!({
+        "success": true,
+        "message": "PHP configuration updated and webserver reloaded",
+        "version": ver
+    })))
+}
+
+// ============================================================================
 // 7. DOMAINS, DATABASES, MAIL, FTP, CLIENTS, CRON & NETWORK IPs
 // ============================================================================
 
@@ -3564,6 +3800,12 @@ fn build_v1_router() -> Router<AppState> {
         .route("/system/services/control", post(system_services_action))
         .route("/system/logs", get(system_logs))
         .route("/system/phpinfo", get(system_phpinfo))
+        // PHP Version & Module Management
+        .route("/php/versions", get(php_versions_list))
+        .route("/php/switch-version", post(php_switch_version))
+        .route("/php/modules", get(php_modules_list))
+        .route("/php/modules/toggle", post(php_modules_toggle))
+        .route("/php/ini", get(php_ini_get).post(php_ini_post))
         // Settings, Plans, Skeleton, Tickets & Messages
         .route("/system/settings", get(system_settings_get).post(system_settings_save))
         .route(
