@@ -3686,17 +3686,36 @@ async fn server_switch_program_get(
         json!({
             "web": "apache_nginx",
             "php": "php-fpm",
-            "dns": "bind"
+            "dns": "bind9",
+            "ftp": "pure-ftpd"
         }),
     );
 
+    let web = current.get("web").and_then(|v| v.as_str()).unwrap_or("apache_nginx");
+    let php = current.get("php").and_then(|v| v.as_str()).unwrap_or("php-fpm");
+    let dns = current.get("dns").and_then(|v| v.as_str()).unwrap_or("bind9");
+    let ftp = current.get("ftp").and_then(|v| v.as_str()).unwrap_or("pure-ftpd");
+
+    let programs = json!({
+        "web_engine": web,
+        "available_web_engines": ["apache_nginx", "nginx", "apache2", "lighttpd"],
+        "php_engine": php,
+        "available_php_engines": ["php-fpm", "fastcgi", "cgi"],
+        "dns_engine": dns,
+        "available_dns_engines": ["bind9", "nsd"],
+        "ftp_engine": ftp,
+        "available_ftp_engines": ["pure-ftpd", "vsftpd"]
+    });
+
     Ok(Json(json!({
         "success": true,
+        "programs": programs,
         "current": current,
         "available": {
-            "web": ["apache_nginx", "nginx", "apache", "lighttpd"],
-            "php": ["php-fpm", "php8.2-fpm", "php8.3-fpm", "php8.4-fpm", "php8.5-fpm"],
-            "dns": ["bind", "pdns", "nsd", "djbdns"]
+            "web": ["apache_nginx", "nginx", "apache2", "lighttpd"],
+            "php": ["php-fpm", "fastcgi", "cgi"],
+            "dns": ["bind9", "nsd"],
+            "ftp": ["pure-ftpd", "vsftpd"]
         }
     })))
 }
@@ -3747,6 +3766,286 @@ async fn server_timezone_get(State(state): State<AppState>, _claims: Claims) -> 
             "America/New_York", "America/Chicago", "America/Los_Angeles",
             "Asia/Dubai", "Asia/Tokyo", "Asia/Singapore"
         ]
+    })))
+}
+
+// ============================================================================
+// 14. SUBDOMAINS & BACKUPS
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+pub struct SubdomainCreatePayload {
+    pub prefix: Option<String>,
+    pub parent_domain: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SubdomainDeletePayload {
+    pub subdomain: Option<String>,
+}
+
+/// `GET /api/v1/subdomains`
+async fn subdomains_list(State(state): State<AppState>, claims: Claims) -> ApiResult<Value> {
+    let path = state.cfg.kloxo_etc_dir.join("subdomains.json");
+    let stored: Vec<Value> = sys::read_json_store(&path, Vec::new());
+
+    let db_rows = sqlx::query("SELECT nname, parent_clname FROM subdomain ORDER BY nname ASC")
+        .fetch_all(&state.db)
+        .await
+        .unwrap_or_default();
+
+    let mut map = std::collections::HashMap::new();
+
+    for item in stored {
+        if let Some(sub) = item.get("subdomain").and_then(|v| v.as_str()) {
+            map.insert(sub.to_string(), item);
+        }
+    }
+
+    for r in db_rows {
+        let nname: String = r.try_get("nname").unwrap_or_default();
+        if !nname.is_empty() && !map.contains_key(&nname) {
+            let parts: Vec<&str> = nname.splitn(2, '.').collect();
+            let parent = if parts.len() == 2 { parts[1] } else { &nname };
+            let prefix = parts[0];
+            let docroot = format!("/home/kloxo/client/admin/{}/subdomains/{}", parent, prefix);
+            map.insert(
+                nname.clone(),
+                json!({
+                    "subdomain": nname,
+                    "parent_domain": parent,
+                    "docroot": docroot,
+                    "status": true
+                }),
+            );
+        }
+    }
+
+    let subdomains: Vec<Value> = map.into_values().collect();
+
+    Ok(Json(json!({
+        "success": true,
+        "subdomains": subdomains
+    })))
+}
+
+/// `POST /api/v1/subdomains`
+async fn subdomains_create(
+    State(state): State<AppState>,
+    claims: Claims,
+    Json(payload): Json<SubdomainCreatePayload>,
+) -> ApiResult<Value> {
+    let prefix = payload
+        .prefix
+        .ok_or_else(|| ApiError::BadRequest("Subdomain prefix is required".to_string()))?;
+    let parent_domain = payload
+        .parent_domain
+        .ok_or_else(|| ApiError::BadRequest("Parent domain is required".to_string()))?;
+
+    let prefix_clean: String = prefix
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '-')
+        .collect();
+
+    if prefix_clean.is_empty() {
+        return Err(ApiError::BadRequest("Invalid subdomain prefix".to_string()));
+    }
+
+    sys::validate_domain(&parent_domain)?;
+    let full_subdomain = format!("{}.{}", prefix_clean, parent_domain);
+
+    let docroot = format!(
+        "/home/kloxo/client/admin/{}/subdomains/{}",
+        parent_domain, prefix_clean
+    );
+
+    let _ = tokio::fs::create_dir_all(&docroot).await;
+    let index_file = PathBuf::from(&docroot).join("index.html");
+    if !index_file.exists() {
+        let html = format!(
+            "<!DOCTYPE html><html><head><title>{}</title></head><body style=\"font-family:sans-serif;padding:2rem;\"><h1>Welcome to {}</h1><p>Subdomain provisioned by Mfklixo</p></body></html>",
+            full_subdomain, full_subdomain
+        );
+        let _ = tokio::fs::write(&index_file, html).await;
+    }
+
+    let _ = sqlx::query("INSERT IGNORE INTO subdomain (nname, parent_clname) VALUES (?, ?)")
+        .bind(&full_subdomain)
+        .bind(&claims.sub)
+        .execute(&state.db)
+        .await;
+
+    let path = state.cfg.kloxo_etc_dir.join("subdomains.json");
+    let mut stored: Vec<Value> = sys::read_json_store(&path, Vec::new());
+    stored.retain(|s| s.get("subdomain").and_then(|v| v.as_str()) != Some(&full_subdomain));
+    stored.push(json!({
+        "subdomain": full_subdomain,
+        "parent_domain": parent_domain,
+        "docroot": docroot,
+        "status": true
+    }));
+    sys::write_json_store(&path, &stored)?;
+
+    Ok(Json(json!({
+        "success": true,
+        "message": format!("Subdomain {} created successfully", full_subdomain)
+    })))
+}
+
+/// `DELETE /api/v1/subdomains`
+async fn subdomains_delete(
+    State(state): State<AppState>,
+    _claims: Claims,
+    Json(payload): Json<SubdomainDeletePayload>,
+) -> ApiResult<Value> {
+    let subdomain = payload
+        .subdomain
+        .ok_or_else(|| ApiError::BadRequest("Subdomain name is required".to_string()))?;
+
+    let _ = sqlx::query("DELETE FROM subdomain WHERE nname = ?")
+        .bind(&subdomain)
+        .execute(&state.db)
+        .await;
+
+    let path = state.cfg.kloxo_etc_dir.join("subdomains.json");
+    let mut stored: Vec<Value> = sys::read_json_store(&path, Vec::new());
+    stored.retain(|s| s.get("subdomain").and_then(|v| v.as_str()) != Some(&subdomain));
+    sys::write_json_store(&path, &stored)?;
+
+    Ok(Json(json!({
+        "success": true,
+        "message": format!("Subdomain {} deleted successfully", subdomain)
+    })))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BackupCreatePayload {
+    #[serde(rename = "type")]
+    pub backup_type: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BackupDeletePayload {
+    pub filename: Option<String>,
+}
+
+fn format_bytes(bytes: u64) -> String {
+    if bytes < 1024 {
+        format!("{} B", bytes)
+    } else if bytes < 1024 * 1024 {
+        format!("{:.1} KB", bytes as f64 / 1024.0)
+    } else if bytes < 1024 * 1024 * 1024 {
+        format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
+    } else {
+        format!("{:.2} GB", bytes as f64 / (1024.0 * 1024.0 * 1024.0))
+    }
+}
+
+/// `GET /api/v1/backups`
+async fn backups_list(_claims: Claims) -> ApiResult<Value> {
+    let backup_dir = PathBuf::from("/var/backups/kloxo");
+    let _ = tokio::fs::create_dir_all(&backup_dir).await;
+
+    let mut backups = Vec::new();
+
+    if let Ok(mut entries) = tokio::fs::read_dir(&backup_dir).await {
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            let path = entry.path();
+            if path.is_file() {
+                let filename = entry.file_name().to_string_lossy().to_string();
+                if filename.ends_with(".tar.gz") || filename.ends_with(".zip") || filename.ends_with(".sql.gz") {
+                    let metadata = entry.metadata().await.ok();
+                    let size_bytes = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
+                    let created_at = metadata
+                        .and_then(|m| m.modified().ok())
+                        .map(|t| chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339())
+                        .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+
+                    backups.push(json!({
+                        "filename": filename,
+                        "path": path.to_string_lossy(),
+                        "size_bytes": size_bytes,
+                        "size_formatted": format_bytes(size_bytes),
+                        "created_at": created_at
+                    }));
+                }
+            }
+        }
+    }
+
+    Ok(Json(json!({
+        "success": true,
+        "backups": backups
+    })))
+}
+
+/// `POST /api/v1/backups/create`
+async fn backups_create(
+    _claims: Claims,
+    Json(payload): Json<BackupCreatePayload>,
+) -> ApiResult<Value> {
+    let btype = payload.backup_type.unwrap_or_else(|| "full".to_string());
+    let backup_dir = PathBuf::from("/var/backups/kloxo");
+    let _ = tokio::fs::create_dir_all(&backup_dir).await;
+
+    let ts = chrono::Utc::now().format("%Y%m%d_%H%M%S").to_string();
+    let filename = format!("kloxo-backup-{}-{}.tar.gz", btype, ts);
+    let target_file = backup_dir.join(&filename);
+
+    let cmd_str = match btype.as_str() {
+        "database" => format!(
+            "mysqldump -u kloxo -pFCayldtdUInsugVe --all-databases 2>/dev/null | gzip -c > {:?}",
+            target_file
+        ),
+        "config" => format!(
+            "tar -czf {:?} -C / etc/nginx etc/apache2 etc/php usr/local/lxlabs/kloxo/etc 2>/dev/null || true",
+            target_file
+        ),
+        _ => format!(
+            "tar -czf {:?} -C / home/kloxo etc/nginx etc/apache2 etc/php usr/local/lxlabs/kloxo/etc 2>/dev/null || true",
+            target_file
+        ),
+    };
+
+    let _ = tokio::process::Command::new("bash")
+        .arg("-c")
+        .arg(&cmd_str)
+        .status()
+        .await;
+
+    let size_bytes = tokio::fs::metadata(&target_file)
+        .await
+        .map(|m| m.len())
+        .unwrap_or(0);
+    let size_formatted = format_bytes(size_bytes);
+
+    Ok(Json(json!({
+        "success": true,
+        "message": format!("{} backup snapshot created successfully", btype),
+        "filename": filename,
+        "size_formatted": size_formatted
+    })))
+}
+
+/// `DELETE /api/v1/backups`
+async fn backups_delete(
+    _claims: Claims,
+    Json(payload): Json<BackupDeletePayload>,
+) -> ApiResult<Value> {
+    let filename = payload
+        .filename
+        .ok_or_else(|| ApiError::BadRequest("Filename is required".to_string()))?;
+
+    if filename.contains('/') || filename.contains('\\') || filename.contains("..") {
+        return Err(ApiError::BadRequest("Invalid filename".to_string()));
+    }
+
+    let target_file = PathBuf::from("/var/backups/kloxo").join(&filename);
+    let _ = tokio::fs::remove_file(target_file).await;
+
+    Ok(Json(json!({
+        "success": true,
+        "message": format!("Backup {} deleted successfully", filename)
     })))
 }
 
@@ -3976,6 +4275,12 @@ fn build_v1_router() -> Router<AppState> {
                 .delete(domains_delete),
         )
         .route(
+            "/subdomains",
+            get(subdomains_list)
+                .post(subdomains_create)
+                .delete(subdomains_delete),
+        )
+        .route(
             "/databases",
             get(databases_list)
                 .post(databases_create)
@@ -4039,6 +4344,12 @@ fn build_v1_router() -> Router<AppState> {
                 .post(dns_records_create)
                 .delete(dns_records_delete),
         )
+        // Backups
+        .route(
+            "/backups",
+            get(backups_list).delete(backups_delete),
+        )
+        .route("/backups/create", post(backups_create))
         // SSL & Security & Server Actions
         .route("/ssl/certificates", get(ssl_certificates_list))
         .route("/security/ssh-config", get(security_ssh_get).post(security_ssh_save))

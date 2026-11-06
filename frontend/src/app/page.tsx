@@ -341,8 +341,21 @@ export default function DashboardPage() {
         const res = await apiFetch<{ success: boolean; lxguard: LxGuardConfig }>('/security/lxguard');
         setLxguard(res.lxguard);
       } else if (modalId === 'switchprogram') {
-        const res = await apiFetch<{ success: boolean; programs: SwitchProgramConfig }>('/server/switch-program');
-        setSwitchProgram(res.programs);
+        const res = await apiFetch<any>('/server/switch-program');
+        if (res?.programs) {
+          setSwitchProgram(res.programs);
+        } else if (res?.current) {
+          setSwitchProgram({
+            web_engine: res.current.web || 'apache_nginx',
+            available_web_engines: res.available?.web || ['apache_nginx', 'nginx', 'apache2', 'lighttpd'],
+            php_engine: res.current.php || 'php-fpm',
+            available_php_engines: res.available?.php || ['php-fpm', 'fastcgi', 'cgi'],
+            dns_engine: res.current.dns || 'bind9',
+            available_dns_engines: res.available?.dns || ['bind9', 'nsd'],
+            ftp_engine: res.current.ftp || 'pure-ftpd',
+            available_ftp_engines: res.available?.ftp || ['pure-ftpd', 'vsftpd'],
+          });
+        }
       } else if (modalId === 'timezone') {
         const res = await apiFetch<TimezoneResponse>('/server/timezone');
         setTimezoneData(res);
@@ -1933,11 +1946,11 @@ export default function DashboardPage() {
                   <div>
                     <label className="block text-xs text-slate-400 mb-1">Web Server Engine</label>
                     <select
-                      value={switchProgram.web_engine}
-                      onChange={(e) => setSwitchProgram({ ...switchProgram, web_engine: e.target.value })}
+                      value={switchProgram?.web_engine || 'apache_nginx'}
+                      onChange={(e) => setSwitchProgram({ ...(switchProgram || {}), web_engine: e.target.value } as any)}
                       className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none uppercase"
                     >
-                      {(switchProgram.available_web_engines || []).map((e) => (
+                      {(switchProgram?.available_web_engines || ['apache_nginx', 'nginx', 'apache2', 'lighttpd']).map((e) => (
                         <option key={e} value={e}>
                           {e}
                         </option>
@@ -1947,11 +1960,11 @@ export default function DashboardPage() {
                   <div>
                     <label className="block text-xs text-slate-400 mb-1">PHP Engine Mode</label>
                     <select
-                      value={switchProgram.php_engine}
-                      onChange={(e) => setSwitchProgram({ ...switchProgram, php_engine: e.target.value })}
+                      value={switchProgram?.php_engine || 'php-fpm'}
+                      onChange={(e) => setSwitchProgram({ ...(switchProgram || {}), php_engine: e.target.value } as any)}
                       className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none uppercase"
                     >
-                      {(switchProgram.available_php_engines || []).map((e) => (
+                      {(switchProgram?.available_php_engines || ['php-fpm', 'fastcgi', 'cgi']).map((e) => (
                         <option key={e} value={e}>
                           {e}
                         </option>
@@ -1961,11 +1974,11 @@ export default function DashboardPage() {
                   <div>
                     <label className="block text-xs text-slate-400 mb-1">DNS Engine</label>
                     <select
-                      value={switchProgram.dns_engine}
-                      onChange={(e) => setSwitchProgram({ ...switchProgram, dns_engine: e.target.value })}
+                      value={switchProgram?.dns_engine || 'bind9'}
+                      onChange={(e) => setSwitchProgram({ ...(switchProgram || {}), dns_engine: e.target.value } as any)}
                       className="w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:outline-none uppercase"
                     >
-                      {(switchProgram.available_dns_engines || []).map((e) => (
+                      {(switchProgram?.available_dns_engines || ['bind9', 'nsd']).map((e) => (
                         <option key={e} value={e}>
                           {e}
                         </option>
