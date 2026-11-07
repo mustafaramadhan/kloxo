@@ -3323,10 +3323,17 @@ async fn files_delete(
 // ============================================================================
 
 /// `GET /api/v1/dns/zones`
-async fn dns_zones_list(State(state): State<AppState>, _claims: Claims) -> ApiResult<Value> {
-    let rows = sqlx::query("SELECT nname, soanameserver, ttl, zone_type FROM dns ORDER BY nname ASC")
-        .fetch_all(&state.db)
-        .await?;
+async fn dns_zones_list(State(state): State<AppState>, claims: Claims) -> ApiResult<Value> {
+    let rows = if claims.is_superadmin() {
+        sqlx::query("SELECT nname, soanameserver, ttl, zone_type FROM dns ORDER BY nname ASC")
+            .fetch_all(&state.db)
+            .await?
+    } else {
+        sqlx::query("SELECT nname, soanameserver, ttl, zone_type FROM dns WHERE parent_clname = ? ORDER BY nname ASC")
+            .bind(&claims.sub)
+            .fetch_all(&state.db)
+            .await?
+    };
 
     let zones: Vec<Value> = rows
         .into_iter()
@@ -3400,7 +3407,7 @@ async fn dns_zones_create(
 /// `DELETE /api/v1/dns/zones`
 async fn dns_zones_delete(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
     Query(q): Query<DomainPayload>,
     body: Option<Json<DomainPayload>>,
 ) -> ApiResult<Value> {
@@ -3409,6 +3416,18 @@ async fn dns_zones_delete(
         .or_else(|| body.and_then(|b| b.0.domain))
         .ok_or_else(|| ApiError::BadRequest("Domain is required".to_string()))?;
     sys::validate_domain(&domain)?;
+
+    if !claims.is_superadmin() {
+        let is_owner = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM dns WHERE nname = ? AND parent_clname = ?")
+            .bind(&domain)
+            .bind(&claims.sub)
+            .fetch_one(&state.db)
+            .await
+            .unwrap_or(0);
+        if is_owner == 0 {
+            return Err(ApiError::Forbidden("You do not have permission to delete this DNS zone".to_string()));
+        }
+    }
 
     sqlx::query("DELETE FROM dns WHERE nname = ?")
         .bind(&domain)
@@ -3430,10 +3449,21 @@ pub struct DnsRecordsQuery {
 /// `GET /api/v1/dns/records`
 async fn dns_records_list(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
     Query(query): Query<DnsRecordsQuery>,
 ) -> ApiResult<Value> {
     sys::validate_domain(&query.zone)?;
+    if !claims.is_superadmin() {
+        let is_owner = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM dns WHERE nname = ? AND parent_clname = ?")
+            .bind(&query.zone)
+            .bind(&claims.sub)
+            .fetch_one(&state.db)
+            .await
+            .unwrap_or(0);
+        if is_owner == 0 {
+            return Err(ApiError::Forbidden("You do not have permission to access this DNS zone".to_string()));
+        }
+    }
     let zone_file = state.cfg.kloxo_dns_dir.join(format!("{}.json", query.zone));
     let raw_records: Vec<Value> = sys::read_json_store(&zone_file, Vec::new());
     let records: Vec<Value> = raw_records
@@ -3469,10 +3499,21 @@ pub struct AddDnsRecordPayload {
 /// `POST /api/v1/dns/records`
 async fn dns_records_create(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
     Json(payload): Json<AddDnsRecordPayload>,
 ) -> ApiResult<Value> {
     sys::validate_domain(&payload.zone)?;
+    if !claims.is_superadmin() {
+        let is_owner = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM dns WHERE nname = ? AND parent_clname = ?")
+            .bind(&payload.zone)
+            .bind(&claims.sub)
+            .fetch_one(&state.db)
+            .await
+            .unwrap_or(0);
+        if is_owner == 0 {
+            return Err(ApiError::Forbidden("You do not have permission to edit this DNS zone".to_string()));
+        }
+    }
     let zone_file = state.cfg.kloxo_dns_dir.join(format!("{}.json", payload.zone));
     let mut records: Vec<Value> = sys::read_json_store(&zone_file, Vec::new());
 
@@ -3506,10 +3547,21 @@ pub struct DeleteDnsRecordPayload {
 /// `DELETE /api/v1/dns/records`
 async fn dns_records_delete(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
     Json(payload): Json<DeleteDnsRecordPayload>,
 ) -> ApiResult<Value> {
     sys::validate_domain(&payload.zone)?;
+    if !claims.is_superadmin() {
+        let is_owner = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM dns WHERE nname = ? AND parent_clname = ?")
+            .bind(&payload.zone)
+            .bind(&claims.sub)
+            .fetch_one(&state.db)
+            .await
+            .unwrap_or(0);
+        if is_owner == 0 {
+            return Err(ApiError::Forbidden("You do not have permission to edit this DNS zone".to_string()));
+        }
+    }
     let zone_file = state.cfg.kloxo_dns_dir.join(format!("{}.json", payload.zone));
     let records: Vec<Value> = sys::read_json_store(&zone_file, Vec::new());
     let filtered: Vec<Value> = records
@@ -3594,8 +3646,23 @@ struct SslDeleteQuery {
 /// `GET /api/v1/ssl/certificates`
 async fn ssl_certificates_list(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
 ) -> ApiResult<Value> {
+    let allowed_domains: Option<std::collections::HashSet<String>> = if !claims.is_superadmin() {
+        let rows = sqlx::query("SELECT nname FROM domain WHERE parent_clname = ?")
+            .bind(&claims.sub)
+            .fetch_all(&state.db)
+            .await
+            .unwrap_or_default();
+        Some(
+            rows.into_iter()
+                .filter_map(|r| r.try_get::<String, _>("nname").ok())
+                .collect(),
+        )
+    } else {
+        None
+    };
+
     let rows = sqlx::query("SELECT nname, certname, parent_domain, upload_status FROM sslcert ORDER BY nname ASC")
         .fetch_all(&state.db)
         .await
@@ -3609,6 +3676,14 @@ async fn ssl_certificates_list(
         let certname: String = r.try_get("certname").unwrap_or_else(|_| id.clone());
         let domain: String = r.try_get("parent_domain").unwrap_or_else(|_| id.clone());
         let upload_status: String = r.try_get("upload_status").unwrap_or_else(|_| "active".to_string());
+
+        if let Some(ref allowed) = allowed_domains {
+            let bare_dom = domain.trim_start_matches("*.");
+            if !allowed.contains(&domain) && !allowed.contains(bare_dom) {
+                continue;
+            }
+        }
+
         let crt_path = state.cfg.kloxo_ssl_dir.join(format!("{}.crt", domain));
         let has_crt = crt_path.exists();
         let has_key = state.cfg.kloxo_ssl_dir.join(format!("{}.key", domain)).exists();
@@ -3630,7 +3705,13 @@ async fn ssl_certificates_list(
         }));
     }
 
-    if let Ok(dom_rows) = sqlx::query("SELECT nname FROM domain").fetch_all(&state.db).await {
+    let dom_query = if claims.is_superadmin() {
+        sqlx::query("SELECT nname FROM domain")
+    } else {
+        sqlx::query("SELECT nname FROM domain WHERE parent_clname = ?").bind(&claims.sub)
+    };
+
+    if let Ok(dom_rows) = dom_query.fetch_all(&state.db).await {
         for dr in dom_rows {
             let dom: String = dr.try_get("nname").unwrap_or_default();
             if !dom.is_empty() && !seen_domains.contains(&dom) {
@@ -3665,7 +3746,7 @@ async fn ssl_certificates_list(
 
 async fn ssl_certificates_create(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
     Json(payload): Json<SslCertificateCreatePayload>,
 ) -> ApiResult<Value> {
     let domain = payload.domain.trim().to_lowercase();
@@ -3676,6 +3757,23 @@ async fn ssl_certificates_create(
     let mode = payload.mode.as_deref().unwrap_or("letsencrypt");
     let is_wc = payload.is_wildcard.unwrap_or(false) || domain.starts_with("*.");
     let clean_domain = domain.trim_start_matches("*.").to_string();
+
+    if !claims.is_superadmin() {
+        let count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM domain WHERE (nname = ? OR nname = ?) AND parent_clname = ?",
+        )
+        .bind(&clean_domain)
+        .bind(&domain)
+        .bind(&claims.sub)
+        .fetch_one(&state.db)
+        .await
+        .unwrap_or(0);
+        if count == 0 {
+            return Err(ApiError::Forbidden(
+                "You do not have permission to manage SSL certificates for this domain".to_string(),
+            ));
+        }
+    }
 
     let _ = fs::create_dir_all(&state.cfg.kloxo_ssl_dir);
     let cert_file = state.cfg.kloxo_ssl_dir.join(format!("{}.crt", clean_domain));
@@ -3862,12 +3960,30 @@ async fn ssl_certificates_create(
 
 async fn ssl_certificates_renew(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
     Json(payload): Json<SslRenewPayload>,
 ) -> ApiResult<Value> {
     let domain = payload.domain.trim().to_lowercase();
     if domain.is_empty() {
         return Err(ApiError::BadRequest("Domain name is required".to_string()));
+    }
+    let clean_domain = domain.trim_start_matches("*.").to_string();
+
+    if !claims.is_superadmin() {
+        let count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM domain WHERE (nname = ? OR nname = ?) AND parent_clname = ?",
+        )
+        .bind(&clean_domain)
+        .bind(&domain)
+        .bind(&claims.sub)
+        .fetch_one(&state.db)
+        .await
+        .unwrap_or(0);
+        if count == 0 {
+            return Err(ApiError::Forbidden(
+                "You do not have permission to renew SSL for this domain".to_string(),
+            ));
+        }
     }
 
     let le_live = Path::new("/etc/letsencrypt/live").join(&domain);
@@ -3910,7 +4026,7 @@ async fn ssl_certificates_renew(
 
 async fn ssl_certificates_delete(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
     Query(params): Query<SslDeleteQuery>,
     body: Option<Json<SslDeleteQuery>>,
 ) -> ApiResult<Value> {
@@ -3925,6 +4041,24 @@ async fn ssl_certificates_delete(
         .to_lowercase();
     if target.is_empty() {
         return Err(ApiError::BadRequest("id or domain parameter is required".to_string()));
+    }
+    let clean_target = target.trim_start_matches("*.").to_string();
+
+    if !claims.is_superadmin() {
+        let count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM domain WHERE (nname = ? OR nname = ?) AND parent_clname = ?",
+        )
+        .bind(&clean_target)
+        .bind(&target)
+        .bind(&claims.sub)
+        .fetch_one(&state.db)
+        .await
+        .unwrap_or(0);
+        if count == 0 {
+            return Err(ApiError::Forbidden(
+                "You do not have permission to delete SSL for this domain".to_string(),
+            ));
+        }
     }
 
     let _ = sqlx::query("DELETE FROM sslcert WHERE nname = ? OR parent_domain = ?")
@@ -4860,19 +4994,48 @@ pub struct SubdomainDeletePayload {
 }
 
 /// `GET /api/v1/subdomains`
-async fn subdomains_list(State(state): State<AppState>, _claims: Claims) -> ApiResult<Value> {
+async fn subdomains_list(State(state): State<AppState>, claims: Claims) -> ApiResult<Value> {
+    let allowed_parents: Option<std::collections::HashSet<String>> = if !claims.is_superadmin() {
+        let rows = sqlx::query("SELECT nname FROM domain WHERE parent_clname = ?")
+            .bind(&claims.sub)
+            .fetch_all(&state.db)
+            .await
+            .unwrap_or_default();
+        Some(
+            rows.into_iter()
+                .filter_map(|r| r.try_get::<String, _>("nname").ok())
+                .collect(),
+        )
+    } else {
+        None
+    };
+
     let path = state.cfg.kloxo_etc_dir.join("subdomains.json");
     let stored: Vec<Value> = sys::read_json_store(&path, Vec::new());
 
-    let db_rows = sqlx::query("SELECT nname, parent_clname FROM subdomain ORDER BY nname ASC")
-        .fetch_all(&state.db)
-        .await
-        .unwrap_or_default();
+    let db_rows = if claims.is_superadmin() {
+        sqlx::query("SELECT nname, parent_clname FROM subdomain ORDER BY nname ASC")
+            .fetch_all(&state.db)
+            .await
+            .unwrap_or_default()
+    } else {
+        sqlx::query("SELECT nname, parent_clname FROM subdomain WHERE parent_clname = ? ORDER BY nname ASC")
+            .bind(&claims.sub)
+            .fetch_all(&state.db)
+            .await
+            .unwrap_or_default()
+    };
 
     let mut map = std::collections::HashMap::new();
 
     for item in stored {
         if let Some(sub) = item.get("subdomain").and_then(|v| v.as_str()) {
+            if let Some(ref allowed) = allowed_parents {
+                let parent = item.get("parent_domain").and_then(|v| v.as_str()).unwrap_or("");
+                if !allowed.contains(parent) {
+                    continue;
+                }
+            }
             map.insert(sub.to_string(), item);
         }
     }
@@ -4882,6 +5045,11 @@ async fn subdomains_list(State(state): State<AppState>, _claims: Claims) -> ApiR
         if !nname.is_empty() && !map.contains_key(&nname) {
             let parts: Vec<&str> = nname.splitn(2, '.').collect();
             let parent = if parts.len() == 2 { parts[1] } else { &nname };
+            if let Some(ref allowed) = allowed_parents {
+                if !allowed.contains(parent) {
+                    continue;
+                }
+            }
             let prefix = parts[0];
             let docroot = format!("/home/kloxo/client/admin/{}/subdomains/{}", parent, prefix);
             map.insert(
@@ -4927,6 +5095,23 @@ async fn subdomains_create(
     }
 
     sys::validate_domain(&parent_domain)?;
+
+    if !claims.is_superadmin() {
+        let count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM domain WHERE nname = ? AND parent_clname = ?",
+        )
+        .bind(&parent_domain)
+        .bind(&claims.sub)
+        .fetch_one(&state.db)
+        .await
+        .unwrap_or(0);
+        if count == 0 {
+            return Err(ApiError::Forbidden(
+                "You do not have permission to create subdomains under this domain".to_string(),
+            ));
+        }
+    }
+
     let full_subdomain = format!("{}.{}", prefix_clean, parent_domain);
 
     let docroot = format!(
@@ -4970,12 +5155,28 @@ async fn subdomains_create(
 /// `DELETE /api/v1/subdomains`
 async fn subdomains_delete(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
     Json(payload): Json<SubdomainDeletePayload>,
 ) -> ApiResult<Value> {
     let subdomain = payload
         .subdomain
         .ok_or_else(|| ApiError::BadRequest("Subdomain name is required".to_string()))?;
+
+    if !claims.is_superadmin() {
+        let count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM subdomain WHERE nname = ? AND parent_clname = ?",
+        )
+        .bind(&subdomain)
+        .bind(&claims.sub)
+        .fetch_one(&state.db)
+        .await
+        .unwrap_or(0);
+        if count == 0 {
+            return Err(ApiError::Forbidden(
+                "You do not have permission to delete this subdomain".to_string(),
+            ));
+        }
+    }
 
     let _ = sqlx::query("DELETE FROM subdomain WHERE nname = ?")
         .bind(&subdomain)
@@ -5017,8 +5218,12 @@ fn format_bytes(bytes: u64) -> String {
 }
 
 /// `GET /api/v1/backups`
-async fn backups_list(_claims: Claims) -> ApiResult<Value> {
-    let backup_dir = PathBuf::from("/var/backups/kloxo");
+async fn backups_list(claims: Claims) -> ApiResult<Value> {
+    let backup_dir = if claims.is_superadmin() {
+        PathBuf::from("/var/backups/kloxo")
+    } else {
+        PathBuf::from(format!("/home/{}/backups", claims.sub))
+    };
     let _ = tokio::fs::create_dir_all(&backup_dir).await;
 
     let mut backups = Vec::new();
@@ -5056,30 +5261,49 @@ async fn backups_list(_claims: Claims) -> ApiResult<Value> {
 
 /// `POST /api/v1/backups/create`
 async fn backups_create(
-    _claims: Claims,
+    claims: Claims,
     Json(payload): Json<BackupCreatePayload>,
 ) -> ApiResult<Value> {
     let btype = payload.backup_type.unwrap_or_else(|| "full".to_string());
-    let backup_dir = PathBuf::from("/var/backups/kloxo");
+    let backup_dir = if claims.is_superadmin() {
+        PathBuf::from("/var/backups/kloxo")
+    } else {
+        PathBuf::from(format!("/home/{}/backups", claims.sub))
+    };
     let _ = tokio::fs::create_dir_all(&backup_dir).await;
 
     let ts = chrono::Utc::now().format("%Y%m%d_%H%M%S").to_string();
-    let filename = format!("kloxo-backup-{}-{}.tar.gz", btype, ts);
+    let filename = format!("backup-{}-{}.tar.gz", claims.sub, ts);
     let target_file = backup_dir.join(&filename);
 
-    let cmd_str = match btype.as_str() {
-        "database" => format!(
-            "mysqldump -u kloxo -pFCayldtdUInsugVe --all-databases 2>/dev/null | gzip -c > {:?}",
-            target_file
-        ),
-        "config" => format!(
-            "tar -czf {:?} -C / etc/nginx etc/apache2 etc/php usr/local/lxlabs/kloxo/etc 2>/dev/null || true",
-            target_file
-        ),
-        _ => format!(
-            "tar -czf {:?} -C / home/kloxo etc/nginx etc/apache2 etc/php usr/local/lxlabs/kloxo/etc 2>/dev/null || true",
-            target_file
-        ),
+    let cmd_str = if claims.is_superadmin() {
+        match btype.as_str() {
+            "database" => format!(
+                "mysqldump -u kloxo -pFCayldtdUInsugVe --all-databases 2>/dev/null | gzip -c > {:?}",
+                target_file
+            ),
+            "config" => format!(
+                "tar -czf {:?} -C / etc/nginx etc/apache2 etc/php usr/local/lxlabs/kloxo/etc 2>/dev/null || true",
+                target_file
+            ),
+            _ => format!(
+                "tar -czf {:?} -C / home/kloxo etc/nginx etc/apache2 etc/php usr/local/lxlabs/kloxo/etc 2>/dev/null || true",
+                target_file
+            ),
+        }
+    } else {
+        let user_home = format!("/home/{}", claims.sub);
+        match btype.as_str() {
+            "database" => format!(
+                "mysqldump -u kloxo -pFCayldtdUInsugVe --databases kloxo 2>/dev/null | gzip -c > {:?}",
+                target_file
+            ),
+            _ => format!(
+                "tar -czf {:?} -C / {} 2>/dev/null || true",
+                target_file,
+                user_home.trim_start_matches('/')
+            ),
+        }
     };
 
     let _ = tokio::process::Command::new("bash")
@@ -5104,7 +5328,7 @@ async fn backups_create(
 
 /// `DELETE /api/v1/backups`
 async fn backups_delete(
-    _claims: Claims,
+    claims: Claims,
     Json(payload): Json<BackupDeletePayload>,
 ) -> ApiResult<Value> {
     let filename = payload
@@ -5115,7 +5339,12 @@ async fn backups_delete(
         return Err(ApiError::BadRequest("Invalid filename".to_string()));
     }
 
-    let target_file = PathBuf::from("/var/backups/kloxo").join(&filename);
+    let backup_dir = if claims.is_superadmin() {
+        PathBuf::from("/var/backups/kloxo")
+    } else {
+        PathBuf::from(format!("/home/{}/backups", claims.sub))
+    };
+    let target_file = backup_dir.join(&filename);
     let _ = tokio::fs::remove_file(target_file).await;
 
     Ok(Json(json!({
