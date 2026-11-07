@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Shell from '@/components/layout/Shell';
-import { apiFetch, ClientItem } from '@/lib/api';
-import { Users, CheckCircle2, XCircle, RefreshCw, Shield, Plus, Trash2, X, AlertCircle } from 'lucide-react';
+import { apiFetch, ClientItem, getStoredToken, setStoredToken } from '@/lib/api';
+import { Users, CheckCircle2, XCircle, RefreshCw, Shield, Plus, Trash2, X, AlertCircle, LogIn } from 'lucide-react';
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<ClientItem[]>([]);
@@ -82,6 +82,32 @@ export default function ClientsPage() {
       await fetchClients();
     } catch (err: any) {
       setMessage({ text: err.message || 'Failed to delete client', success: false });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleLoginAsClient = async (targetUsername: string) => {
+    setActionLoading(true);
+    setMessage(null);
+    try {
+      const currentToken = getStoredToken();
+      if (currentToken) {
+        sessionStorage.setItem('admin_impersonator_token', currentToken);
+        sessionStorage.setItem('admin_impersonator_user', 'admin');
+      }
+
+      const res = await apiFetch<{ success: boolean; token: string; user: any }>('/auth/impersonate', {
+        method: 'POST',
+        body: JSON.stringify({ username: targetUsername }),
+      });
+
+      if (res.token) {
+        setStoredToken(res.token);
+        window.location.href = '/';
+      }
+    } catch (err: any) {
+      setMessage({ text: err.message || `Failed to login as ${targetUsername}`, success: false });
     } finally {
       setActionLoading(false);
     }
@@ -230,18 +256,31 @@ export default function ClientsPage() {
                         {c.disk_used_mb} MB
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {c.username === 'admin' ? (
-                          <span className="text-xs text-slate-500 italic">Protected</span>
-                        ) : (
-                          <button
-                            onClick={() => handleDeleteClient(c.username)}
-                            disabled={actionLoading}
-                            className="inline-flex items-center gap-1 text-xs text-rose-400 hover:text-rose-300 transition-colors p-1.5 rounded-lg hover:bg-rose-500/10 disabled:opacity-50"
-                            title="Delete Client"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {c.username !== 'admin' && (
+                            <button
+                              onClick={() => handleLoginAsClient(c.username)}
+                              disabled={actionLoading}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 text-xs font-semibold shadow-sm transition-all disabled:opacity-50"
+                              title={`Login to panel as ${c.username}`}
+                            >
+                              <LogIn className="h-3.5 w-3.5" />
+                              <span>Login as User</span>
+                            </button>
+                          )}
+                          {c.username === 'admin' ? (
+                            <span className="text-xs text-slate-500 italic px-2">Primary Admin</span>
+                          ) : (
+                            <button
+                              onClick={() => handleDeleteClient(c.username)}
+                              disabled={actionLoading}
+                              className="inline-flex items-center gap-1 text-xs text-rose-400 hover:text-rose-300 transition-colors p-1.5 rounded-lg hover:bg-rose-500/10 disabled:opacity-50"
+                              title="Delete Client"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -29,6 +29,8 @@ import {
   SlidersHorizontal,
   Layers,
   Wrench,
+  UserCheck,
+  ArrowLeft,
 } from 'lucide-react';
 import { getStoredToken, setStoredToken } from '@/lib/api';
 
@@ -40,7 +42,8 @@ export default function Shell({ children }: ShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState<{ username: string; role: string } | null>(null);
+  const [user, setUser] = useState<{ username?: string; sub?: string; role?: string; type?: string } | null>(null);
+  const [impersonatingAdmin, setImpersonatingAdmin] = useState<string | null>(null);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -48,7 +51,7 @@ export default function Shell({ children }: ShellProps) {
       router.push('/login');
       return;
     }
-    // Simple user extraction
+    // Extract user claims
     try {
       if (token) {
         const payload = JSON.parse(atob(token.split('.')[1]));
@@ -57,9 +60,35 @@ export default function Shell({ children }: ShellProps) {
     } catch {
       // ignore
     }
+
+    if (typeof window !== 'undefined') {
+      const adminTok = sessionStorage.getItem('admin_impersonator_token');
+      const adminUsr = sessionStorage.getItem('admin_impersonator_user') || 'admin';
+      if (adminTok) {
+        setImpersonatingAdmin(adminUsr);
+      } else {
+        setImpersonatingAdmin(null);
+      }
+    }
   }, [pathname, router]);
 
+  const handleReturnToAdmin = () => {
+    if (typeof window !== 'undefined') {
+      const adminTok = sessionStorage.getItem('admin_impersonator_token');
+      if (adminTok) {
+        setStoredToken(adminTok);
+        sessionStorage.removeItem('admin_impersonator_token');
+        sessionStorage.removeItem('admin_impersonator_user');
+        window.location.href = '/clients';
+      }
+    }
+  };
+
   const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('admin_impersonator_token');
+      sessionStorage.removeItem('admin_impersonator_user');
+    }
     setStoredToken(null);
     router.push('/login');
   };
@@ -72,12 +101,19 @@ export default function Shell({ children }: ShellProps) {
     }
   };
 
+  const isSuperadmin =
+    user?.role === 'superadmin' ||
+    user?.role === 'admin' ||
+    user?.sub === 'admin' ||
+    user?.username === 'admin';
+  const isReseller = user?.role === 'reseller' || user?.type === 'reseller';
+
   const navGroups = [
     {
       title: 'Hosting & Core',
       items: [
         { name: 'Overview', href: '/', icon: LayoutDashboard },
-        { name: 'Services', href: '/services', icon: Server },
+        ...(isSuperadmin ? [{ name: 'Services', href: '/services', icon: Server }] : []),
         { name: 'Domains', href: '/domains', icon: Globe },
         { name: 'Subdomains', href: '/subdomains', icon: Network },
         { name: 'DNS Zones', href: '/dns', icon: Layers },
@@ -104,20 +140,33 @@ export default function Shell({ children }: ShellProps) {
       title: 'Security & SSL',
       items: [
         { name: 'SSL Certificates', href: '/ssl', icon: Lock },
-        { name: 'Firewall & Security', href: '/security', icon: Shield },
+        ...(isSuperadmin ? [{ name: 'Firewall & Security', href: '/security', icon: Shield }] : []),
       ],
     },
     {
-      title: 'System & Server',
+      title: 'Tools & Automation',
       items: [
-        { name: 'CustomBuild', href: '/custombuild', icon: Wrench, badge: 'DirectAdmin' },
-        { name: 'Clients', href: '/clients', icon: Users },
         { name: 'Cron Tasks', href: '/cron', icon: Clock },
-        { name: 'PHP Directives', href: '/php-config', icon: Sliders },
-        { name: 'Advanced PHP', href: '/php-advanced', icon: SlidersHorizontal },
-        { name: 'Server Logs', href: '/logs', icon: Terminal },
       ],
     },
+    ...(isSuperadmin || isReseller
+      ? [
+          {
+            title: isSuperadmin ? 'System & Server' : 'Reseller Tools',
+            items: [
+              ...(isSuperadmin ? [{ name: 'CustomBuild', href: '/custombuild', icon: Wrench, badge: 'DirectAdmin' }] : []),
+              { name: 'Clients', href: '/clients', icon: Users },
+              ...(isSuperadmin
+                ? [
+                    { name: 'PHP Directives', href: '/php-config', icon: Sliders },
+                    { name: 'Advanced PHP', href: '/php-advanced', icon: SlidersHorizontal },
+                    { name: 'Server Logs', href: '/logs', icon: Terminal },
+                  ]
+                : []),
+            ],
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -220,12 +269,23 @@ export default function Shell({ children }: ShellProps) {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/5 bg-slate-950/40">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 font-bold">
-                {user?.username?.[0]?.toUpperCase() || 'A'}
+              <div
+                className={`flex h-9 w-9 items-center justify-center rounded-xl font-bold border ${
+                  isSuperadmin
+                    ? 'bg-purple-500/10 border-purple-500/20 text-purple-400'
+                    : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                }`}
+              >
+                {(user?.sub || user?.username || 'A')[0]?.toUpperCase()}
               </div>
               <div className="overflow-hidden">
-                <p className="truncate text-sm font-medium text-white">{user?.username || 'admin'}</p>
-                <p className="truncate text-xs text-slate-400">{user?.role || 'superadmin'}</p>
+                <p className="truncate text-xs font-bold text-white">{user?.sub || user?.username || 'admin'}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className={`h-1.5 w-1.5 rounded-full ${isSuperadmin ? 'bg-purple-400' : 'bg-emerald-400'}`} />
+                  <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                    {isSuperadmin ? 'Superadmin' : isReseller ? 'Reseller' : 'Client Account'}
+                  </p>
+                </div>
               </div>
             </div>
             <button
@@ -241,6 +301,27 @@ export default function Shell({ children }: ShellProps) {
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Impersonation Warning Banner */}
+        {impersonatingAdmin && (
+          <div className="bg-gradient-to-r from-amber-500/25 via-orange-500/20 to-amber-500/25 border-b border-amber-500/30 px-6 py-2.5 backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-amber-200 z-30 shadow-lg">
+            <div className="flex items-center gap-2.5 font-medium">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                <UserCheck className="h-3.5 w-3.5" />
+              </span>
+              <span>
+                You are currently viewing this panel as <strong className="text-white font-mono bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30">{user?.sub || user?.username}</strong> (Client View, Impersonated by {impersonatingAdmin})
+              </span>
+            </div>
+            <button
+              onClick={handleReturnToAdmin}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Return to Administrator</span>
+            </button>
+          </div>
+        )}
+
         {/* Top Navbar */}
         <header className="flex h-16 items-center justify-between border-b border-white/5 bg-slate-950/60 px-6 backdrop-blur-xl">
           <div className="flex items-center gap-4">

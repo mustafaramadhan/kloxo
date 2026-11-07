@@ -955,6 +955,57 @@ async fn auth_me(claims: Claims) -> ApiResult<Value> {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct ImpersonatePayload {
+    pub username: String,
+}
+
+/// `POST /api/v1/auth/impersonate`
+async fn auth_impersonate(
+    State(state): State<AppState>,
+    claims: Claims,
+    Json(payload): Json<ImpersonatePayload>,
+) -> ApiResult<Value> {
+    if !claims.is_superadmin() {
+        return Err(ApiError::Forbidden("Only administrators can impersonate clients".to_string()));
+    }
+
+    let target_user = payload.username.trim();
+    let row = sqlx::query("SELECT nname, cttype FROM client WHERE nname = ? LIMIT 1")
+        .bind(target_user)
+        .fetch_optional(&state.db)
+        .await?;
+
+    let Some(row) = row else {
+        return Err(ApiError::NotFound(format!("User {} not found", target_user)));
+    };
+
+    let cttype: String = row.try_get("cttype").unwrap_or_else(|_| "customer".to_string());
+    let role = if cttype == "admin" || cttype == "superadmin" || target_user == "admin" {
+        "superadmin"
+    } else if cttype == "reseller" {
+        "reseller"
+    } else {
+        "client"
+    };
+
+    let token = issue_jwt(target_user, role, &state.jwt_secret)?;
+
+    Ok(Json(json!({
+        "success": true,
+        "status": "success",
+        "token": token,
+        "user": {
+            "username": target_user,
+            "name": target_user,
+            "role": role,
+            "type": cttype,
+            "impersonated": true,
+            "impersonator": claims.sub
+        }
+    })))
+}
+
+#[derive(Debug, Deserialize)]
 pub struct SsoQuery {
     pub token: Option<String>,
 }
@@ -5231,6 +5282,7 @@ fn build_v1_router() -> Router<AppState> {
         .route("/", get(api_root))
         // Auth & SSO
         .route("/auth/login", post(auth_login))
+        .route("/auth/impersonate", post(auth_impersonate))
         .route("/auth/me", get(auth_me))
         .route("/auth/sso", get(legacy_sso_bridge))
         // System Status, Quotas, Processes, Command Center, Components, Services, Logs & PHPInfo

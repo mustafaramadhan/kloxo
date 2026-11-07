@@ -113,6 +113,26 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // User & Role State
+  const [userRole, setUserRole] = useState<string>('superadmin');
+  const [currentUser, setCurrentUser] = useState<string>('admin');
+
+  useEffect(() => {
+    const token = getStoredToken();
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const role = payload.role || payload.type || (payload.sub === 'admin' ? 'superadmin' : 'client');
+        setUserRole(role);
+        setCurrentUser(payload.sub || payload.username || 'admin');
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+
+  const isSuperadmin = userRole === 'superadmin' || userRole === 'admin' || currentUser === 'admin';
+
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -854,9 +874,50 @@ export default function DashboardPage() {
     { id: 'sendmailban', title: 'Sendmail to Bans', description: 'Spam prevention and automatic IP ban triggers', icon: ShieldAlert, category: 'advanced', modal: 'sendmailban' },
   ];
 
+  // Allowed Items for Client/Customer Accounts (Role-Based Access)
+  const clientAllowedIds = useMemo(
+    () =>
+      new Set([
+        'all_domain',
+        'all_addondomain',
+        'all_mailaccount',
+        'all_mailforward',
+        'all_webmail',
+        'all_mysqldb',
+        'all_pma',
+        'all_cron',
+        'all_ftpuser',
+        'all_sslcert',
+        'ticket',
+        'smessage',
+        'password',
+        'skin',
+        'dnstemplate',
+        'backup',
+        'sslcert',
+        'dom_ftpuser',
+        'dom_mysqldb',
+        'filemanager',
+        'sqlmanager',
+        'webmail_portal',
+      ]),
+    []
+  );
+
+  // Available Items based on user role
+  const availableItems = useMemo(() => {
+    if (isSuperadmin) return allItems;
+    return allItems.filter((item) => clientAllowedIds.has(item.id));
+  }, [allItems, isSuperadmin, clientAllowedIds]);
+
+  // Available Categories (only show categories that have items)
+  const availableCategories = useMemo(() => {
+    return categories.filter((c) => availableItems.some((i) => i.category === c.id));
+  }, [categories, availableItems]);
+
   // Filtering Logic
   const filteredItems = useMemo(() => {
-    let result = allItems;
+    let result = availableItems;
     if (selectedCategory !== 'all') {
       result = result.filter((item) => item.category === selectedCategory);
     }
@@ -867,7 +928,7 @@ export default function DashboardPage() {
       );
     }
     return result;
-  }, [allItems, selectedCategory, searchQuery]);
+  }, [availableItems, selectedCategory, searchQuery]);
 
   return (
     <Shell>
@@ -877,7 +938,7 @@ export default function DashboardPage() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-black tracking-tight text-white md:text-3xl">
-                Server Control Center
+                {isSuperadmin ? 'Server Control Center' : `Hosting Dashboard (${currentUser})`}
               </h1>
               {serverInfo?.maintenance && (
                 <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-3 py-0.5 text-xs font-semibold text-amber-400 animate-pulse">
@@ -886,7 +947,8 @@ export default function DashboardPage() {
               )}
             </div>
             <p className="mt-1 text-xs text-slate-400">
-              Host: <span className="font-mono text-sky-400">{status?.hostname || 'localhost'}</span> • {status?.os} • System Load: {status?.load_average['1m']} {status?.load_average['5m']}
+              Host: <span className="font-mono text-sky-400">{status?.hostname || 'localhost'}</span> • {status?.os}
+              {isSuperadmin && <> • System Load: {status?.load_average['1m']} {status?.load_average['5m']}</>}
             </p>
           </div>
 
@@ -911,21 +973,25 @@ export default function DashboardPage() {
               Webmail
             </a>
 
-            <Link
-              href="/php-advanced"
-              className="flex items-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-all"
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              Advanced PHP
-            </Link>
+            {isSuperadmin && (
+              <Link
+                href="/php-advanced"
+                className="flex items-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-xs font-semibold text-sky-300 hover:bg-sky-500/20 transition-all"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                Advanced PHP
+              </Link>
+            )}
 
-            <button
-              onClick={() => handleOpenModal('commandcenter', 'Quick Diagnostics')}
-              className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/60 px-3.5 py-2 text-xs font-medium text-slate-200 hover:bg-white/10 transition-all"
-            >
-              <Terminal className="h-3.5 w-3.5" />
-              Terminal
-            </button>
+            {isSuperadmin && (
+              <button
+                onClick={() => handleOpenModal('commandcenter', 'Quick Diagnostics')}
+                className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/60 px-3.5 py-2 text-xs font-medium text-slate-200 hover:bg-white/10 transition-all"
+              >
+                <Terminal className="h-3.5 w-3.5" />
+                Terminal
+              </button>
+            )}
 
             <button
               onClick={handleManualRefresh}
@@ -972,10 +1038,10 @@ export default function DashboardPage() {
                   : 'bg-slate-900/40 text-slate-400 border border-white/5 hover:text-white hover:bg-white/5'
               }`}
             >
-              All Sections ({allItems.length})
+              All Sections ({availableItems.length})
             </button>
-            {categories.map((c) => {
-              const count = allItems.filter((i) => i.category === c.id).length;
+            {availableCategories.map((c) => {
+              const count = availableItems.filter((i) => i.category === c.id).length;
               const isSelected = selectedCategory === c.id;
               return (
                 <button
@@ -1101,11 +1167,11 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white font-bold shadow-lg shadow-sky-500/20">
-                    {serverInfo?.username?.[0]?.toUpperCase() || 'A'}
+                    {(currentUser || serverInfo?.username || 'A')?.[0]?.toUpperCase()}
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-white">Account Information</h3>
-                    <p className="text-xs text-sky-400">User: {serverInfo?.username || 'admin'}</p>
+                    <p className="text-xs text-sky-400">User: {currentUser || serverInfo?.username || 'admin'}</p>
                   </div>
                 </div>
                 <button
@@ -1230,7 +1296,7 @@ export default function DashboardPage() {
 
           {/* Right Column: 7 Comprehensive Action Categories */}
           <div className="space-y-6 lg:col-span-8">
-            {categories.map((category) => {
+            {availableCategories.map((category) => {
               const itemsInCategory = filteredItems.filter((i) => i.category === category.id);
               if (itemsInCategory.length === 0) return null;
 
