@@ -3569,7 +3569,7 @@ struct SslRenewPayload {
     domain: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 struct SslDeleteQuery {
     id: Option<String>,
     domain: Option<String>,
@@ -3896,8 +3896,17 @@ async fn ssl_certificates_delete(
     State(state): State<AppState>,
     _claims: Claims,
     Query(params): Query<SslDeleteQuery>,
+    body: Option<Json<SslDeleteQuery>>,
 ) -> ApiResult<Value> {
-    let target = params.id.or(params.domain).unwrap_or_default().trim().to_lowercase();
+    let body_params = body.map(|Json(b)| b).unwrap_or_default();
+    let target = params
+        .id
+        .or(params.domain)
+        .or(body_params.id)
+        .or(body_params.domain)
+        .unwrap_or_default()
+        .trim()
+        .to_lowercase();
     if target.is_empty() {
         return Err(ApiError::BadRequest("id or domain parameter is required".to_string()));
     }

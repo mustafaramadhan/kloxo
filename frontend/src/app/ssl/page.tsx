@@ -20,6 +20,7 @@ import {
   RotateCcw,
   Clock,
   ExternalLink,
+  AlertTriangle,
 } from 'lucide-react';
 
 export default function SslPage() {
@@ -47,6 +48,7 @@ export default function SslPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [renewingDomain, setRenewingDomain] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -83,6 +85,7 @@ export default function SslPage() {
     e.preventDefault();
     if (!selectedDomain.trim()) return;
     setActionLoading(true);
+    setModalError(null);
     setMessage(null);
     try {
       const res = await apiFetch<{ success: boolean; message: string }>('/ssl/certificates', {
@@ -101,11 +104,12 @@ export default function SslPage() {
       });
       setMessage({ text: res.message || 'SSL certificate configured successfully', success: true });
       setShowAddModal(false);
+      setModalError(null);
       setCrtText('');
       setKeyText('');
       await fetchData();
     } catch (err: any) {
-      setMessage({ text: err.message || 'Failed to configure SSL certificate', success: false });
+      setModalError(err.message || 'Failed to configure SSL certificate');
     } finally {
       setActionLoading(false);
     }
@@ -133,7 +137,8 @@ export default function SslPage() {
     setActionLoading(true);
     setMessage(null);
     try {
-      const res = await apiFetch<{ success: boolean; message: string }>('/ssl/certificates', {
+      const queryParams = new URLSearchParams({ id, domain });
+      const res = await apiFetch<{ success: boolean; message: string }>(`/ssl/certificates?${queryParams.toString()}`, {
         method: 'DELETE',
         body: JSON.stringify({ id, domain }),
       });
@@ -354,6 +359,23 @@ export default function SslPage() {
               </button>
             </div>
 
+            {modalError && (
+              <div className="mt-3 flex items-start gap-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs text-rose-300">
+                <AlertCircle className="h-4 w-4 flex-shrink-0 text-rose-400 mt-0.5" />
+                <div className="flex-1">
+                  <span className="font-semibold block mb-0.5">Issuance Error</span>
+                  <span className="leading-relaxed">{modalError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setModalError(null)}
+                  className="text-rose-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
             {/* Mode Tabs */}
             <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-950 rounded-2xl border border-white/5 mt-4">
               <button
@@ -460,6 +482,18 @@ export default function SslPage() {
                         </p>
                       </div>
                     </label>
+
+                    {isWildcard && (
+                      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
+                        <div className="flex items-center gap-1.5 font-bold mb-1">
+                          <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                          <span>Wildcard DNS Requirement (DNS-01)</span>
+                        </div>
+                        <p className="text-[11px] leading-relaxed text-amber-200/90">
+                          Let&apos;s Encrypt requires a DNS TXT challenge (_acme-challenge) for wildcard certificates. If your domain ({selectedDomain}) uses Cloudflare or external nameservers, you must add the TXT record there, or uncheck Wildcard to issue a standard certificate instantly via automated HTTP-01 webroot challenge.
+                        </p>
+                      </div>
+                    )}
 
                     <label className="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer">
                       <input
