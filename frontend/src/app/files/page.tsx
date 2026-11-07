@@ -35,7 +35,8 @@ import {
 } from 'lucide-react';
 
 export default function FileManagerPage() {
-  const [currentPath, setCurrentPath] = useState('/home/admin');
+  const [currentPath, setCurrentPath] = useState('');
+  const [userRootPath, setUserRootPath] = useState('');
   const [parentPath, setParentPath] = useState<string | null>(null);
   const [items, setItems] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,15 +87,20 @@ export default function FileManagerPage() {
 
   const [actionLoading, setActionLoading] = useState(false);
 
-  const fetchDirectory = async (path: string) => {
+  const fetchDirectory = async (path?: string) => {
     setLoading(true);
     setError(null);
     setSelectedPaths([]);
     try {
-      const data = await apiFetch<FileListResponse>(`/files?path=${encodeURIComponent(path)}`);
-      setCurrentPath(data.current_path);
-      setParentPath(data.parent_path);
-      setItems(data.items);
+      const url = path ? `/files?path=${encodeURIComponent(path)}` : '/files';
+      const data = await apiFetch<any>(url);
+      const resolvedPath = data.current_path || data.path || path || '/';
+      setCurrentPath(resolvedPath);
+      setParentPath(data.parent_path || null);
+      setItems(data.items || data.files || []);
+      if (!userRootPath && resolvedPath) {
+        setUserRootPath(resolvedPath);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load directory');
     } finally {
@@ -103,7 +109,23 @@ export default function FileManagerPage() {
   };
 
   useEffect(() => {
-    fetchDirectory('/home/admin');
+    const token = getStoredToken();
+    let initialPath = '';
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const user = payload.sub || payload.username;
+        if (user && user !== 'admin') {
+          initialPath = `/home/${user}`;
+        } else {
+          initialPath = '/home/admin';
+        }
+      } catch {}
+    }
+    if (initialPath) {
+      setUserRootPath(initialPath);
+    }
+    fetchDirectory(initialPath || undefined);
   }, []);
 
   // Compute octal permissions string from checkboxes
@@ -516,22 +538,37 @@ export default function FileManagerPage() {
         <div className="flex items-center justify-between rounded-xl border border-white/5 bg-slate-950/60 px-4 py-2.5 text-xs">
           <div className="flex items-center gap-1.5 overflow-x-auto text-slate-400">
             <button
-              onClick={() => fetchDirectory('/home')}
+              onClick={() => fetchDirectory(userRootPath || '/home')}
               className="flex items-center gap-1 hover:text-white transition-colors"
+              title="Home directory"
             >
               <Home className="h-3.5 w-3.5 text-sky-400" />
-              <span>/</span>
+              <span>~</span>
             </button>
             {breadcrumbSegments.map((seg, idx) => {
               const segPath = '/' + breadcrumbSegments.slice(0, idx + 1).join('/');
               const isLast = idx === breadcrumbSegments.length - 1;
+              const isAccessible = !userRootPath || userRootPath === '/home/admin' || segPath.startsWith(userRootPath) || userRootPath.startsWith(segPath);
               return (
                 <React.Fragment key={segPath}>
                   <ChevronRight className="h-3.5 w-3.5 text-slate-600 flex-shrink-0" />
                   <button
-                    onClick={() => fetchDirectory(segPath)}
+                    disabled={!isAccessible}
+                    onClick={() => {
+                      if (!isAccessible) return;
+                      // If clicking a parent like /home while jailed to /home/mehdi, open userRootPath
+                      if (userRootPath && userRootPath !== '/home/admin' && !segPath.startsWith(userRootPath)) {
+                        fetchDirectory(userRootPath);
+                      } else {
+                        fetchDirectory(segPath);
+                      }
+                    }}
                     className={`font-mono transition-colors ${
-                      isLast ? 'text-white font-semibold' : 'text-slate-400 hover:text-white'
+                      isLast
+                        ? 'text-white font-semibold'
+                        : isAccessible
+                        ? 'text-slate-400 hover:text-white'
+                        : 'text-slate-600 cursor-default'
                     }`}
                   >
                     {seg}

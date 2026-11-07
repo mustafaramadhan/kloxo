@@ -2932,20 +2932,36 @@ async fn files_list(
             .map(|m| format!("{:o}", m.permissions().mode() & 0o777))
             .unwrap_or_else(|| "0755".to_string());
 
+        let modified_str = chrono::DateTime::from_timestamp(mtime as i64, 0)
+            .map(|dt| dt.format("%Y-%m-%d %H:%M").to_string())
+            .unwrap_or_default();
+
         files.push(json!({
             "name": name,
             "path": entry.path().to_string_lossy(),
             "is_dir": is_dir,
+            "is_directory": is_dir,
             "size": size,
+            "size_bytes": size,
             "mtime": mtime,
+            "modified": modified_str,
             "permissions": perms
         }));
     }
 
+    let parent = if !claims.is_superadmin() && target == state.cfg.home_base_dir.join(&claims.sub) {
+        None
+    } else {
+        target.parent().map(|p| p.to_string_lossy().to_string())
+    };
+
     Ok(Json(json!({
         "success": true,
         "path": target.to_string_lossy(),
-        "files": files
+        "current_path": target.to_string_lossy(),
+        "parent_path": parent,
+        "files": files,
+        "items": files
     })))
 }
 
