@@ -15,8 +15,9 @@
 
 use axum::{
     body::Body,
-    extract::{FromRequestParts, Multipart, Query, State},
+    extract::{FromRequestParts, Multipart, Query, Request, State},
     http::{header, request::Parts, HeaderMap, HeaderValue, Method, StatusCode},
+    middleware::Next,
     response::{IntoResponse, Redirect, Response},
     routing::{delete, get, post},
     Json, Router,
@@ -52,6 +53,7 @@ pub struct AppState {
     pub jwt_secret: Vec<u8>,
     pub cfg: Arc<AppConfig>,
     pub watchdog_alerts: Arc<RwLock<Vec<Value>>>,
+    pub login_attempts: Arc<std::sync::Mutex<HashMap<String, (u32, std::time::Instant)>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -653,13 +655,46 @@ pub mod sys {
             }
         }
 
-        if !claims.is_superadmin() && !normalized.starts_with(&jail_root) {
-            return Err(ApiError::Forbidden(
-                "Access outside user home directory is forbidden".to_string(),
-            ));
+        if !claims.is_superadmin() {
+            if !normalized.starts_with(&jail_root) {
+                return Err(ApiError::Forbidden(
+                    "Access outside user home directory is forbidden".to_string(),
+                ));
+            }
+            if normalized.exists() {
+                if let Ok(canonical) = fs::canonicalize(&normalized) {
+                    if !canonical.starts_with(&jail_root) {
+                        return Err(ApiError::Forbidden(
+                            "Symlink access outside user home directory is forbidden".to_string(),
+                        ));
+                    }
+                }
+            } else if let Some(parent) = normalized.parent() {
+                if parent.exists() {
+                    if let Ok(canonical) = fs::canonicalize(parent) {
+                        if !canonical.starts_with(&jail_root) {
+                            return Err(ApiError::Forbidden(
+                                "Target path escapes user home directory".to_string(),
+                            ));
+                        }
+                    }
+                }
+            }
         }
 
         Ok(normalized)
+    }
+
+    pub fn sanitize_filename(raw: &str) -> Result<String, ApiError> {
+        let clean = Path::new(raw)
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .trim();
+        if clean.is_empty() || clean.contains('/') || clean.contains('\\') || clean == ".." || clean == "." {
+            return Err(ApiError::BadRequest("Invalid filename or path traversal detected".to_string()));
+        }
+        Ok(clean.to_string())
     }
 
     pub fn read_hostname() -> String {
@@ -885,8 +920,31 @@ fn check_kloxo_password(plain: &str, stored_hash: &str, realpass: &str) -> bool 
 /// `POST /api/v1/auth/login`
 async fn auth_login(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<LoginPayload>,
 ) -> Result<Response, ApiError> {
+    let client_ip = headers
+        .get("x-forwarded-for")
+        .or_else(|| headers.get("x-real-ip"))
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.split(',').next())
+        .map(|s| s.trim().to_string())
+        .unwrap_or_else(|| "127.0.0.1".to_string());
+
+    let now = std::time::Instant::now();
+    {
+        if let Ok(mut attempts) = state.login_attempts.lock() {
+            attempts.retain(|_, (_, time)| now.duration_since(*time) < Duration::from_secs(60));
+            if let Some((count, _)) = attempts.get(&client_ip) {
+                if *count >= 10 {
+                    return Err(ApiError::BadRequest(
+                        "Too many failed login attempts. Please wait 1 minute.".to_string(),
+                    ));
+                }
+            }
+        }
+    }
+
     let row = sqlx::query(
         "SELECT nname, password, realpass, cttype FROM client WHERE nname = ? LIMIT 1",
     )
@@ -895,6 +953,11 @@ async fn auth_login(
     .await?;
 
     let Some(row) = row else {
+        if let Ok(mut attempts) = state.login_attempts.lock() {
+            let entry = attempts.entry(client_ip).or_insert((0, now));
+            entry.0 += 1;
+            entry.1 = now;
+        }
         return Err(ApiError::Unauthorized(
             "Invalid username or password".to_string(),
         ));
@@ -904,9 +967,18 @@ async fn auth_login(
     let realpass: String = row.try_get("realpass").unwrap_or_default();
 
     if !check_kloxo_password(&payload.password, &stored_pass, &realpass) {
+        if let Ok(mut attempts) = state.login_attempts.lock() {
+            let entry = attempts.entry(client_ip).or_insert((0, now));
+            entry.0 += 1;
+            entry.1 = now;
+        }
         return Err(ApiError::Unauthorized(
             "Invalid username or password".to_string(),
         ));
+    }
+
+    if let Ok(mut attempts) = state.login_attempts.lock() {
+        attempts.remove(&client_ip);
     }
 
     let username: String = row
@@ -1118,17 +1190,63 @@ async fn system_quotas(
         mail_count,
         db_count,
         ftp_count,
-    ) = tokio::join!(
-        count_table_rows(&state.db, "client"),
-        count_table_rows(&state.db, "domain"),
-        count_table_rows(&state.db, "subdomain"),
-        count_table_rows(&state.db, "mailaccount"),
-        count_table_rows(&state.db, "mysqldb"),
-        count_table_rows(&state.db, "ftpuser"),
-    );
+    ) = if claims.is_superadmin() {
+        tokio::join!(
+            count_table_rows(&state.db, "client"),
+            count_table_rows(&state.db, "domain"),
+            count_table_rows(&state.db, "subdomain"),
+            count_table_rows(&state.db, "mailaccount"),
+            count_table_rows(&state.db, "mysqldb"),
+            count_table_rows(&state.db, "ftpuser"),
+        )
+    } else {
+        let d = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM domain WHERE parent_clname = ?")
+            .bind(&claims.sub)
+            .fetch_one(&state.db)
+            .await
+            .unwrap_or(0);
+        let s = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM subdomain WHERE parent_clname = ?")
+            .bind(&claims.sub)
+            .fetch_one(&state.db)
+            .await
+            .unwrap_or(0);
+        let m = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM mailaccount WHERE parent_clname = ?")
+            .bind(&claims.sub)
+            .fetch_one(&state.db)
+            .await
+            .unwrap_or(0);
+        let db = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM mysqldb WHERE parent_clname = ?")
+            .bind(&claims.sub)
+            .fetch_one(&state.db)
+            .await
+            .unwrap_or(0);
+        let f = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM ftpuser WHERE parent_clname = ?")
+            .bind(&claims.sub)
+            .fetch_one(&state.db)
+            .await
+            .unwrap_or(0);
+        (1, d, s, m, db, f)
+    };
 
-    let (_, disk_used_bytes, _, _) = sys::read_root_disk_stats();
-    let disk_used_mb = (disk_used_bytes / (1024 * 1024)) as i64;
+    let disk_used_mb = if claims.is_superadmin() {
+        let (_, disk_used_bytes, _, _) = sys::read_root_disk_stats();
+        (disk_used_bytes / (1024 * 1024)) as i64
+    } else {
+        let used_client: Option<String> = sqlx::query_scalar("SELECT used_q_clientdisk_usage FROM client WHERE nname = ?")
+            .bind(&claims.sub)
+            .fetch_optional(&state.db)
+            .await
+            .ok()
+            .flatten();
+        used_client
+            .and_then(|v| v.parse::<f64>().ok())
+            .map(|v| v as i64)
+            .unwrap_or_else(|| {
+                // Approximate fallback: check size of user home directory
+                let home = state.cfg.home_base_dir.join(&claims.sub);
+                fs::metadata(&home).map(|m| (m.len() / (1024 * 1024)) as i64).unwrap_or(0)
+            })
+    };
 
     let settings_path = state.cfg.kloxo_etc_dir.join("panel_settings.json");
     let settings: Value = sys::read_json_store(&settings_path, json!({}));
@@ -1445,7 +1563,10 @@ pub struct LogsQuery {
 }
 
 /// `GET /api/v1/system/logs`
-async fn system_logs(_claims: Claims, Query(query): Query<LogsQuery>) -> ApiResult<Value> {
+async fn system_logs(claims: Claims, Query(query): Query<LogsQuery>) -> ApiResult<Value> {
+    if !claims.is_superadmin() {
+        return Err(ApiError::Forbidden("Superadmin role required to view system logs".to_string()));
+    }
     let service = query.service.unwrap_or_else(|| "nginx".to_string());
     let log_file = match service.as_str() {
         "nginx" => "/var/log/nginx/error.log",
@@ -1476,7 +1597,10 @@ async fn system_logs(_claims: Claims, Query(query): Query<LogsQuery>) -> ApiResu
 }
 
 /// `GET /api/v1/system/phpinfo`
-async fn system_phpinfo(_claims: Claims) -> ApiResult<Value> {
+async fn system_phpinfo(claims: Claims) -> ApiResult<Value> {
+    if !claims.is_superadmin() {
+        return Err(ApiError::Forbidden("Superadmin role required to view phpinfo".to_string()));
+    }
     Ok(Json(json!({
         "success": true,
         "php": {
@@ -2198,7 +2322,7 @@ async fn domains_create(
 /// `DELETE /api/v1/domains`
 async fn domains_delete(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
     Query(q): Query<DomainPayload>,
     body: Option<Json<DomainPayload>>,
 ) -> ApiResult<Value> {
@@ -2207,6 +2331,22 @@ async fn domains_delete(
         .or_else(|| body.and_then(|b| b.0.domain))
         .ok_or_else(|| ApiError::BadRequest("Domain name is required".to_string()))?;
     sys::validate_domain(&domain)?;
+
+    if !claims.is_superadmin() {
+        let is_owner = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM domain WHERE nname = ? AND parent_clname = ?",
+        )
+        .bind(&domain)
+        .bind(&claims.sub)
+        .fetch_one(&state.db)
+        .await
+        .unwrap_or(0);
+        if is_owner == 0 {
+            return Err(ApiError::Forbidden(
+                "You do not have permission to delete this domain".to_string(),
+            ));
+        }
+    }
 
     let _ = fs::remove_file(state.cfg.kloxo_httpd_dir.join(format!("{}.conf", domain)));
     sqlx::query("DELETE FROM domain WHERE nname = ?")
@@ -2315,7 +2455,7 @@ pub struct DeleteDbPayload {
 /// `DELETE /api/v1/databases`
 async fn databases_delete(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
     Query(q): Query<DeleteDbPayload>,
     body: Option<Json<DeleteDbPayload>>,
 ) -> ApiResult<Value> {
@@ -2324,6 +2464,23 @@ async fn databases_delete(
         .or(q.dbname)
         .or_else(|| body.and_then(|b| b.0.name.or(b.0.dbname)))
         .ok_or_else(|| ApiError::BadRequest("Database name is required".to_string()))?;
+
+    if !claims.is_superadmin() {
+        let is_owner = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM mysqldb WHERE (nname = ? OR dbname = ?) AND parent_clname = ?",
+        )
+        .bind(&dbname)
+        .bind(&dbname)
+        .bind(&claims.sub)
+        .fetch_one(&state.db)
+        .await
+        .unwrap_or(0);
+        if is_owner == 0 {
+            return Err(ApiError::Forbidden(
+                "You do not have permission to delete this database".to_string(),
+            ));
+        }
+    }
 
     sqlx::query("DELETE FROM mysqldb WHERE nname = ? OR dbname = ?")
         .bind(&dbname)
@@ -2428,7 +2585,7 @@ pub struct DeleteMailPayload {
 /// `DELETE /api/v1/mail/accounts`
 async fn mail_accounts_delete(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
     Query(q): Query<DeleteMailPayload>,
     body: Option<Json<DeleteMailPayload>>,
 ) -> ApiResult<Value> {
@@ -2436,6 +2593,22 @@ async fn mail_accounts_delete(
         .email
         .or_else(|| body.and_then(|b| b.0.email))
         .ok_or_else(|| ApiError::BadRequest("Email is required".to_string()))?;
+
+    if !claims.is_superadmin() {
+        let is_owner = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM mailaccount WHERE nname = ? AND parent_clname = ?",
+        )
+        .bind(&email)
+        .bind(&claims.sub)
+        .fetch_one(&state.db)
+        .await
+        .unwrap_or(0);
+        if is_owner == 0 {
+            return Err(ApiError::Forbidden(
+                "You do not have permission to delete this mailbox".to_string(),
+            ));
+        }
+    }
 
     sqlx::query("DELETE FROM mailaccount WHERE nname = ?")
         .bind(&email)
@@ -2529,7 +2702,7 @@ pub struct DeleteFtpPayload {
 /// `DELETE /api/v1/ftp/users`
 async fn ftp_users_delete(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
     Query(q): Query<DeleteFtpPayload>,
     body: Option<Json<DeleteFtpPayload>>,
 ) -> ApiResult<Value> {
@@ -2537,6 +2710,22 @@ async fn ftp_users_delete(
         .username
         .or_else(|| body.and_then(|b| b.0.username))
         .ok_or_else(|| ApiError::BadRequest("Username is required".to_string()))?;
+
+    if !claims.is_superadmin() {
+        let is_owner = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM ftpuser WHERE nname = ? AND parent_clname = ?",
+        )
+        .bind(&username)
+        .bind(&claims.sub)
+        .fetch_one(&state.db)
+        .await
+        .unwrap_or(0);
+        if is_owner == 0 {
+            return Err(ApiError::Forbidden(
+                "You do not have permission to delete this FTP user".to_string(),
+            ));
+        }
+    }
 
     sqlx::query("DELETE FROM ftpuser WHERE nname = ?")
         .bind(&username)
@@ -2550,7 +2739,12 @@ async fn ftp_users_delete(
 }
 
 /// `GET /api/v1/clients`
-async fn clients_list(State(state): State<AppState>, _claims: Claims) -> ApiResult<Value> {
+async fn clients_list(State(state): State<AppState>, claims: Claims) -> ApiResult<Value> {
+    if !claims.is_superadmin() {
+        return Err(ApiError::Forbidden(
+            "Superadmin privileges required to view clients".to_string(),
+        ));
+    }
     let rows = sqlx::query(
         "SELECT nname, cttype, contactemail, status, used_q_domain_num, priv_q_domain_num, used_q_clientdisk_usage FROM client ORDER BY nname ASC",
     )
@@ -2833,7 +3027,7 @@ pub struct DeleteCronPayload {
 /// `DELETE /api/v1/cron/jobs`
 async fn cron_jobs_delete(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
     Query(q): Query<DeleteCronPayload>,
     body: Option<Json<DeleteCronPayload>>,
 ) -> ApiResult<Value> {
@@ -2841,6 +3035,22 @@ async fn cron_jobs_delete(
         .id
         .or_else(|| body.and_then(|b| b.0.id))
         .ok_or_else(|| ApiError::BadRequest("Cron ID is required".to_string()))?;
+
+    if !claims.is_superadmin() {
+        let is_owner = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM cron WHERE nname = ? AND parent_clname = ?",
+        )
+        .bind(&id)
+        .bind(&claims.sub)
+        .fetch_one(&state.db)
+        .await
+        .unwrap_or(0);
+        if is_owner == 0 {
+            return Err(ApiError::Forbidden(
+                "You do not have permission to delete this cron task".to_string(),
+            ));
+        }
+    }
 
     sqlx::query("DELETE FROM cron WHERE nname = ?")
         .bind(&id)
@@ -2854,7 +3064,10 @@ async fn cron_jobs_delete(
 }
 
 /// `GET /api/v1/network/ips`
-async fn network_ips_list(State(state): State<AppState>, _claims: Claims) -> ApiResult<Value> {
+async fn network_ips_list(State(state): State<AppState>, claims: Claims) -> ApiResult<Value> {
+    if !claims.is_superadmin() {
+        return Err(ApiError::Forbidden("Superadmin role required".to_string()));
+    }
     let rows = sqlx::query("SELECT devname, ipaddr, netmask, status FROM ipaddress")
         .fetch_all(&state.db)
         .await
@@ -2979,8 +3192,9 @@ async fn files_create(
     claims: Claims,
     Json(payload): Json<FileCreatePayload>,
 ) -> ApiResult<Value> {
+    let safe_name = sys::sanitize_filename(&payload.name)?;
     let base = sys::resolve_safe_path(&state.cfg.home_base_dir, &claims, &payload.path)?;
-    let full_path = base.join(payload.name.trim_matches('/'));
+    let full_path = base.join(&safe_name);
 
     if payload.item_type == "directory" || payload.item_type == "dir" {
         fs::create_dir_all(&full_path).map_err(|e| ApiError::SystemExec(e.to_string()))?;
@@ -3063,12 +3277,13 @@ async fn files_upload(
                 }
             }
         } else if let Some(fname) = field.file_name().map(|s| s.to_string()) {
+            let safe_name = sys::sanitize_filename(&fname)?;
             if let Ok(bytes) = field.bytes().await {
                 let _ = fs::create_dir_all(&target_dir);
-                let dest = target_dir.join(&fname);
+                let dest = target_dir.join(&safe_name);
                 fs::write(&dest, &bytes).map_err(|e| ApiError::SystemExec(e.to_string()))?;
                 saved_path = dest.to_string_lossy().to_string();
-                saved_name = fname;
+                saved_name = safe_name;
             }
         }
     }
@@ -3164,11 +3379,12 @@ async fn files_compress(
     claims: Claims,
     Json(payload): Json<FileCompressPayload>,
 ) -> ApiResult<Value> {
+    let safe_archive_name = sys::sanitize_filename(&payload.archive_name)?;
     let dest_dir =
         sys::resolve_safe_path(&state.cfg.home_base_dir, &claims, &payload.destination)?;
     let _ = fs::create_dir_all(&dest_dir);
     let fmt = payload.format.unwrap_or_else(|| "zip".to_string());
-    let archive_path = dest_dir.join(&payload.archive_name);
+    let archive_path = dest_dir.join(&safe_archive_name);
 
     let mut safe_files = Vec::new();
     for f in &payload.files {
@@ -3212,11 +3428,12 @@ async fn files_rename(
     claims: Claims,
     Json(payload): Json<FileRenamePayload>,
 ) -> ApiResult<Value> {
+    let safe_new_name = sys::sanitize_filename(&payload.new_name)?;
     let src = sys::resolve_safe_path(&state.cfg.home_base_dir, &claims, &payload.path)?;
     let dst = src
         .parent()
         .unwrap_or(Path::new("/home"))
-        .join(payload.new_name.trim_matches('/'));
+        .join(&safe_new_name);
     fs::rename(&src, &dst).map_err(|e| ApiError::SystemExec(e.to_string()))?;
 
     Ok(Json(json!({
@@ -3305,6 +3522,13 @@ async fn files_delete(
         .or_else(|| body.map(|b| b.0.path))
         .ok_or_else(|| ApiError::BadRequest("Path is required".to_string()))?;
     let target = sys::resolve_safe_path(&state.cfg.home_base_dir, &claims, &raw)?;
+
+    if !claims.is_superadmin() && target == state.cfg.home_base_dir.join(&claims.sub) {
+        return Err(ApiError::BadRequest("Cannot delete root user home directory".to_string()));
+    }
+    if target == Path::new("/") || target == state.cfg.home_base_dir {
+        return Err(ApiError::Forbidden("Cannot delete system root or base home directory".to_string()));
+    }
 
     if target.is_dir() {
         fs::remove_dir_all(&target).map_err(|e| ApiError::SystemExec(e.to_string()))?;
@@ -4153,8 +4377,11 @@ async fn get_cmd_version_line(cmd: &str, args: &[&str]) -> String {
 
 async fn custombuild_status_get(
     State(_state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
 ) -> ApiResult<Value> {
+    if !claims.is_superadmin() {
+        return Err(ApiError::Forbidden("Superadmin role required".to_string()));
+    }
     let nginx_ver = get_cmd_version_line("nginx", &["-v"]).await;
     let apache_ver = get_cmd_version_line("apache2", &["-v"]).await;
     let php_ver = get_cmd_version_line("php", &["-v"]).await;
@@ -4279,8 +4506,11 @@ async fn custombuild_status_get(
 
 async fn custombuild_options_get(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
 ) -> ApiResult<Value> {
+    if !claims.is_superadmin() {
+        return Err(ApiError::Forbidden("Superadmin role required".to_string()));
+    }
     let path = state.cfg.kloxo_etc_dir.join("custombuild.json");
     let options: CustomBuildOptions = sys::read_json_store(&path, CustomBuildOptions::default());
     Ok(Json(json!({
@@ -4291,9 +4521,12 @@ async fn custombuild_options_get(
 
 async fn custombuild_options_post(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
     Json(options): Json<CustomBuildOptions>,
 ) -> ApiResult<Value> {
+    if !claims.is_superadmin() {
+        return Err(ApiError::Forbidden("Superadmin role required".to_string()));
+    }
     let path = state.cfg.kloxo_etc_dir.join("custombuild.json");
     sys::write_json_store(&path, &options)?;
     Ok(Json(json!({
@@ -4655,7 +4888,10 @@ async fn support_messages_create(
 }
 
 /// `GET /api/v1/security/ssh-config`
-async fn security_ssh_get(State(state): State<AppState>, _claims: Claims) -> ApiResult<Value> {
+async fn security_ssh_get(State(state): State<AppState>, claims: Claims) -> ApiResult<Value> {
+    if !claims.is_superadmin() {
+        return Err(ApiError::Forbidden("Superadmin role required".to_string()));
+    }
     let path = state.cfg.kloxo_etc_dir.join("ssh_config.json");
     let default_cfg = json!({
         "port": 22,
@@ -4726,8 +4962,11 @@ async fn security_ssh_save(
 /// `GET /api/v1/security/watchdog`
 async fn security_watchdog_get(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
 ) -> ApiResult<Value> {
+    if !claims.is_superadmin() {
+        return Err(ApiError::Forbidden("Superadmin role required".to_string()));
+    }
     let path = state.cfg.kloxo_etc_dir.join("watchdog_config.json");
     let default_cfg = json!({
         "active": true,
@@ -4802,8 +5041,11 @@ async fn security_watchdog_post(
 /// `GET /api/v1/security/lxguard`
 async fn security_lxguard_get(
     State(state): State<AppState>,
-    _claims: Claims,
+    claims: Claims,
 ) -> ApiResult<Value> {
+    if !claims.is_superadmin() {
+        return Err(ApiError::Forbidden("Superadmin role required".to_string()));
+    }
     let path = state.cfg.kloxo_etc_dir.join("lxguard.json");
     let data: Value = sys::read_json_store(
         &path,
@@ -5261,6 +5503,7 @@ async fn backups_list(claims: Claims) -> ApiResult<Value> {
 
 /// `POST /api/v1/backups/create`
 async fn backups_create(
+    State(state): State<AppState>,
     claims: Claims,
     Json(payload): Json<BackupCreatePayload>,
 ) -> ApiResult<Value> {
@@ -5276,11 +5519,16 @@ async fn backups_create(
     let filename = format!("backup-{}-{}.tar.gz", claims.sub, ts);
     let target_file = backup_dir.join(&filename);
 
+    let pass_path = state.cfg.kloxo_root_dir.join("etc/conf/kloxo.pass");
+    let db_pass = fs::read_to_string(&pass_path)
+        .map(|s| s.trim().to_string())
+        .unwrap_or_else(|_| "FCayldtdUInsugVe".to_string());
+
     let cmd_str = if claims.is_superadmin() {
         match btype.as_str() {
             "database" => format!(
-                "mysqldump -u kloxo -pFCayldtdUInsugVe --all-databases 2>/dev/null | gzip -c > {:?}",
-                target_file
+                "mysqldump -u kloxo -p'{}' --all-databases 2>/dev/null | gzip -c > {:?}",
+                db_pass, target_file
             ),
             "config" => format!(
                 "tar -czf {:?} -C / etc/nginx etc/apache2 etc/php usr/local/lxlabs/kloxo/etc 2>/dev/null || true",
@@ -5294,10 +5542,29 @@ async fn backups_create(
     } else {
         let user_home = format!("/home/{}", claims.sub);
         match btype.as_str() {
-            "database" => format!(
-                "mysqldump -u kloxo -pFCayldtdUInsugVe --databases kloxo 2>/dev/null | gzip -c > {:?}",
-                target_file
-            ),
+            "database" => {
+                let user_dbs: Vec<String> = sqlx::query_scalar(
+                    "SELECT dbname FROM mysqldb WHERE parent_clname = ?",
+                )
+                .bind(&claims.sub)
+                .fetch_all(&state.db)
+                .await
+                .unwrap_or_default();
+
+                if user_dbs.is_empty() {
+                    format!("echo '-- No user databases found for {}' | gzip -c > {:?}", claims.sub, target_file)
+                } else {
+                    let dbs_list = user_dbs
+                        .iter()
+                        .map(|d| format!("'{}'", d.replace('\'', "")))
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    format!(
+                        "mysqldump -u kloxo -p'{}' --databases {} 2>/dev/null | gzip -c > {:?}",
+                        db_pass, dbs_list, target_file
+                    )
+                }
+            }
             _ => format!(
                 "tar -czf {:?} -C / {} 2>/dev/null || true",
                 target_file,
@@ -5331,13 +5598,11 @@ async fn backups_delete(
     claims: Claims,
     Json(payload): Json<BackupDeletePayload>,
 ) -> ApiResult<Value> {
-    let filename = payload
+    let raw_filename = payload
         .filename
         .ok_or_else(|| ApiError::BadRequest("Filename is required".to_string()))?;
 
-    if filename.contains('/') || filename.contains('\\') || filename.contains("..") {
-        return Err(ApiError::BadRequest("Invalid filename".to_string()));
-    }
+    let filename = sys::sanitize_filename(&raw_filename)?;
 
     let backup_dir = if claims.is_superadmin() {
         PathBuf::from("/var/backups/kloxo")
@@ -5686,6 +5951,28 @@ fn build_v1_router() -> Router<AppState> {
         .route("/server/action", post(server_action))
 }
 
+async fn security_headers_middleware(req: Request, next: Next) -> Response {
+    let mut resp = next.run(req).await;
+    let headers = resp.headers_mut();
+    headers.insert(
+        header::HeaderName::from_static("x-content-type-options"),
+        HeaderValue::from_static("nosniff"),
+    );
+    headers.insert(
+        header::HeaderName::from_static("x-frame-options"),
+        HeaderValue::from_static("SAMEORIGIN"),
+    );
+    headers.insert(
+        header::HeaderName::from_static("referrer-policy"),
+        HeaderValue::from_static("strict-origin-when-cross-origin"),
+    );
+    headers.insert(
+        header::HeaderName::from_static("x-xss-protection"),
+        HeaderValue::from_static("1; mode=block"),
+    );
+    resp
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
@@ -5719,6 +6006,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         jwt_secret,
         cfg: Arc::new(cfg.clone()),
         watchdog_alerts: Arc::new(RwLock::new(Vec::new())),
+        login_attempts: Arc::new(std::sync::Mutex::new(HashMap::new())),
     };
 
     tokio::spawn(background_watchdog_worker(state.clone()));
@@ -5738,6 +6026,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1", build_v1_router())
         .nest("/api", build_v1_router())
         .merge(build_v1_router())
+        .layer(axum::middleware::from_fn(security_headers_middleware))
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http())
         .layer(cors)

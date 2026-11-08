@@ -108,6 +108,22 @@ export default function Shell({ children }: ShellProps) {
     user?.username === 'admin';
   const isReseller = user?.role === 'reseller' || user?.type === 'reseller';
 
+  useEffect(() => {
+    if (!user) return;
+    const adminOnlyRoutes = [
+      '/clients',
+      '/custombuild',
+      '/services',
+      '/security',
+      '/php-config',
+      '/php-advanced',
+      '/logs',
+    ];
+    if (!isSuperadmin && adminOnlyRoutes.some((route) => pathname.startsWith(route))) {
+      router.push('/');
+    }
+  }, [pathname, user, isSuperadmin, router]);
+
   const navGroups = [
     {
       title: 'Hosting & Core',
