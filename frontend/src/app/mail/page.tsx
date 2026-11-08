@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Shell from '@/components/layout/Shell';
 import { apiFetch, MailAccountItem, MailForwarderItem } from '@/lib/api';
-import { Mail, CheckCircle2, XCircle, RefreshCw, Plus, Trash2, X, AlertCircle, Inbox, Send, ArrowRight } from 'lucide-react';
+import { Mail, CheckCircle2, XCircle, RefreshCw, Plus, Trash2, X, AlertCircle, Inbox, Send, ArrowRight, ExternalLink } from 'lucide-react';
 
 export default function MailAccountsPage() {
   const [activeTab, setActiveTab] = useState<'accounts' | 'forwarders'>('accounts');
@@ -137,6 +137,16 @@ export default function MailAccountsPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <a
+              href="/webmail/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-2 text-sm font-semibold text-indigo-300 hover:bg-indigo-500/20 transition-all shadow-sm"
+            >
+              <Mail className="h-4 w-4" />
+              Launch Webmail
+              <ExternalLink className="h-3.5 w-3.5 opacity-70" />
+            </a>
             <button
               onClick={fetchMailData}
               disabled={loading}
@@ -258,14 +268,26 @@ export default function MailAccountsPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <button
-                            onClick={() => handleDeleteMail(acc.email)}
-                            disabled={actionLoading}
-                            className="inline-flex items-center p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition-colors"
-                            title="Delete Mailbox"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <a
+                              href="/webmail/"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 text-xs font-medium text-indigo-300 hover:bg-indigo-500/20 transition-colors"
+                              title="Open Webmail"
+                            >
+                              <Mail className="h-3.5 w-3.5" />
+                              Webmail
+                            </a>
+                            <button
+                              onClick={() => handleDeleteMail(acc.email)}
+                              disabled={actionLoading}
+                              className="inline-flex items-center p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition-colors"
+                              title="Delete Mailbox"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

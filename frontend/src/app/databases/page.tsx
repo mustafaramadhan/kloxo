@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Shell from '@/components/layout/Shell';
-import { Database, Plus, RefreshCw, Trash2, X, AlertCircle, CheckCircle2, User, Key, Terminal, Play, Table } from 'lucide-react';
+import { Database, Plus, RefreshCw, Trash2, X, AlertCircle, CheckCircle2, User, Key, Terminal, Play, Table, ExternalLink } from 'lucide-react';
 import { apiFetch, DatabaseItem, SqlQueryResult } from '@/lib/api';
 
 export default function DatabasesPage() {
@@ -123,6 +123,16 @@ export default function DatabasesPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <a
+              href="/phpmyadmin/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-300 hover:bg-amber-500/20 transition-all shadow-sm"
+            >
+              <Database className="h-4 w-4" />
+              Open phpMyAdmin
+              <ExternalLink className="h-3.5 w-3.5 opacity-70" />
+            </a>
             <button
               onClick={loadDatabases}
               disabled={loading}
@@ -213,6 +223,16 @@ export default function DatabasesPage() {
                       <td className="px-6 py-4 font-mono text-xs text-slate-300">{db.usage_mb} MB</td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <a
+                            href="/phpmyadmin/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-300 hover:bg-amber-500/20 transition-colors"
+                            title="Manage in phpMyAdmin"
+                          >
+                            <Database className="h-3.5 w-3.5" />
+                            phpMyAdmin
+                          </a>
                           <button
                             onClick={() => openSqlForDb(db.name)}
                             className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-xs font-medium text-purple-300 hover:bg-purple-500/20 transition-colors"

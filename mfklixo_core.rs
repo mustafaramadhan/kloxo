@@ -2423,10 +2423,35 @@ async fn databases_create(
         .username
         .or(payload.dbuser)
         .unwrap_or_else(|| dbname.clone());
-    let _password = payload.password.or(payload.dbpass).unwrap_or_default();
+    let password = payload.password.or(payload.dbpass).unwrap_or_default();
 
     sys::validate_ident(&dbname, "database name")?;
     sys::validate_ident(&username, "database username")?;
+
+    // Actually create database in MariaDB
+    let create_db_sql = format!("CREATE DATABASE IF NOT EXISTS `{}`", dbname);
+    let _ = sqlx::query(&create_db_sql).execute(&state.db).await;
+
+    // Create user and grant privileges if password provided
+    if !password.is_empty() {
+        let clean_pass = password.replace('\'', "''");
+        let create_user_sql = format!(
+            "CREATE USER IF NOT EXISTS '{}'@'localhost' IDENTIFIED BY '{}'",
+            username, clean_pass
+        );
+        let alter_user_sql = format!(
+            "ALTER USER '{}'@'localhost' IDENTIFIED BY '{}'",
+            username, clean_pass
+        );
+        let grant_sql = format!(
+            "GRANT ALL PRIVILEGES ON `{}`.* TO '{}'@'localhost'",
+            dbname, username
+        );
+        let _ = sqlx::query(&create_user_sql).execute(&state.db).await;
+        let _ = sqlx::query(&alter_user_sql).execute(&state.db).await;
+        let _ = sqlx::query(&grant_sql).execute(&state.db).await;
+        let _ = sqlx::query("FLUSH PRIVILEGES").execute(&state.db).await;
+    }
 
     sqlx::query(
         "REPLACE INTO mysqldb (nname, dbname, username, parent_clname, used_q_mysqldb_usage)
@@ -2481,6 +2506,10 @@ async fn databases_delete(
             ));
         }
     }
+
+    // Drop database in MariaDB
+    let drop_db_sql = format!("DROP DATABASE IF EXISTS `{}`", dbname);
+    let _ = sqlx::query(&drop_db_sql).execute(&state.db).await;
 
     sqlx::query("DELETE FROM mysqldb WHERE nname = ? OR dbname = ?")
         .bind(&dbname)
