@@ -395,6 +395,10 @@ impl Claims {
             || self.sub == "admin"
     }
 
+    pub fn is_reseller(&self) -> bool {
+        self.role == "reseller" || self.user_type == "reseller"
+    }
+
     pub fn normalized_role(&self) -> &'static str {
         if self.is_superadmin() {
             "superadmin"
@@ -2775,7 +2779,7 @@ async fn clients_list(State(state): State<AppState>, claims: Claims) -> ApiResul
         ));
     }
     let rows = sqlx::query(
-        "SELECT nname, cttype, contactemail, status, used_q_domain_num, priv_q_domain_num, used_q_clientdisk_usage FROM client ORDER BY nname ASC",
+        "SELECT nname, cttype, contactemail, status, used_q_domain_num, priv_q_domain_num, used_q_clientdisk_usage, resourceplan_used FROM client ORDER BY nname ASC",
     )
     .fetch_all(&state.db)
     .await?;
@@ -2787,6 +2791,7 @@ async fn clients_list(State(state): State<AppState>, claims: Claims) -> ApiResul
             let cttype: String = r.try_get("cttype").unwrap_or_else(|_| "customer".to_string());
             let email: String = r.try_get("contactemail").unwrap_or_default();
             let status_str: String = r.try_get("status").unwrap_or_else(|_| "on".to_string());
+            let plan: String = r.try_get("resourceplan_used").unwrap_or_else(|_| "Standard Hosting".to_string());
             let domains_used: i64 = r.try_get("used_q_domain_num").unwrap_or(0);
             let domains_quota: i64 = r
                 .try_get::<String, _>("priv_q_domain_num")
@@ -2805,7 +2810,8 @@ async fn clients_list(State(state): State<AppState>, claims: Claims) -> ApiResul
                 "status": status_str == "on" || status_str == "active" || status_str == "1",
                 "domains_used": domains_used,
                 "domains_quota": domains_quota,
-                "disk_used_mb": disk_used_mb
+                "disk_used_mb": disk_used_mb,
+                "plan": plan
             })
         })
         .collect();
@@ -2823,6 +2829,7 @@ pub struct CreateClientPayload {
     pub email: Option<String>,
     #[serde(rename = "type")]
     pub client_type: Option<String>,
+    pub plan_name: Option<String>,
 }
 
 /// `POST /api/v1/clients`
@@ -2839,6 +2846,83 @@ async fn clients_create(
     let cttype = payload.client_type.unwrap_or_else(|| "customer".to_string());
     let pass_hash = bcrypt::hash(&payload.password, bcrypt::DEFAULT_COST)
         .map_err(|e| ApiError::Internal(e.to_string()))?;
+
+    // Determine plan quotas
+    let plan_name = payload.plan_name.clone().unwrap_or_else(|| {
+        if cttype == "reseller" {
+            "Reseller Pro".to_string()
+        } else {
+            "Standard Hosting".to_string()
+        }
+    });
+
+    let path = state.cfg.kloxo_etc_dir.join("plans.json");
+    let default_plans = vec![
+        json!({
+            "name": "Standard Hosting",
+            "plan_type": "customer",
+            "disk_mb": 10240,
+            "traffic_mb": 102400,
+            "domains": 5,
+            "subdomains": 10,
+            "mail_accounts": 10,
+            "mysql_dbs": 5,
+            "ftp_users": 5,
+            "is_default": true
+        }),
+        json!({
+            "name": "Unlimited Hosting",
+            "plan_type": "customer",
+            "disk_mb": 51200,
+            "traffic_mb": 512000,
+            "domains": 20,
+            "subdomains": 50,
+            "mail_accounts": 50,
+            "mysql_dbs": 20,
+            "ftp_users": 20,
+            "is_default": false
+        }),
+        json!({
+            "name": "Reseller Bronze",
+            "plan_type": "reseller",
+            "disk_mb": 51200,
+            "traffic_mb": 512000,
+            "domains": 25,
+            "subdomains": 50,
+            "mail_accounts": 50,
+            "mysql_dbs": 25,
+            "ftp_users": 25,
+            "is_default": false
+        }),
+        json!({
+            "name": "Reseller Pro",
+            "plan_type": "reseller",
+            "disk_mb": 204800,
+            "traffic_mb": 2048000,
+            "domains": 100,
+            "subdomains": 200,
+            "mail_accounts": 200,
+            "mysql_dbs": 100,
+            "ftp_users": 100,
+            "is_default": true
+        }),
+    ];
+    let plans: Vec<Value> = sys::read_json_store(&path, default_plans);
+    let matched_plan = plans.iter().find(|p| p.get("name").and_then(|v| v.as_str()) == Some(&plan_name));
+
+    let (disk_mb, traffic_mb, domains, subdomains, mail_accounts, mysql_dbs, ftp_users) = if let Some(p) = matched_plan {
+        (
+            p.get("disk_mb").and_then(|v| v.as_i64()).unwrap_or(10240),
+            p.get("traffic_mb").and_then(|v| v.as_i64()).unwrap_or(102400),
+            p.get("domains").and_then(|v| v.as_i64()).unwrap_or(5),
+            p.get("subdomains").and_then(|v| v.as_i64()).unwrap_or(10),
+            p.get("mail_accounts").and_then(|v| v.as_i64()).unwrap_or(10),
+            p.get("mysql_dbs").and_then(|v| v.as_i64()).unwrap_or(5),
+            p.get("ftp_users").and_then(|v| v.as_i64()).unwrap_or(5),
+        )
+    } else {
+        (10240, 102400, 5, 10, 10, 5, 5)
+    };
 
     // 1. Create Linux system user and home directory in Ubuntu
     let user_exists = Command::new("id")
@@ -2903,8 +2987,8 @@ async fn clients_create(
         .await;
 
     sqlx::query(
-        "REPLACE INTO client (nname, parent_clname, password, realpass, cttype, contactemail, status)
-         VALUES (?, ?, ?, ?, ?, ?, 'on')",
+        "REPLACE INTO client (nname, parent_clname, password, realpass, cttype, contactemail, status, resourceplan_used, priv_q_clientdisk_usage, priv_q_traffic_usage, priv_q_domain_num, priv_q_subdomain_num, priv_q_mailaccount_num, priv_q_mysqldb_num, priv_q_ftpuser_num)
+         VALUES (?, ?, ?, ?, ?, ?, 'on', ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&payload.username)
     .bind(&claims.sub)
@@ -2912,13 +2996,22 @@ async fn clients_create(
     .bind(&payload.password)
     .bind(&cttype)
     .bind(&email)
+    .bind(&plan_name)
+    .bind(disk_mb.to_string())
+    .bind(traffic_mb.to_string())
+    .bind(domains.to_string())
+    .bind(subdomains.to_string())
+    .bind(mail_accounts.to_string())
+    .bind(mysql_dbs.to_string())
+    .bind(ftp_users.to_string())
     .execute(&state.db)
     .await?;
 
     Ok(Json(json!({
         "success": true,
-        "message": format!("Client account {} created successfully", payload.username),
-        "username": payload.username
+        "message": format!("Client account {} created successfully with plan {}", payload.username, plan_name),
+        "username": payload.username,
+        "plan": plan_name
     })))
 }
 
@@ -4726,15 +4819,56 @@ async fn system_settings_save(
 /// `GET /api/v1/system/plans`
 async fn system_plans_list(State(state): State<AppState>, _claims: Claims) -> ApiResult<Value> {
     let path = state.cfg.kloxo_etc_dir.join("plans.json");
-    let default_plans = vec![json!({
-        "name": "Standard Plan",
-        "disk_mb": 10240,
-        "traffic_mb": 102400,
-        "domains": 5,
-        "mail_accounts": 10,
-        "mysql_dbs": 5,
-        "is_default": true
-    })];
+    let default_plans = vec![
+        json!({
+            "name": "Standard Hosting",
+            "plan_type": "customer",
+            "disk_mb": 10240,
+            "traffic_mb": 102400,
+            "domains": 5,
+            "subdomains": 10,
+            "mail_accounts": 10,
+            "mysql_dbs": 5,
+            "ftp_users": 5,
+            "is_default": true
+        }),
+        json!({
+            "name": "Unlimited Hosting",
+            "plan_type": "customer",
+            "disk_mb": 51200,
+            "traffic_mb": 512000,
+            "domains": 20,
+            "subdomains": 50,
+            "mail_accounts": 50,
+            "mysql_dbs": 20,
+            "ftp_users": 20,
+            "is_default": false
+        }),
+        json!({
+            "name": "Reseller Bronze",
+            "plan_type": "reseller",
+            "disk_mb": 51200,
+            "traffic_mb": 512000,
+            "domains": 25,
+            "subdomains": 50,
+            "mail_accounts": 50,
+            "mysql_dbs": 25,
+            "ftp_users": 25,
+            "is_default": false
+        }),
+        json!({
+            "name": "Reseller Pro",
+            "plan_type": "reseller",
+            "disk_mb": 204800,
+            "traffic_mb": 2048000,
+            "domains": 100,
+            "subdomains": 200,
+            "mail_accounts": 200,
+            "mysql_dbs": 100,
+            "ftp_users": 100,
+            "is_default": true
+        }),
+    ];
     let plans: Vec<Value> = sys::read_json_store(&path, default_plans);
 
     Ok(Json(json!({
@@ -4749,14 +4883,26 @@ async fn system_plans_save(
     claims: Claims,
     Json(payload): Json<Value>,
 ) -> ApiResult<Value> {
-    if !claims.is_superadmin() {
-        return Err(ApiError::Forbidden("Superadmin role required".to_string()));
+    if !claims.is_superadmin() && !claims.is_reseller() {
+        return Err(ApiError::Forbidden("Superadmin or Reseller role required".to_string()));
     }
     let name = payload
         .get("name")
         .or_else(|| payload.get("plan_name"))
         .and_then(|v| v.as_str())
         .ok_or_else(|| ApiError::BadRequest("Plan name is required".to_string()))?
+        .trim()
+        .to_string();
+
+    if name.is_empty() {
+        return Err(ApiError::BadRequest("Plan name cannot be empty".to_string()));
+    }
+
+    let plan_type = payload
+        .get("plan_type")
+        .or_else(|| payload.get("type"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("customer")
         .to_string();
 
     let path = state.cfg.kloxo_etc_dir.join("plans.json");
@@ -4765,11 +4911,14 @@ async fn system_plans_save(
 
     let plan_obj = json!({
         "name": name,
+        "plan_type": plan_type,
         "disk_mb": payload.get("disk_mb").or_else(|| payload.get("max_quota_mb")).and_then(|v| v.as_i64()).unwrap_or(10240),
         "traffic_mb": payload.get("traffic_mb").or_else(|| payload.get("max_traffic_mb")).and_then(|v| v.as_i64()).unwrap_or(102400),
         "domains": payload.get("domains").or_else(|| payload.get("max_domains")).and_then(|v| v.as_i64()).unwrap_or(5),
+        "subdomains": payload.get("subdomains").and_then(|v| v.as_i64()).unwrap_or(10),
         "mail_accounts": payload.get("mail_accounts").and_then(|v| v.as_i64()).unwrap_or(10),
         "mysql_dbs": payload.get("mysql_dbs").and_then(|v| v.as_i64()).unwrap_or(5),
+        "ftp_users": payload.get("ftp_users").and_then(|v| v.as_i64()).unwrap_or(5),
         "is_default": payload.get("is_default").and_then(|v| v.as_bool()).unwrap_or(false)
     });
     plans.push(plan_obj);

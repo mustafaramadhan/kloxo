@@ -68,6 +68,20 @@ export interface ClientItem {
   domains_used: number;
   domains_quota: string | number;
   disk_used_mb: number;
+  plan?: string;
+}
+
+export interface PlanItem {
+  name: string;
+  plan_type?: 'customer' | 'reseller' | string;
+  disk_mb: number;
+  traffic_mb: number;
+  domains: number;
+  subdomains?: number;
+  mail_accounts: number;
+  mysql_dbs: number;
+  ftp_users?: number;
+  is_default?: boolean;
 }
 
 export interface CronJobItem {
