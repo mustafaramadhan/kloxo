@@ -113,8 +113,8 @@ class ippool extends Lxdb
 
 		$param['ttype'] = 'vps';
 
-		param['firstip'] = trim(param['firstip']);
-		param['lastip'] = trim(param['lastip']);
+		$param['firstip'] = trim($param['firstip']);
+		$param['lastip'] = trim($param['lastip']);
 
 		validate_ipaddress($param['firstip']);
 		validate_ipaddress($param['lastip']);
@@ -164,8 +164,8 @@ class ippool extends Lxdb
 	{
 		global $login;
 
-		param['firstip'] = trim(param['firstip']);
-		param['lastip'] = trim(param['lastip']);
+		$param['firstip'] = trim($param['firstip']);
+		$param['lastip'] = trim($param['lastip']);
 
 		validate_ipaddress($param['firstip']);
 		validate_ipaddress($param['lastip']);

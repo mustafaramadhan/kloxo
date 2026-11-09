@@ -81,9 +81,13 @@ class Driver extends Lxdb
 	{
 		global $gbl, $sgbl, $login, $ghtml;
 
-		$os = $this->getParentO()->ostype;
-	//	include_once "../file/driver/$os.inc";
-		include_once "../file/driver/rhel.inc";
+		$driver_dir = dirname(__FILE__) . "/../../file/driver";
+		$os = ($this->getParentO() && isset($this->getParentO()->ostype)) ? $this->getParentO()->ostype : 'rhel';
+		if ($os && file_exists("$driver_dir/$os.inc")) {
+			include_once "$driver_dir/$os.inc";
+		} else {
+			include_once "$driver_dir/rhel.inc";
+		}
 
 		$vlist = null;
 

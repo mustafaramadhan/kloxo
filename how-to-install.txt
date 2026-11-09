@@ -1,126 +1,181 @@
-A. pre-install -- better for fresh install
+===============================================================================
+                       Mfklixo (Next-Gen Cloud Panel)
+                       Installation & Quickstart Guide
+===============================================================================
 
-    cd /
+Mfklixo is a high-performance modern web hosting control panel combining:
+  • Rust Core Daemon (mfklixo-core) with high-speed Axum REST API (Port 7788)
+  • Next.js 15 Dark-Mode Glassmorphism Dashboard (Port 3000 via Nginx 7777)
+  • Reverse-Proxy Web Server: Nginx (80/443) -> Apache 2.4 (8080)
+  • Database: MariaDB 10.11+ LTS with phpMyAdmin 5.2.2 web studio
+  • Mail Suite: Postfix + Dovecot + Roundcube Webmail 1.6.10
+  • Multi-PHP Manager: Version switcher, native module toggle & php.ini editor
+  • Automated SSL Engine: Let's Encrypt 1-Click issuance, auto-renewals & custom certs
+  • DirectAdmin CustomBuild Studio: Software stack recompiler, options.conf & conf rewriter
 
-    # update centos to latest version
-    yum update -y
-    # install some packages like package-cleanup, etc
-    yum install yum-utils yum-priorities vim-minimal subversion curl zip unzip -y
-    yum install telnet wget -y
+Repository: https://github.com/feizezadeh/Mfklixo
+Branch:     modernize-kloxo
 
-    cd /
+-------------------------------------------------------------------------------
+1. Fast Automated Installation (Recommended)
+-------------------------------------------------------------------------------
 
-B. Install Kloxo-MR
-   - Install/reinstall/upgrade -- data not destroyed with this fork
-     for existing Kloxo (6.1.x), run 'sh /script/update' first.
+On a clean Ubuntu 22.04 / 24.04 LTS or Debian 12 server:
 
-B.1. Fresh Install
+    curl -fsSL https://raw.githubusercontent.com/feizezadeh/Mfklixo/modernize-kloxo/install.sh | sudo bash
 
-    B.1.1. for version 6.5.0 (rpm naming as kloxomr-6.5.0-*.rpm)
+The installer will automatically:
+  1. Install system prerequisites (Rust, Node.js 20, Nginx, Apache, MariaDB, PHP)
+  2. Build and install mfklixo-core Rust daemon
+  3. Deploy Next.js modern control panel
+  4. Install phpMyAdmin 5.2.2 and Roundcube Webmail 1.6.10
+  5. Setup dual-access routing (Port 80/443 domains + Port 7777 control panel)
+  6. Enable and start all Systemd service daemons
 
-        # move to /tmp
-        cd /tmp
+-------------------------------------------------------------------------------
+2. Manual Step-by-Step Installation
+-------------------------------------------------------------------------------
 
-        # remove old rpm
-        rm -f mratwork*
+Step 1: Install System Packages
+--------------------------------
+On Ubuntu / Debian:
+    sudo apt-get update -y
+    sudo apt-get install -y git curl wget tar gzip zip unzip build-essential \
+                            mariadb-server nginx apache2 libapache2-mod-php \
+                            php-cli php-fpm php-mysql php-mbstring php-xml \
+                            php-curl php-zip php-intl php-gd composer \
+                            certbot python3-certbot-nginx python3-certbot-apache
 
-        # install rpm (read Warning)
-        rpm -ivh https://github.com/mustafaramadhan/rpms/raw/master/mratwork/release/neutral/noarch/mratwork-release-0.0.1-1.noarch.rpm
-        # move to /
-        cd /
+Step 2: Install Node.js 20 LTS & Rust Toolchain
+------------------------------------------------
+    # Node.js 20
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+    sudo apt-get install -y nodejs
 
-        # update
-        yum clean all
+    # Rust
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    source "$HOME/.cargo/env"
 
-        yum update mratwork-* -y
+Step 3: Clone Repository
+------------------------
+    sudo mkdir -p /usr/local/lxlabs
+    cd /usr/local/lxlabs
+    sudo git clone -b modernize-kloxo https://github.com/feizezadeh/Mfklixo.git kloxo
+    cd /usr/local/lxlabs/kloxo
 
-        yum install kloxomr -y
+Step 4: Build & Install Rust Core Daemon
+----------------------------------------
+    cargo build --release
+    sudo cp target/release/mfklixo-core /usr/local/lxlabs/kloxo/bin/mfklixo-core
+    sudo chmod +x /usr/local/lxlabs/kloxo/bin/mfklixo-core
 
-        sh /script/upcp
-  
-    B.1.2. for version 7.0.0 (rpm naming as kloxomr7-7.0.0-*.rpm)
+    # Install Systemd service
+    sudo cp kloxo/init/mfklixo-core.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now mfklixo-core.service
 
-        # move to /tmp
-        cd /tmp
+Step 5: Build & Install Next.js Dashboard
+-----------------------------------------
+    cd /usr/local/lxlabs/kloxo/frontend
+    npm install
+    npm run build
 
-        # remove old rpm
-        rm -f mratwork*
+    # Install Dashboard Systemd service
+    sudo cp ../kloxo/init/kloxo-dashboard.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now kloxo-dashboard.service
 
-        # install rpm (read Warning)
-        rpm -ivh https://github.com/mustafaramadhan/rpms/raw/master/mratwork/release/neutral/noarch/mratwork-release-0.0.1-1.noarch.rpm
+Step 6: Install phpMyAdmin 5.2.2
+--------------------------------
+    sudo mkdir -p /usr/share/phpmyadmin
+    curl -sL https://files.phpmyadmin.net/phpMyAdmin/5.2.2/phpMyAdmin-5.2.2-all-languages.tar.gz \
+      | sudo tar -xz -C /usr/share/phpmyadmin --strip-components=1
 
-        # move to /
-        cd /
+    # Link Apache configuration
+    sudo cp /usr/local/lxlabs/kloxo/kloxo/init/phpmyadmin.conf /etc/apache2/conf-available/
+    sudo a2enconf phpmyadmin
+    sudo systemctl reload apache2
 
-        # update
-        yum clean all
+Step 7: Install Roundcube Webmail 1.6.10
+----------------------------------------
+    sudo mkdir -p /usr/share/roundcube
+    curl -sL https://github.com/roundcube/roundcubemail/releases/download/1.6.10/roundcubemail-1.6.10-complete.tar.gz \
+      | sudo tar -xz -C /usr/share/roundcube --strip-components=1
 
-        yum update mratwork-* -y
+    # Link Apache configuration
+    sudo cp /usr/local/lxlabs/kloxo/kloxo/init/roundcube.conf /etc/apache2/conf-available/
+    sudo a2enconf roundcube
+    sudo systemctl reload apache2
 
-        yum install kloxomr7 -y
+-------------------------------------------------------------------------------
+3. Accessing the Control Panel & Web Tools
+-------------------------------------------------------------------------------
 
-        sh /script/upcp
+Once installation completes, all services are available:
 
-B.2. update from 6.5.0 to 7.0.0
+  • Modern Control Panel:
+      https://<YOUR_SERVER_IP>:7777/
+      Default Username: admin
+      Default Password: (generated during installation or set in client table)
 
-    yum replace kloxomr --replace-with=kloxomr7 -y
-	
-    # '-y' mean force
-    sh /script/upcp -y
-    sh /script/mysql-optimize --select=upgrade
+  • phpMyAdmin MariaDB Manager:
+      Direct Web URL:   http://<YOUR_SERVER_IP>/phpmyadmin/
+      Panel Secure URL: https://<YOUR_SERVER_IP>:7777/phpmyadmin/
 
-B.3. update from Kloxo Official 6.1.19
+  • Roundcube Webmail:
+      Direct Web URL:   http://<YOUR_SERVER_IP>/webmail/
+      Panel Secure URL: https://<YOUR_SERVER_IP>:7777/webmail/
 
-    ## follow step B.1.1 or B.1.2 and read 'WARNING' below before next step
+  • Advanced PHP Configure:
+      https://<YOUR_SERVER_IP>:7777/php-advanced
+      (PHP version switcher, live module toggle, OPcache & custom php.ini editor)
 
-    # '-y' mean force
-    sh /script/upcp -y
-    sh /script/mysql-optimize --select=upgrade
+  • REST API Gateway:
+      https://<YOUR_SERVER_IP>:7777/api/v1/
 
-WARNING:
+-------------------------------------------------------------------------------
+4. Systemd Daemons & Service Management
+-------------------------------------------------------------------------------
 
-1. Need running 'sh /script/backup-patch' in Kloxo Official (6.1.12) before backup data.
+Check status of all Mfklixo daemons:
+    sudo systemctl status mfklixo-core.service      # Rust Backend Core (Port 7788)
+    sudo systemctl status kloxo-dashboard.service    # Next.js Frontend (Port 3000)
+    sudo systemctl status kloxo-web.service          # Nginx Gateway (Port 7777)
+    sudo systemctl status nginx                      # Public Web Proxy (Port 80/443)
+    sudo systemctl status apache2                    # Web Backend (Port 8080)
+    sudo systemctl status mariadb                    # Database Server
 
-    - In Kloxo offical run:
+Restart all Mfklixo stack:
+    sudo systemctl restart mfklixo-core kloxo-dashboard kloxo-web nginx apache2
 
-        cd /script
-        wget https://github.com/mustafaramadhan/kloxo/raw/dev/kloxo/pscript/backup-patch  --no-check-certificate
-        sh ./backup-patch
+-------------------------------------------------------------------------------
+5. Decommissioning Old Legacy Core
+-------------------------------------------------------------------------------
 
-2. Need remove certain rpms in Kloxo Official after 6.1.12 (testing in 6.1.19)
+Mfklixo completely eliminates the ancient PHP 5/lxphp core.
+Ensure old services are permanently disabled:
+    sudo systemctl stop kloxo-php kloxo-wrap 2>/dev/null || true
+    sudo systemctl disable kloxo-php kloxo-wrap 2>/dev/null || true
+    sudo rm -f /etc/systemd/system/kloxo-php.service /etc/systemd/system/kloxo-wrap.service
+    sudo systemctl daemon-reload
 
-    # remove packages from Kloxo Official
-    yum remove kloxo* -y
-    
-3. Since 6.5.0.f-20130701, Kloxo-MR using MySQLi API instead MySQL API. Need update mysql 5.0.x to 5.1.x or above for Centos 5.
+All operations now execute through the high-performance Rust daemon on port 7788.
 
-    Check mysql version with:
+-------------------------------------------------------------------------------
+6. DirectAdmin-Style CustomBuild & Let's Encrypt SSL
+-------------------------------------------------------------------------------
 
-        mysql -V|awk '{print $5}'
+Mfklixo features a native DirectAdmin-style CustomBuild stack engine:
+  • Web Interface:
+      Navigate to: https://<YOUR_SERVER_IP>:7777/custombuild
+      - Live component versions vs latest releases (Nginx, Apache, PHP, MariaDB, etc.)
+      - options.conf stack configuration (/usr/local/lxlabs/kloxo/etc/custombuild.json)
+      - 1-Click build actions: Update Versions, Rewrite Confs, Build Stack
+      - Real-time build log streaming console
 
-    Update with:
-
-        yum replace mysql --replace-with=mysql55' (ask to forum for update to MariaDB)
-
-4. Make sure all MySQL databases in MyISAM storage-engine (especially upgrade to version 6.5.0) with execute:
-
-    ## convert to MyISAM storage-engine
-    sh /script/mysql-convert --engine=myisam
-
-5. Trouble with 'rpm -Uvh':
-
-    In CentOS 32bit may trouble with:
-
-        # install rpm (read Warning)
-        rpm -Uvh https://github.com/mustafaramadhan/rpms/raw/master/mratwork/release/neutral/noarch/mratwork-release-0.0.1-1.noarch.rpm
-
-    and then use:
-
-        cd /tmp
-        # remove old rpm
-        rm -f mratwork*
-
-        # get rpm file
-        wget https://github.com/mustafaramadhan/rpms/raw/master/mratwork/release/neutral/noarch/mratwork-release-0.0.1-1.noarch.rpm
-
-        rpm -ivh mratwork-release-0.0.1-1.noarch.rpm
+  • SSL & Let's Encrypt Management:
+      Navigate to: https://<YOUR_SERVER_IP>:7777/ssl
+      - 1-Click Let's Encrypt automated issuance with www alias & HTTP->HTTPS force
+      - Auto-renewal status tracking and 1-Click renewal button
+      - Self-signed certificate generator & custom PEM/CRT/KEY installer
+===============================================================================

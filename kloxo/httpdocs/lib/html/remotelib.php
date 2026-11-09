@@ -782,9 +782,17 @@ function process_server_input($total)
 		reload_slave_password();
 
 		if (check_remote_pass($remoteuser, $remotepass)) {
-			$rmt = unserialize(base64_decode($list[3]));
-			$rmt->authenticated = true;
-			save_slave_name($rmt);
+			$rmt = @unserialize(base64_decode($list[3]));
+			if ($rmt && is_object($rmt)) {
+				$rmt->authenticated = true;
+				save_slave_name($rmt);
+			} else {
+				$res = new Remote();
+				$res->message = "Remote Data Invalid";
+				$res->exception = new lxException("remote_data_invalid", '');
+				$res->ddata = null;
+				return base64_encode(serialize($res));
+			}
 		} else {
 			$res = new Remote();
 			$res->message = "Remote Authentication failed";
@@ -795,16 +803,18 @@ function process_server_input($total)
 			return $out;
 		}
 	} else {
-		$rmt = unserialize(base64_decode($total));
-		$rmt->authenticated = false;
+		$rmt = @unserialize(base64_decode($total));
+		if ($rmt && is_object($rmt)) {
+			$rmt->authenticated = false;
+		}
 	}
 
-	if ($rmt) {
+	if ($rmt && is_object($rmt)) {
 		$res = do_remote($rmt);
 	} else {
 		$res = new Remote();
 		$res->message = "Got Error From Your End";
-		$res->exception = new lxException("got_error_from_ur_end", $rmt->machine);
+		$res->exception = new lxException("got_error_from_ur_end", (is_object($rmt) && isset($rmt->machine)) ? $rmt->machine : 'unknown');
 		$res->ddata = null;
 	}
 

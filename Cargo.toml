@@ -1,0 +1,47 @@
+[package]
+name = "mfklixo-core"
+version = "1.0.0"
+edition = "2021"
+authors = ["Mfklixo Modernization Team"]
+description = "Full-featured Rust Core Daemon, FastCGI/REST API v1 Gateway, Watchdog & Legacy SSO Bridge for Mfklixo (Next.js 15 + 72 Native Modules)"
+
+[[bin]]
+name = "mfklixo-core"
+path = "mfklixo_core.rs"
+
+[dependencies]
+# Async Runtime & Web Framework
+tokio = { version = "1.41", features = ["full"] }
+axum = { version = "0.7", features = ["macros", "json", "query", "multipart"] }
+tower = { version = "0.5", features = ["util", "timeout", "limit"] }
+tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip", "fs"] }
+
+# Serialization & Data Formats
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+base64 = "0.22"
+
+# Database (Supports both MariaDB/MySQL and SQLite Kloxo schemas)
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "mysql", "sqlite", "any", "macros", "chrono"] }
+
+# Authentication & Cryptography (Compatible with kloxo/httpdocs/api/jwt.php & legacy-sso.php)
+jsonwebtoken = "9.3"
+rand = "0.8"
+sha2 = "0.10"
+md-5 = "0.10"
+bcrypt = "0.15"
+hex = "0.4"
+
+# Linux System Calls, Time & Logging
+libc = "0.2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "2.0"
+chrono = { version = "0.4", features = ["serde"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

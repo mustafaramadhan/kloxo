@@ -1,17 +1,16 @@
 [Unit]
-Description=Startup script for Kloxo-MR.
-Documentation=https://forum.mratwork.com/
-After=network.target remote-fs.target nss-lookup.target
- 
+Description=Startup script for Mfklixo Control Panel Web Service
+Documentation=https://github.com/feizezadeh/Mfklixo
+After=network.target remote-fs.target nss-lookup.target mariadb.service mysql.service php8.5-fpm.service php-fpm.service
+
 [Service]
 Type=forking
-PIDFile=/usr/local/lxlabs/kloxo/init/kloxo-hiawatha.pid
-ExecStartPre=-/usr/bin/bash -c "if [ \"$(pgrep ^mysql)\" == \"\" ]; then /usr/bin/bash /script/restart-mysql; fi"
-ExecStartPre=/usr/bin/lxphp.exe -f /usr/local/lxlabs/kloxo/init/changeport.php
-ExecStart=/usr/local/lxlabs/kloxo/init/kloxo-hiawatha -c /usr/local/lxlabs/kloxo/init
-ExecReload=/bin/kill -s HUP $MAINPID
-ExecStop=/bin/kill -s QUIT $MAINPID
+PIDFile=/usr/local/lxlabs/kloxo/pid/kloxo-panel-nginx.pid
+ExecStartPre=-/usr/bin/mkdir -p /usr/local/lxlabs/kloxo/log /usr/local/lxlabs/kloxo/pid
+ExecStart=/usr/sbin/nginx -c /usr/local/lxlabs/kloxo/init/kloxo-panel-nginx.conf
+ExecReload=/usr/sbin/nginx -c /usr/local/lxlabs/kloxo/init/kloxo-panel-nginx.conf -s reload
+ExecStop=/usr/sbin/nginx -c /usr/local/lxlabs/kloxo/init/kloxo-panel-nginx.conf -s stop
 PrivateTmp=true
- 
+
 [Install]
 WantedBy=multi-user.target

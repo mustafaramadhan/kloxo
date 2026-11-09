@@ -590,7 +590,7 @@ function do_select_list($object, $sclist)
 	$desc = get_classvar_description($class);
 
 	foreach ($sclist as $k => $s) {
-		$cg = $ghtml->frm_o_o;
+		$cg = (isset($ghtml->frm_o_o) && is_array($ghtml->frm_o_o)) ? $ghtml->frm_o_o : array();
 		$n = count($cg);
 		$cg[$n]['frm_o_o']['class'] = $k;
 		$string[] = $ghtml->object_variable_startblock($object, $class, "{$desc[2]}");
@@ -989,7 +989,7 @@ function __ac_desc_UpdateForm($object)
 /*
 	$object->createShowPropertyList($alist);
 
-	if (isset($alist['property']) && count($alist['property']) > 1) {
+	if (isset($alist['property']) && is_countable($alist['property']) && count($alist['property']) > 1) {
 		$nalist = null;
 		$nalist = lx_merge_good($nalist, $alist['property']);
 	} elseif ($object->getParentO()) {
@@ -1398,7 +1398,7 @@ function create_xml($object, $stuff, $ret)
 			} else {
 				$descr = $ghtml->get_classvar_description_after_overload($class, $k);
 
-				if (count($descr) < 3) {
+				if (!is_countable($descr) || count($descr) < 3) {
 					dprint("Variable $k in $class Not Defined... <br/> \n");
 					$descr = array($class, $k, "Not Defined");
 				}
@@ -1996,7 +1996,7 @@ function print_warning()
 
 	$sesss = $login->getList('ssession');
 
-	if (count($sesss) > 1) {
+	if (is_countable($sesss) && count($sesss) > 1) {
 		$ghtml->__http_vars['frm_emessage'] = "more_than_one_user";
 	}
 
@@ -2218,18 +2218,15 @@ function do_display_init()
 
 		print_warning();
 		password_contact_check();
-	} catch (Exception $e) {
+	} catch (Throwable $e) {
 		log_log("redirect_error", "exception");
 		$gbl->setSessionV('__tmp_redirect_var', $ghtml->__http_vars);
 		$gbl->c_session->write();
 
-		if (is_array($e->variable)) {
-			$evlist = implode(",", $e->variable);
-		} else {
-			$evlist = $e->variable;
-		}
+		$evlist = (isset($e->variable) && is_array($e->variable)) ? implode(",", $e->variable) : (isset($e->variable) ? $e->variable : '');
+		$val = isset($e->value) ? $e->value : '';
 
-		$ghtml->print_redirect_back($e->getMessage(), $evlist, $e->value);
+		$ghtml->print_redirect_back($e->getMessage(), $evlist, $val);
 
 		exit;
 	}
@@ -2315,7 +2312,8 @@ function lx_frm_inc()
 	global $gbl, $sgbl, $login, $ghtml;
 
 	if (!$ghtml->iset("frm_action")) {
-		display_die('Action Not set');
+		$ghtml->frm_action = 'show';
+		$ghtml->__http_vars['frm_action'] = 'show';
 	}
 
 //	if (isRemotePost()) {
@@ -2365,18 +2363,15 @@ function lx_frm_inc()
 		}
 
 		$gbl->unsetSessionV('__tmp_redirect_var');
-	} catch (Exception $e) {
+	} catch (Throwable $e) {
 		log_log("redirect_error", "exception");
 		$gbl->setSessionV('__tmp_redirect_var', $ghtml->__http_vars);
 		$gbl->c_session->write();
 
-		if (is_array($e->variable)) {
-			$evlist = implode(",", $e->variable);
-		} else {
-			$evlist = $e->variable;
-		}
+		$evlist = (isset($e->variable) && is_array($e->variable)) ? implode(",", $e->variable) : (isset($e->variable) ? $e->variable : '');
+		$val = isset($e->value) ? $e->value : '';
 
-		$ghtml->print_redirect_back($e->getMessage(), $evlist, $e->value);
+		$ghtml->print_redirect_back($e->getMessage(), $evlist, $val);
 
 		exit;
 	}
@@ -2448,7 +2443,7 @@ function display_exec()
 
 	try {
 		lx_frm_inc();
-	} catch (Exception $e) {
+	} catch (Throwable $e) {
 		log_redirect("Caught except");
 ?>
 		The resource you requested could not be retrieved... <?= $e->getMessage() ?>

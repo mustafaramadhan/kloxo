@@ -19,7 +19,7 @@ $driver['ftpuser'] = "pureftp";
 $driver['web'] = array("none", "apache", "lighttpd", "nginx", "hiawatha", "openlitespeed", "monkey", 
 	"lighttpdproxy", "nginxproxy", "hiawathaproxy", "openlitespeedproxy", "monkeyproxy");
 */
-$driver['web'] = array("none", "apache", "lighttpd", "nginx", "hiawatha", "lighttpdproxy", "nginxproxy", "hiawathaproxy");
+$driver['web'] = array("none", "apache", "lighttpd", "nginx", "hiawatha", "lighttpdproxy", "nginxproxy", "apache_nginx", "hiawathaproxy");
 $driver['webcache'] = array("none", "varnish", "trafficserver", "squid");
 $driver['mmail'] = array("qmail");
 $driver['cron'] = "linux";

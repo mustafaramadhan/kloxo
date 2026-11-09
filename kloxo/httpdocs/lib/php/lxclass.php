@@ -1326,7 +1326,7 @@ abstract class Lxclass
 
 		$this->$typevar = 'fullist';
 
-		$this->$totalvar = count($this->$list);
+		$this->$totalvar = (isset($this->$list) && is_countable($this->$list)) ? count($this->$list) : 0;
 
 		if (!isset($this->$list)) {
 			$this->$list = NULL;
@@ -2422,7 +2422,7 @@ abstract class Lxclass
 			if ($sortby) {
 				$__tvar = "__sortby_{$class}";
 
-				if (!isset($this->$__tvar) || $this->__sortby_{$class} != $sortby || $this->__sortdir != $sortdir) {
+				if (!isset($this->$__tvar) || $this->$__tvar != $sortby || $this->__sortdir != $sortdir) {
 					$this->__sortby = $sortby;
 					$this->__sortdir = $sortdir;
 					$this->$__tvar = $sortby;

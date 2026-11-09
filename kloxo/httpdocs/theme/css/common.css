@@ -761,107 +761,123 @@ html>body #quotausagebar span.last {
 	}
 
 	.div_note {
-		width: 240px;
-		border: 1px solid #ddd;
-		margin: 0 auto 0 auto;
-		background-color: #fff;
+		width: 250px;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 12px;
+		margin: 0 0 16px 0;
+		background: rgba(22, 29, 45, 0.7);
+		backdrop-filter: blur(12px);
+		overflow: hidden;
 	}
 
 	.div_note_title {
-		padding: 4px;
-		text-align: center;
-		background: #edc;
+		padding: 8px 12px;
+		text-align: left;
+		background: rgba(30, 41, 59, 0.8) !important;
+		color: #60a5fa !important;
+		font-weight: 700;
+		font-size: 0.8rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+	}
+
+	.div_note input {
+		background: rgba(15, 23, 42, 0.8) !important;
+		color: #F8FAFC !important;
+		border: none !important;
+		padding: 8px 12px !important;
+		outline: none !important;
+		box-sizing: border-box !important;
 	}
 
 	.div_resource {
-		width: 240px;
-		border: 0;
-		margin: 0 auto 0 auto;
-		background-color: #fff;
+		width: 250px;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 12px;
+		margin: 0 0 16px 0;
+		background: rgba(22, 29, 45, 0.7) !important;
+		backdrop-filter: blur(12px);
+		overflow: hidden;
 	}
 
 	.div_standard {
-		width: 910px;
-		/* border: 1px solid #ddd; */
+		width: 100%;
 		border: 0;
-		margin: 0 auto 0 auto;
-		background-color: #fff;
+		margin: 0 auto;
+		background: transparent !important;
 	}
 
 	.div_showhide {
-		width: 910px;
-		margin: 0 auto 0 auto;
+		width: 100%;
+		margin: 0 auto;
 	}
 
 	.div_fixed_left {
-		position: fixed;
-		top: 2px;
-		left: 2px;
+		display: flex;
+		align-items: center;
+		gap: 16px;
 	}
 
 	.div_fixed_right {
-		position: fixed;
-		top: 2px;
-		right: 2px;
+		display: flex;
+		align-items: center;
+		gap: 12px;
 	}
 
 	.div_fixed_logo_left {
-		position: fixed;
-		top: 40px;
-		left: 10px;
-		background-color: #fff;
-		filter: alpha(opacity=60);
-		opacity: 0.6;
-		padding: 5px;
-		border-radius: 10px;
-		-moz-border-radius: 10px;
-		-webkit-border-radius: 10px;
-		z-index: -9999;
+		display: none !important;
 	}
 
 	.div_fixed_logo_right {
-		position: fixed;
-		top: 40px;
-		right: 10px;
-		background-color: #fff;
-		filter: alpha(opacity=60);
-		opacity: 0.6;
-		padding: 5px;
-		border-radius: 10px;
-		-moz-border-radius: 10px;
-		-webkit-border-radius: 10px;
-		z-index: -9999;
+		display: none !important;
 	}
 
 	.div_fixed_top {
 		position: fixed;
 		width: 100%;
 		top: 0;
-		height: 30px;
+		left: 0;
+		right: 0;
+		height: 54px;
 		margin: 0;
-		padding: 0;
-		background-color: #e43;
+		padding: 0 24px;
+		background: rgba(15, 23, 42, 0.85);
+		backdrop-filter: blur(20px);
+		-webkit-backdrop-filter: blur(20px);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+		box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+		z-index: 99999;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		box-sizing: border-box;
 	}
 
 	.div_mmm_simplicity {
-		width: 960px;
-		padding: 0;
-		border: 0;
-		margin: 60px auto 10px auto;
+		width: 95%;
+		max-width: 1400px;
+		padding: 24px 28px;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 20px;
+		margin: 76px auto 40px auto;
+		background: rgba(18, 24, 38, 0.78);
+		backdrop-filter: blur(24px);
+		-webkit-backdrop-filter: blur(24px);
+		box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6);
 	}
 
 	.div_mmm_feather {
-		width: 960px;
-		padding: 0;
-		border: 4px double #ddd;
-		margin: 10px auto 10px auto;
-		background-color: #fff;
+		width: 95%;
+		max-width: 1400px;
+		margin: 70px auto 20px auto;
+		background: rgba(18, 24, 38, 0.78);
 	}
 
 	.div_mmm_inside {
-		background-color: #fff;
-		padding:20px 20px 20px 20px;
-		border: 1px solid #ddd;
+		background: transparent !important;
+		padding: 0;
+		border: none;
 	}
 
 	.div_mmm_warning {

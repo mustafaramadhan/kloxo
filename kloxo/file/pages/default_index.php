@@ -1,181 +1,195 @@
 <?php
-	ini_set("display_errors","1");
+ini_set("display_errors", "0");
 
-//	if(!isset($_SESSION)) {
-	if (session_id() == "") {
-		session_start();
-	}
+if (session_id() == "") {
+    session_start();
+}
 
-	if (file_exists("./custom-index.php")) {
-		include_once "./custom-index.php";
-	} elseif (file_exists("./custom.index.php")) {
-		include_once "./custom.index.php";
-	} else {
+$incfile = "./inc.php";
+if (file_exists("./custom-inc.php")) {
+    $incfile = "./custom-inc.php";
+} elseif (file_exists("./custom.inc.php")) {
+    $incfile = "./custom.inc.php";
+}
 
-		if (file_exists("./custom-inc.php")) {
-			$incfile = "./custom-inc.php";
-		} elseif (file_exists("./custom.inc.php")) {
-			$incfile = "./custom.inc.php";
-		} else {
-			if (file_exists("./inc.php")) {
-				$incfile = "./inc.php";
-			}
-		}
-
-		if (file_exists("./custom-inc2.php")) {
-			$incfile2 = "./custom-inc2.php";
-		} elseif (file_exists("./custom.inc2.php")) {
-			$incfile = "./custom.inc2.php";
-		} else {
-			if (file_exists("./inc2.php")) {
-				$incfile2 = "./inc2.php";
-			}
-		}
-
-		if (file_exists("./images/user-logo.png")) {
-			$logo_url = "./images/user-logo.png";
-		} else {
-			$logo_url = "./images/logo.png";
-		}
+$title = "Mfklixo - Cloud Control Panel Login";
 ?>
-<html>
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
-	<meta http-equiv="Content-Language" content="en-us" />
-	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<?php
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= htmlspecialchars($title); ?></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0B0F19;
+            --bg-surface: rgba(18, 24, 38, 0.75);
+            --bg-surface-hover: rgba(26, 34, 53, 0.85);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-focus: #3b82f6;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-glow: rgba(37, 99, 235, 0.35);
+            --success: #10B981;
+            --danger: #EF4444;
+            --radius-md: 10px;
+            --radius-lg: 18px;
+        }
 
-		if(isset($incfile2)) { include_once $incfile2 ; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-		if (isset($page)) {
-			$title = "Kloxo-MR {$page} page";
-		} else {
-			$title = "Kloxo-MR Page";
-		}
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px 16px;
+            position: relative;
+            overflow-x: hidden;
+        }
 
-		if (basename(getcwd()) === 'login') {
+        /* Ambient glowing background */
+        body::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 700px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.18) 0%, rgba(16, 185, 129, 0.08) 45%, transparent 70%);
+            filter: blur(80px);
+            pointer-events: none;
+            z-index: 0;
+        }
 
-			$selimg = './images/abstract.jpg';
+        .auth-container {
+            width: 100%;
+            max-width: 440px;
+            position: relative;
+            z-index: 1;
+        }
 
-			$path = "../theme/background";
+        .brand-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
 
-			// MR -- trick to make random background for login
-			if ((file_exists($path)) && (!file_exists("./.norandomimage"))) {
-				try {
-					$dirs = glob("{$path}/*", GLOB_MARK);
+        .brand-logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 58px;
+            height: 58px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(30, 41, 59, 0.8) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 10px 25px -5px var(--primary-glow);
+            margin-bottom: 16px;
+        }
 
-					if ($dirs) {
-						$count = count($dirs);
-						$selnum = rand(0, ($count - 1));
+        .brand-logo svg {
+            width: 32px;
+            height: 32px;
+            color: #60a5fa;
+        }
 
-						if ((isset($_SESSION['last_login_time'])) && (isset($_SESSION['num_login_fail']))) {
-							if ($_SESSION['num_login_fail'] == 5) {
-								$selimg = "{$path}/abstract_003.jpg";
-							} else {
-								$selimg = $dirs[$selnum];
-							}
-						} else {
-							$selimg = $dirs[$selnum];
-						}
-					}
-				} catch (Exception $e) { }
-			} else {
-				$c = trim(file_get_contents("./.norandomimage"));
-					
-				if ($c !== '') {
-					$selimg = "{$path}/{$c}";
-				}
-			}
+        .brand-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
 
-			$bckgrnd = "\tbackground-image: url({$selimg});\n".
-				"\tbackground-size: cover;\n".
-				"\tbackground-attachment: fixed;";
-		} else {
-			$bckgrnd = "\tbackground-image: url(./images/abstract.jpg);";
-		}
-?>
-	<title><?= $title; ?></title>
-<style>
-body {
-	font-family: Tahoma, Verdana, Arial, Helvertica, sans-serif;
-	font-size: 8pt;
-	font-weight: 100;
-<?= $bckgrnd; ?>
+        .brand-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
 
-	background-color:#cccccc;
-	margin: 0;
-}
-a {
-	text-decoration: none;
-}
-img {
-	border: 0;
-}
+        .auth-card {
+            background: var(--bg-surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 36px 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
+        }
 
-img.logo {
-	margin: 5px;
-	padding: 0;
-}
+        .footer-note {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
 
-table.header {
-	border-collapse: collapse;
-	border-spacing: 0;
-	width: 100%;
-	font-family: Tahoma, Verdana, Arial, Helvertica, sans-serif;
-	font-size: 8pt;
-	font-weight: 100;
-}
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-subtle);
+            padding: 3px 10px;
+            border-radius: 9999px;
+        }
 
-table.content {
-	border-collapse: collapse;
-	border-spacing: 0;
-	width: 100%;
-	/* height: 100%; */
-	font-family: Tahoma, Verdana, Arial, Helvertica, sans-serif;
-	font-size: 8pt;
-	font-weight: 100%;
-}
-
-table.content_body td {
-	border-collapse: collapse;
-	border: 1px dashed #cccccc;
-	font-family: Tahoma, Verdana, Arial, Helvertica, sans-serif;
-	font-size: 10pt;
-	color: #444444;
-	padding:10px;
-	spacing:0;
-}
-
-table.content_title td {
-	border-collapse: collapse;
-	border: 0;
-	font-family: Tahoma, Verdana, Arial, Helvertica, sans-serif;
-	font-size: 12pt;
-	color: #336699;
-}
-
-</style>
-
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            background-color: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--success);
+        }
+    </style>
+    <script src="/theme/js/login.js"></script>
+    <script src="/theme/js/lxa.js"></script>
 </head>
-
 <body>
+    <div class="auth-container">
+        <div class="brand-header">
+            <div class="brand-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                    <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                    <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                </svg>
+            </div>
+            <h1 class="brand-title">Mfklixo Control Panel</h1>
+            <p class="brand-subtitle">High-performance modern hosting management</p>
+        </div>
 
-<table class="header">
-	<tr>
-		<td width="100%"><img style="margin:5px; padding:5px; height:50px" class="logo" src="<?php echo $logo_url; ?>" alt="hosting-logo"></td>
-		<td><a href="//mratwork.com/work/" title="Go to Kloxo-MR website"><img style="margin:5px; padding:5px; height:50px" class="logo" src="./images/kloxo-mr.png" alt="kloxo-mr-logo"></a></td>
-	</tr>
-</table>
-<table class="content">
-	<tr>
-		<td width="50">&nbsp;</td>
-		<td valign="middle" width="100%"><?php include_once $incfile; ?></td>
-		<td width="50">&nbsp;</td>
-	</tr>
-</table>
+        <div class="auth-card">
+            <?php include_once $incfile; ?>
+        </div>
+
+        <div class="footer-note">
+            <span class="status-badge"><span class="status-dot"></span> System Operational</span>
+            <span>&bull;</span>
+            <span>Mfklixo Cloud v7.0</span>
+        </div>
+    </div>
 </body>
-
 </html>
-<?php
-		}
-?>

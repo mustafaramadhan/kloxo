@@ -78,7 +78,7 @@ class easyinstaller__linux extends LxDriverclass
 				throw new lxException($login->getThrow('could_not_download_application_archive'), '', $this->main->appname);
 			}
 
-			$vd = createTempDir("/tmp", easyinstallerdir");
+			$vd = createTempDir("/tmp", "easyinstallerdir");
 			lxshell_unzip("__system__", $vd, $tf);
 			lxfile_cp_content("$vd/{$this->main->appname}", "$dompath/$dir");
 			$filelist = lscandir_without_dot("$vd/{$this->main->appname}");

@@ -1,2 +1,6 @@
 
 /.idea
+
+target/
+*.log
+*.tsbuildinfo

@@ -129,12 +129,31 @@ class phpini extends lxdb
 
 	function fixphpIniFlag()
 	{
-		if (!isset($this->phpini_flag_b) || get_class($this->phpini_flag_b) !== 'phpini_flag_b') {
+		if (!isset($this->phpini_flag_b) || !($this->phpini_flag_b instanceof phpini_flag_b)) {
 		//if ($this->getParentO()->getClass() === 'web') { return; }
 		//if ($this->getParentO()->getClass() === 'domain') { return; }
 			$this->phpini_flag_b = new phpini_flag_b(null, null, $this->nname);
 			$this->setUpInitialValues();
 		}
+	}
+
+	function getParentClass($var = 'parent_clname')
+	{
+		$parent = $this->getParentO();
+
+		if ($parent && is_object($parent) && method_exists($parent, 'getClass')) {
+			return $parent->getClass();
+		}
+
+		if (isset($this->$var) && $this->$var) {
+			list($pclass, ) = getParentNameAndClass($this->$var);
+
+			if ($pclass) {
+				return $pclass;
+			}
+		}
+
+		return 'pserver';
 	}
 
 	function createExtraVariables()
@@ -143,34 +162,36 @@ class phpini extends lxdb
 
 		$this->fixphpIniFlag();
 		$gen = $login->getObject('general')->generalmisc_b;
+		$pclass = $this->getParentClass();
+		$parent = $this->getParentO();
 
 		//	if (!$this->getParentO()->is__table('pserver')) {
-		if ($this->getParentO()->getClass() !== 'pserver') {
+		if ($pclass !== 'pserver') {
 			$ob = new phpini(null, $this->syncserver, createParentName('pserver', $this->syncserver));
 			$ob->get();
 			$ob->fixphpIniFlag();
 
 			// MR -- trick for escape web-based php.ini
 			//	if ($this->getParentO()->is__table('web')) {
-			if ($this->getParentO()->getClass() === 'web') {
-				$this->__var_docrootpath = $this->getParentO()->getFullDocRoot();
+			if ($pclass === 'web' && $parent && method_exists($parent, 'getFullDocRoot')) {
+				$this->__var_docrootpath = $parent->getFullDocRoot();
 			}
 
 			$list = $this->getInheritedList();
 
 			foreach ($list as $l) {
-				$this->phpini_flag_b->$l = $ob->phpini_flag_b->$l;
+				$this->phpini_flag_b->$l = (isset($ob->phpini_flag_b) && isset($ob->phpini_flag_b->$l)) ? $ob->phpini_flag_b->$l : null;
 			}
 
 			// MR -- trick for escape web-based php.ini
 			//	if ($this->getParentO()->is__table('web')) {
-			if ($this->getParentO()->getClass() === 'web') {
-				$this->__var_web_user = $this->getParentO()->username;
+			if ($pclass === 'web' && $parent && isset($parent->username)) {
+				$this->__var_web_user = $parent->username;
 			//	$this->__var_customer_name = $this->getParentO()->customer_name;
 			//	$this->__var_disable_openbasedir = (isset($this->getParentO()->webmisc_b->disable_openbasedir)) ?
 			//	$this->getParentO()->webmisc_b->disable_openbasedir : null;
 			} else {
-				$this->__var_web_user = $this->getParentO()->nname;
+				$this->__var_web_user = ($parent && isset($parent->nname)) ? $parent->nname : $this->nname;
 			}
 		}
 
@@ -199,10 +220,12 @@ class phpini extends lxdb
 		// We need to write because the fixphpini reads everything from the database.
 		$this->write();
 
+		$parent = $this->getParentO();
 
 	//	if ($this->getParentO()->is__table('pserver')) {
-		if ($this->getParentO()->getClass() === 'pserver') {
-			exec("sh /script/fixphp --server={$this->getParentO()->nname}");
+		if ($this->getParentClass() === 'pserver') {
+			$server = ($parent && isset($parent->nname)) ? $parent->nname : 'localhost';
+			exec("sh /script/fixphp --server={$server}");
 
 			exec("sh /script/enable-php-fpm");
 		}
@@ -227,6 +250,7 @@ class phpini extends lxdb
 
 	function initPhpIni()
 	{
+		$this->fixphpIniFlag();
 		$this->setUpInitialValues();
 	}
 
@@ -236,7 +260,7 @@ class phpini extends lxdb
 
 		$this->initPhpIni();
 
-		$parent = $this->getParentO();
+		$pclass = $this->getParentClass();
 
 		if ($subaction === 'extraedit') {
 			$totallist = $this->getExtraList();
@@ -249,7 +273,7 @@ class phpini extends lxdb
 
 		foreach ($totallist as $l) {
 		//	if ((!$parent->is__table('pserver') && array_search_bool($l, $inheritedlist)) || array_search_bool($l, $adminList)) {
-			if (($parent->getClass() !== 'pserver' && array_search_bool($l, $inheritedlist)) || array_search_bool($l, $adminList)) {
+			if (($pclass !== 'pserver' && array_search_bool($l, $inheritedlist)) || array_search_bool($l, $adminList)) {
 				$vlist["phpini_flag_b-$l"] = array('M', null);
 			} else {
 				$vlist["phpini_flag_b-$l"] = null;
@@ -264,7 +288,8 @@ class phpini extends lxdb
 				$this->initialValue('phpini_flag_b-phpfpm_type_flag', 'ondemand');
 				$vlist["phpini_flag_b-phpfpm_type_flag"] = array('s', self::getPhpfpmTypeList());
 			} else {
-				$vlist["phpini_flag_b-phpfpm_type_flag"] = array('s', array($this->phpini_flag_b->phpfpm_type_flag));
+				$type = (isset($this->phpini_flag_b) && isset($this->phpini_flag_b->phpfpm_type_flag)) ? $this->phpini_flag_b->phpfpm_type_flag : 'ondemand';
+				$vlist["phpini_flag_b-phpfpm_type_flag"] = array('s', array($type));
 			}
 
 		//	$vlist["phpini_flag_b-phpfpm_limit_extensions"] = array('t', self::getPhpfpmLimitExtensions());
@@ -274,7 +299,7 @@ class phpini extends lxdb
 		// MR -- still not work (like in 'appearance')
 		// still something wrong with 'updateall' process!
 	//	if ($parent->is__table('pserver')) {
-		if ($parent->getClass() === 'pserver') {
+		if ($pclass === 'pserver') {
 			$vlist['__v_updateall_button'] = array();
 		}
 
@@ -288,22 +313,30 @@ class phpini extends lxdb
 
 	function setUpInitialValues()
 	{
-		if ($this->getParentO()->getClass() === 'pserver') {
+		if (!isset($this->phpini_flag_b) || !($this->phpini_flag_b instanceof phpini_flag_b)) {
+			$this->phpini_flag_b = new phpini_flag_b(null, null, $this->nname);
+		}
+
+		$pclass = $this->getParentClass();
+
+		if ($pclass === 'pserver') {
 			$this->initialValuesBasic();
 		} else {
 			$p = new phpini(null, $this->syncserver, createParentName('pserver', $this->syncserver));
 			$p->get();
+			$p->fixphpIniFlag();
 
 			$b = $p->phpini_flag_b;
 
 			$list = array_merge($this->getInheritedList(), $this->getLocalList(), $this->getExtraList());
 
-			array_unique($list);
+			$list = array_unique($list);
 
 			foreach ($list as $k => $v) {
 				if ($v === 'session_save_path_flag') {
-					if ($this->getParentO()->getClass() === 'client') {
-						$user = $this->getParentO()->nname;
+					if ($pclass === 'client') {
+						$parent = $this->getParentO();
+						$user = ($parent && isset($parent->nname)) ? $parent->nname : $this->nname;
 						$path = "/home/kloxo/client/{$user}/session";
 						exec("mkdir -p $path");
 						$this->initialValue($v, $path);
@@ -311,7 +344,8 @@ class phpini extends lxdb
 						exec("chmod 777 $path");
 					}
 				} else {
-					$this->initialValue($v, $b->$v);
+					$val = (isset($b) && is_object($b) && isset($b->$v)) ? $b->$v : null;
+					$this->initialValue($v, $val);
 				}
 			}
 		}
@@ -319,6 +353,10 @@ class phpini extends lxdb
 
 	function initialValuesBasic()
 	{
+		if (!isset($this->phpini_flag_b) || !($this->phpini_flag_b instanceof phpini_flag_b)) {
+			$this->phpini_flag_b = new phpini_flag_b(null, null, $this->nname);
+		}
+
 		$this->initialValue('output_compression_flag', 'off');
 
 		$this->initialValue('upload_max_filesize', '16M');
@@ -375,6 +413,10 @@ class phpini extends lxdb
 
 	function initialValue($var, $val)
 	{
+		if (!isset($this->phpini_flag_b) || !($this->phpini_flag_b instanceof phpini_flag_b)) {
+			$this->phpini_flag_b = new phpini_flag_b(null, null, $this->nname);
+		}
+
 		if (!isset($this->phpini_flag_b->$var) || !$this->phpini_flag_b->$var) {
 			$this->phpini_flag_b->$var = $val;
 		}

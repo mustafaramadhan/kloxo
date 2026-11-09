@@ -1,82 +1,167 @@
-![Kloxo-MR logo](https://github.com/mustafaramadhan/kloxo/blob/dev/kloxo-mr_big.png)
+# Mfklixo (Next-Gen Hosting & Cloud Control Panel)
 
-### Kloxo fork by Mustafa Ramadhan
+![Mfklixo Banner](kloxo-mr_big.png)
 
+[![License: AGPLv3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE.txt)
+[![Rust: 1.80+](https://img.shields.io/badge/Rust-Core%20v1.1.0-orange.svg)](https://www.rust-lang.org/)
+[![Next.js: 15+](https://img.shields.io/badge/Next.js-15.0%2B-black.svg)](https://nextjs.org/)
+[![MariaDB: 10.11+ / 11.4+](https://img.shields.io/badge/MariaDB-10.11%20%7C%2011.4%20LTS-003545.svg)](https://mariadb.org/)
+[![Ubuntu: 20.04 - 26.04](https://img.shields.io/badge/Ubuntu-20.04%20--%2026.04%20LTS-E95420.svg)](https://ubuntu.com/)
 
-===================
+> **Mfklixo** is a modern, enterprise-grade, high-performance web hosting control panel evolved from Kloxo-MR. Completely redesigned with a **Rust Core Daemon (`mfklixo-core`)**, a **Next.js 15 responsive UI**, an **`apache_nginx` dual reverse-proxy stack**, native **Multi-PHP & module controls**, and out-of-the-box **phpMyAdmin & Roundcube Webmail** integration.
 
-Branch:
-- master - original code from lxcenter
-- dev - branch for next release
-- bugfix-6.5.0 - branch for bugfix for 6.5.0.f
-- rpms - branch for mratwork repo rpms
+---
 
-===================
+## 🏛️ System Architecture
 
-# Kloxo-MR
+```mermaid
+flowchart TD
+    Client["Client / Web Browser"]
+    
+    subgraph "Control Panel Layer (Port 7777 / 7778 HTTPS/HTTP)"
+        NginxPanel["Nginx Control Panel Gateway (:7777)"]
+        NextJS["Next.js 15 Modern Dashboard (:3000)"]
+        RustCore["Mfklixo Core Daemon (:7788)"]
+    end
+    
+    subgraph "Web Hosting Layer (Port 80 / 443 & 8080)"
+        NginxWeb["Nginx Reverse Proxy (:80/443)"]
+        ApacheWeb["Apache 2.4 Engine (:8080)"]
+        PHP_Engine["PHP-FPM (8.5 / 8.3 / Multi-PHP)"]
+    end
+    
+    subgraph "Data & Application Layer"
+        PMA["phpMyAdmin 5.2+ (/phpmyadmin)"]
+        RC["Roundcube Webmail (/webmail)"]
+        MariaDB["MariaDB 10.11+ / 11.4 LTS (:3306)"]
+        PHP_Mods["PHP Modules (phpenmod / phpdismod)"]
+    end
 
-This is special edition (fork) of Kloxo with many features not existing on Kloxo official release (6.1.12+).
+    Client -->|Dashboard Access| NginxPanel
+    NginxPanel -->|/| NextJS
+    NginxPanel -->|/api/*| RustCore
+    NginxPanel -->|/phpmyadmin/| ApacheWeb
+    NginxPanel -->|/webmail/| ApacheWeb
+    
+    Client -->|Website Access| NginxWeb
+    NginxWeb -->|Static Assets| NginxWeb
+    NginxWeb -->|Dynamic / PHP| ApacheWeb
+    
+    ApacheWeb --> PHP_Engine
+    PHP_Engine --> PMA
+    PHP_Engine --> RC
+    PHP_Engine --> PHP_Mods
+    
+    RustCore -->|Native SQLx Pool| MariaDB
+    RustCore -->|CLI Module Controls| PHP_Mods
+    PMA --> MariaDB
+    RC --> MariaDB
+```
 
-This fork named as Kloxo-MR (meaning 'Kloxo fork by Mustafa Ramadhan').
+---
 
-### URL
+## 🚀 Key Modern Features
 
-1. More information about Kloxo (Official from LxCenter) - http://lxcenter.org/ and http://forum.lxcenter.org/
+### 1. High-Performance Rust Core Daemon (`mfklixo-core`)
+- Built with **Rust**, **Tokio**, and **Axum 0.7**.
+- Pure native REST API v1 (`/api/v1/`) replacing legacy PHP wrappers.
+- Cryptographic **JWT Authentication** seamlessly synced with MariaDB credentials (supporting Bcrypt, MD5, and legacy Kloxo `__lxen:` base64 hashes).
+- Live real-time system metrics, disk quotas, process management, and health watchdog.
+- Bound safely to `127.0.0.1:7788` with role-based Claims validation for superadmin endpoints.
 
-2. More information about Kloxo-MR - http://mratwork.com/ and http://forum.mratwork.com/
+### 2. Next.js 15 Modern Responsive Dashboard
+- Built with **Next.js 15**, **React**, and **Tailwind CSS**.
+- Beautiful dark/light mode UI with real-time server health widgets.
+- Complete replacement for the 2008-era classic HTML frames interface.
 
-### Kloxo-MR Features
+### 3. Integrated Database Manager & Webmail
+- **phpMyAdmin 5.2+** available out-of-the-box at `/phpmyadmin/`.
+- **Roundcube Webmail 1.6+** available out-of-the-box at `/webmail/`.
+- Dual routed: accessible from hosted domains (`http://yourdomain.com/phpmyadmin`) and directly on the panel's secure port (`https://yourserver:7777/phpmyadmin`).
 
-* OS: Redhat/CentOS 5 and 6 (32bit and 64bit) or their variants; also Redhat/Centos 7 *)
-* Billing: AWBS, WHMCS, HostBill, TheHostingTool, AccountLab Plus, Blesta and BoxBilling (note: claim by billing's author)
-* Web server: Nginx, Nginx-Proxy and Lighttpd-proxy, Hiawatha, Hiawatha-proxy and Httpd 24, beside Httpd and Lighttpd; also Dual and Multiple Web server *)
-* Webcache server: Squid, Varnish and ATS *)
-* Php: Dual-php with php 5.3/5.4 as primary and php 5.2 as secondary; multiple-php *)
-* PHP-type for Apache: php-fpm_worker/_event and fcgid_worker/_event; beside mod_php/_ruid2/_itk and suphp/_worker/_event
-* Mail server: qmail-toaster instead special qmail (in progress: change from courier-imap to dovecot as imap/pop3) *)
-* Database: MySQL or MariaDB *)
-* Database Manager: PHPMyAdmin; Adminer, MyWebSql and SqlBuddy as additional **)
-* Webmail: Afterlogic Webmail Lite, Telaen, Squirrelmail, Roundcube and Rainloop; Horde and T-Dah dropped
-* FTP server: Pure-ftpd
-* DNS Server: Bind and Djbdns; add Powerdns, ~~MaraDNS~~, NSD, myDNS and Yadifa *)
-* Addons: ClamAV, Spamassassin/Bogofilter/Spamdyke, RKHunter and MalDetect
-* Free SSL: Let's Encrypt (via letsencrypt/certbot-auto and acme.sh) and StartAPI *)
-* Fixed many bugs of Kloxo Official (including security issues)
-* And many more!
+### 4. Multi-PHP Branch & Live Module Controls
+- Support for modern PHP versions: **PHP 7.4, 8.0, 8.1, 8.2, 8.3, 8.4, and 8.5**.
+- **Live Module Toggle:** Enable or disable PHP extensions (`phpenmod` / `phpdismod`) directly from the panel or REST API without server downtime.
+- **Dynamic php.ini Tuning:** Adjust `memory_limit`, `upload_max_filesize`, `post_max_size`, and `max_execution_time` on the fly.
 
-### Contributing
+### 5. High-Performance `apache_nginx` Webserver
+- **Nginx Front-End (Port 80/443):** Handles SSL termination, gzip compression, and ultra-fast static file serving.
+- **Apache 2.4 Back-End (Port 8080):** Handles PHP processing via PHP-FPM, `.htaccess` rewrite rules, and full web application compatibility.
 
-* Always invite for devs and testers. Go to http://mratwork.com/ and http://forum.mratwork.com/
+### 6. Completely Decommissioned Legacy Code
+- **100% Insecurity Elimination:** Removed all legacy PHP 5.x services (`kloxo-php`, `kloxo-wrap`) and obsolete SUID root binaries, eliminating historical Kloxo vulnerabilities.
+- Drastic reduction in memory footprint and CPU overhead.
 
-### Licensing - AGPLv3
+---
 
-* Like Kloxo Official, Kloxo-MR adopt AGPLv3 too.
+## ⚡ Quick Start: Automated Installation
 
-### How to install
+Install Mfklixo on a fresh Ubuntu (20.04, 22.04, 24.04, 26.04), Debian, AlmaLinux, or Rocky Linux server:
 
-* Read https://github.com/mustafaramadhan/kloxo/blob/dev/how-to-install.txt
+```bash
+curl -fsSL https://raw.githubusercontent.com/feizezadeh/Mfklixo/modernize-kloxo/install.sh | sudo bash
+```
 
-### Notes
-*) New features in Kloxo-MR 7.0.0 (aka Kloxo-MR 7)
+Or clone the modernized branch and install locally:
 
-- Version 6.5.1 change to 7.0.0 since 20 Aug 2014 (beta step)
-- OS: Redhat/CentOS 7 (64bit) (since 27 Feb 2017) *)
-- Web server: Hiawatha (since 28 Sep 2013) and Httpd 2.4 (since 20 Jun 2015); Dual (since 19 Jan 2016) and Multiple Web server (in progress)
-- Webcache server: Squid, Varnish and ATS (Apache Traffic Server) (since 3 Oct 2013)
-- DNS server: Powerdns, NSD, MyDNS and Yadifa (since 16 Sep 2013)
-- Mail server: Dovecot (since 19 Jun 2016)
-- Database: using MariaDB 10.x instead MySQL 5.5
-- Php: multiple Php versions
-  * suphp base (since 27 Jun 2014)
-  * fcgid base (since 5 Jul 2015)
-  * php-fpm/spawning base (since 24 May 2016)
-- Free SSL:
-  * Let's Encrypt (since 4 May 2016)
-  * StartAPI (since 29 Jun 2016)
-- Stats:
-  * Change URL from 'domain.com/stats' to 'stats.domain.com' (since 3 Sep 2016)
+```bash
+git clone -b modernize-kloxo https://github.com/feizezadeh/Mfklixo.git
+cd Mfklixo
+sudo bash install.sh
+```
 
-**) New features in Kloxo-MR 6.5.0 after released
-- Panel: Adminer, MyWebSql and SqlBuddy as alternative for Database management
-- Core: change from lxphp + lxlighttpd  to use Hiawatha + php52s for running panel
+---
 
+## 🌐 Default Access Points
+
+| Service | Public Port | Panel Port | URL Path |
+| :--- | :--- | :--- | :--- |
+| **Modern Dashboard (HTTPS)** | — | `7777` | `https://<SERVER_IP>:7777/` |
+| **Modern Dashboard (HTTP)** | — | `7778` | `http://<SERVER_IP>:7778/` |
+| **phpMyAdmin** | `80 / 443` | `7777` | `http://<SERVER_IP>/phpmyadmin/` |
+| **Roundcube Webmail** | `80 / 443` | `7777` | `http://<SERVER_IP>/webmail/` |
+| **Rust REST API Gateway** | `127.0.0.1` | — | `http://127.0.0.1:7788/api/v1/` |
+
+**Default Admin Login:**
+- **Username:** `admin`
+- **Password:** `admin`
+
+---
+
+## 🛠️ Management & Service Commands
+
+### Service Control
+```bash
+# Check status of Core Daemon and Panel Web Gateway
+sudo systemctl status mfklixo-core kloxo-web
+
+# Restart Core Daemon
+sudo systemctl restart mfklixo-core
+
+# Check Hosted Web Services
+sudo systemctl status nginx apache2 mariadb
+```
+
+### PHP Version & Module Management (CLI & API)
+```bash
+# List PHP versions
+curl -s http://127.0.0.1:7788/api/v1/php/versions -H "Authorization: Bearer <TOKEN>"
+
+# List all PHP modules for PHP 8.5
+curl -s http://127.0.0.1:7788/api/v1/php/modules?version=8.5 -H "Authorization: Bearer <TOKEN>"
+
+# Toggle a PHP module (e.g. enable curl)
+curl -s -X POST http://127.0.0.1:7788/api/v1/php/modules/toggle \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer <TOKEN>" \
+     -d '{"version":"8.5","module":"curl","enable":true}'
+
+# Switch web engine
+sh /usr/local/lxlabs/kloxo/pscript/switchserver --class=web --driver=apache_nginx
+```
+
+---
+
+## 📄 License
+
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPLv3)**. See [LICENSE.txt](LICENSE.txt) for details.

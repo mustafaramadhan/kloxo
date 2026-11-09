@@ -1,0 +1,18 @@
+[Unit]
+Description=Mfklixo Rust Core Daemon & REST Gateway
+Documentation=https://github.com/feizezadeh/Mfklixo
+After=network.target mariadb.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/usr/local/lxlabs/kloxo
+Environment=PORT=7788
+Environment=BIND_ADDR=127.0.0.1:7788
+ExecStart=/usr/local/lxlabs/kloxo/bin/mfklixo-core
+Restart=always
+RestartSec=3
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

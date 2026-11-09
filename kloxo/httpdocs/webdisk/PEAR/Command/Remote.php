@@ -486,7 +486,7 @@ parameter.
         if (!class_exists('PEAR_Downloader')) {
             require_once 'PEAR/Downloader.php';
         }
-        $a = &new PEAR_Downloader($this->ui, $options, $this->config);
+        $a = new PEAR_Downloader($this->ui, $options, $this->config);
         return $a;
     }
     // {{{ doDownload()
@@ -642,7 +642,7 @@ parameter.
         }
         $num = 0;
         while ($ent = readdir($dp)) {
-            if (preg_match('/^xmlrpc_cache_[a-z0-9]{32}$/', $ent) ||
+            if (preg_match('/^xmlrpc_cache_[a-z0-9][32]$/', $ent) ||
                   preg_match('/rest.cache(file|id)$/', $ent)) {
                 $path = $cache_dir . DIRECTORY_SEPARATOR . $ent;
                 $ok = @unlink($path);

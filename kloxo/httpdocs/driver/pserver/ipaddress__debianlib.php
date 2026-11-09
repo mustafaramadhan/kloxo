@@ -213,27 +213,30 @@ function dosyncToSystem()
 
 static function getCurrentIps()
 {
-
 	global $gbl, $sgbl, $login, $ghtml; 
 
-	$contents = lfile_get_contents("/etc/network/interfaces");
+	$ret = array();
+	if (file_exists("/etc/network/interfaces")) {
+		$contents = lfile_get_contents("/etc/network/interfaces");
+		$string = preg_replace('/[\n]+/' , "\n",  $contents);
+		$array = explode("auto" , $string);
 
-	$string = preg_replace('/[\n]+/' , "\n",  $contents);
-	
-	$array = explode("auto" , $string);
-
-	foreach($array as $a12) {
-		$a[]   =  self::getArrayFromString($a12); 
-	}	
-	foreach($a as $single ) {
-
-		if(count($single) >= 3) {
-			$ret[] = $single;
+		foreach($array as $a12) {
+			$a[]   =  self::getArrayFromString($a12); 
+		}	
+		foreach((array)$a as $single ) {
+			if(count($single) >= 3) {
+				$ret[] = $single;
+			}
 		}
 	}
 
-	return $ret;
+	if (empty($ret)) {
+		include_once dirname(__FILE__) . "/ipaddress__redhatlib.php";
+		$ret = ipaddress__redhat::getModernIps();
+	}
 
+	return $ret;
 }
 
 static function getArrayFromString($t) 

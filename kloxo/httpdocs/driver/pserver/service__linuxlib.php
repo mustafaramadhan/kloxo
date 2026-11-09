@@ -40,6 +40,7 @@ class Service__Linux extends Lxlclass
 		global $gbl, $sgbl, $login, $ghtml;
 
 		$nval['httpd'] = 'httpd';
+		$nval['apache2'] = 'apache2';
 		$nval['lighttpd'] = 'lighttpd';
 		$nval['nginx'] = 'nginx';
 		$nval['hiawatha'] = 'hiawatha';

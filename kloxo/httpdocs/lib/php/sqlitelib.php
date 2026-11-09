@@ -323,25 +323,33 @@ class Sqlite
 		$string = " ( ";
 		$result = $this->getColumnTypes();
 
-		foreach ($result as $key => $val) {
-			$string .= " $key,";
+		if ($result) {
+			foreach ($result as $key => $val) {
+				$string .= " `$key`,";
+			}
 		}
 
 		$string = preg_replace("/,$/i", "", $string);
-		$string .= " values(";
+		$string .= " ) values(";
 
-		foreach ($result as $key => $val) {
-			if ($key === 'realpass') {
-				$rp = $array[$key];
-				$rp = base64_encode($rp);
-				$rp = "__lxen:{$rp}";
-				$string .= " '{$rp}',";
+		if ($result) {
+			foreach ($result as $key => $val) {
+				if ($key === 'realpass') {
+					$rp = isset($array[$key]) ? $array[$key] : '';
+					$rp = base64_encode($rp);
+					$rp = "__lxen:{$rp}";
+					$string .= " '{$rp}',";
 
-				continue;
+					continue;
+				}
+
+				$val = isset($array[$key]) ? $array[$key] : '';
+				if (!is_scalar($val)) {
+					$val = '';
+				}
+				$val = addslashes((string)$val);
+				$string .= " '" . $val . "',";
 			}
-
-			$string .= " '" . $this->escapeBack($key, $array[$key]). "',";
-
 		}
 
 		$string = preg_replace("/,$/i", "", $string);
@@ -358,26 +366,33 @@ class Sqlite
 		$strarray = array();
 		$result = $this->getColumnTypes();
 
-		foreach ($result as $key => $val) {
-			if (isset($sgbl->__var_collectquota_run) && $sgbl->__var_collectquota_run) {
-				if (!csb($key, "priv_") && !csb($key, 'used_') && !csb($key, "nname") && !csb($key, "status") && !csb($key, "state") && !csb($key, "cpstatus")) {
+		if ($result) {
+			foreach ($result as $key => $val) {
+				if (isset($sgbl->__var_collectquota_run) && $sgbl->__var_collectquota_run) {
+					if (!csb($key, "priv_") && !csb($key, 'used_') && !csb($key, "nname") && !csb($key, "status") && !csb($key, "state") && !csb($key, "cpstatus")) {
+						continue;
+					}
+				}
+
+				if ($key === 'realpass') {
+					$rp = isset($array[$key]) ? $array[$key] : '';
+
+					if (!csb($rp, "__lxen:")) {
+						$rp = base64_encode($rp);
+						$rp = "__lxen:{$rp}";
+					}
+					$strarray[] = "`$key` = '{$rp}'";
+
 					continue;
 				}
-			}
 
-			if ($key === 'realpass') {
-				$rp = $array[$key];
-
-				if (!csb($rp, "__lxen:")) {
-					$rp = base64_encode($rp);
-					$rp = "__lxen:{$rp}";
+				$val = isset($array[$key]) ? $array[$key] : '';
+				if (!is_scalar($val)) {
+					$val = '';
 				}
-				$strarray[] = "{$key} = '{$rp}'";
-
-				continue;
+				$val = addslashes((string)$val);
+				$strarray[] = "`$key` = '{$val}'";
 			}
-
-			$strarray[] = "$key = '".$this->escapeBack($key, $array[$key])."'";
 		}
 
 		$string = implode(",", $strarray);
@@ -492,7 +507,7 @@ class Sqlite
 
 		$string = $this->createQueryStringUpdate($array);
 
-		$update = "update {$this->__sqtable} set {$string} where {$nname}='{$value}'";
+		$update = "update `{$this->__sqtable}` set {$string} where `{$nname}`='{$value}'";
 
 		if ($array['nname'] === 'boxtrapper.com') {
 			//
@@ -522,7 +537,7 @@ class Sqlite
 		$string = $this->createQueryStringAdd($array);
 
 	//	$insert = "insert into $this->__sqtable $string ;";
-		$insert = "insert ignore into {$this->__sqtable} {$string} ;";
+		$insert = "insert ignore into `{$this->__sqtable}` {$string} ;";
 
 		if ($ins = $this->database_query($gbl->$fdbvar, $insert)) {
 			dprint("Record inserted in {$this->__sqtable} for {$array['nname']}\n", 1);
@@ -550,7 +565,7 @@ class Sqlite
 
 		$fdbvar = "__fdb_{$this->__readserver}";
 
-		$delete = "delete from {$this->__sqtable} where {$nname} = '{$value}'";
+		$delete = "delete from `{$this->__sqtable}` where `{$nname}` = '{$value}'";
 
 		$delresult = $this->database_query($gbl->$fdbvar, $delete);
 

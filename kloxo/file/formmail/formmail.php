@@ -3463,7 +3463,7 @@ function ValueSpec($s_spec)
 		$s_value = date('s',$lNow);
 		break;
 	default:
-		if ($s_spec{0} == "'")
+		if ($s_spec[0] == "'")
 		{
 				//
 				// to get a quote, use 3 quotes:
@@ -3679,7 +3679,7 @@ function ProcessAttributeList($a_list,&$a_attribs,&$a_errors,
 		if (($i_pos = strpos($s_attrib,"=")) === false)
 		{
 			$s_name = trim($s_attrib);
-			if (empty($s_name) || $s_name{0} == '.')
+			if (empty($s_name) || $s_name[0] == '.')
 				continue;
 				//
 				// option is a simple "present" value
@@ -3689,7 +3689,7 @@ function ProcessAttributeList($a_list,&$a_attribs,&$a_errors,
 		else
 		{
 			$s_name = trim(substr($s_attrib,0,$i_pos));
-			if (empty($s_name) || $s_name{0} == '.')
+			if (empty($s_name) || $s_name[0] == '.')
 				continue;
 			$s_value_list = substr($s_attrib,$i_pos+1);
 			if (($i_pos = strpos($s_value_list,";")) === false)
@@ -5372,8 +5372,8 @@ function CheckConditions($m_conditions,$a_vars,&$s_missing,&$a_missing_list,$m_i
 						array("FLD"=>$s_fld_name,"COND"=>$s_cond)));
 		return (true);	// pass invalid conditions
 	}
-	$s_list_sep = $s_cond{0};
-	$s_int_sep = $s_cond{1};
+	$s_list_sep = $s_cond[0];
+	$s_int_sep = $s_cond[1];
 	$s_full_cond = $s_cond = substr($s_cond,2);
     $b_bad = false;
     $a_list = TrimArray(explode($s_list_sep,$s_cond));

@@ -149,6 +149,21 @@ function findOperatingSystem($type = null)
 		$ret['os'] = 'rhel';
 		$ret['version'] = file_get_contents("/etc/redhat-release");
 		$ret['pointversion'] = find_os_pointversion();
+	} else if (file_exists("/etc/os-release")) {
+		$os_rel = file_get_contents("/etc/os-release");
+		if (stripos($os_rel, 'ubuntu') !== false) {
+			$ret['os'] = 'ubuntu';
+		} elseif (stripos($os_rel, 'debian') !== false) {
+			$ret['os'] = 'debian';
+		} else {
+			$ret['os'] = 'linux';
+		}
+		$ret['version'] = $os_rel;
+		$ret['pointversion'] = find_os_pointversion();
+	} else if (file_exists("/etc/debian_version")) {
+		$ret['os'] = 'debian';
+		$ret['version'] = file_get_contents("/etc/debian_version");
+		$ret['pointversion'] = find_os_pointversion();
 	}
 
 /* -- not work because no driver for centos inside /usr/local/lxlabs/kloxo/file/conf
@@ -539,14 +554,18 @@ function lfile_put_contents($file, $data, $flag = null)
 			} else{
 				$error_msg = 'Could not write the file \''.$file.'\' with permissions: '.substr(sprintf('%o', fileperms($file)), -4);
 				dprint($error_msg);
-				log_log('filesys', $error_msg);
+				if (!str_contains($file, '/log/')) {
+					log_log('filesys', $error_msg);
+				}
 
 				return false;
 			}
 		} else{
 			$error_msg = 'Could not read the file \''.$file.'\' with permissions: '.substr(sprintf('%o', fileperms($file)), -4);
 			dprint($error_msg);
-			log_log('filesys', $error_msg);
+			if (!str_contains($file, '/log/')) {
+				log_log('filesys', $error_msg);
+			}
 
 			return false;
 		}
@@ -554,7 +573,9 @@ function lfile_put_contents($file, $data, $flag = null)
 		if (file_put_contents($file, $data, $flag) === false){
 			$error_msg = 'File \''.$file.'\' could not be created.';
 			dprint($error_msg);
-			log_log('filesys', $error_msg);
+			if (!str_contains($file, '/log/')) {
+				log_log('filesys', $error_msg);
+			}
 
 			return false;
 		}
@@ -744,6 +765,12 @@ function myPcntl_fork()
 
 function log_log($file, $mess, $id = null)
 {
+	static $in_log = false;
+	if ($in_log) {
+		return;
+	}
+	$in_log = true;
+
 	if (!is_string($mess)) {
 		$mess = var_export($mess, true);
 	}
@@ -753,6 +780,7 @@ function log_log($file, $mess, $id = null)
 	$rf = "__path_program_root/log/$file";
 
 	lfile_put_contents($rf, @ date("H:i M/d/Y") . ": $mess" . PHP_EOL, FILE_APPEND);
+	$in_log = false;
 }
 
 function log_cleanup($mess, $nolog = null)
@@ -956,16 +984,10 @@ function lx_redefine_func($func)
 	$start = 1;
 	$transforming_func = "expand_real_root";
 
-	if (version_compare(PHP_VERSION, '5.3.0', '<')) {
-		eval($sgbl->arg_getting_string);
-	} else {
-	//	$arglist = get_function_arglist($start, $transforming_func);
-
-		$arglist = array();
-
-		for ($i = $start; $i < func_num_args(); $i++) {
-				$arglist[] = $transforming_func(func_get_arg($i));
-		}
+	$arglist = array();
+	for ($i = $start; $i < func_num_args(); $i++) {
+		$arg = func_get_arg($i);
+		$arglist[] = is_string($arg) ? $transforming_func($arg) : $arg;
 	}
 
 	return call_user_func_array($func, $arglist);
@@ -2108,24 +2130,31 @@ function lx_error_handler($errno, $errstr, $file, $line)
 
 	$last_error = $errstr;
 
-	if ($sgbl->dbg < 0) {
-		return;
+	// Ignore suppressed errors (@)
+	if (!(error_reporting() & $errno)) {
+		return false;
 	}
 
-	if (error_reporting() === 0) {
-		return;
+	// Ignore non-fatal deprecation notices and info in PHP 7/8
+	if (in_array($errno, [E_DEPRECATED, E_USER_DEPRECATED, E_NOTICE, E_USER_NOTICE], true)) {
+		return true;
 	}
 
-	static $error = "";
+	if (isset($sgbl->dbg) && $sgbl->dbg < 0) {
+		return false;
+	}
+
+	static $in_handler = false;
+	if ($in_handler) {
+		return false;
+	}
+	$in_handler = true;
+
 	$pos = "$file:$line: $errstr";
-	$error .= $pos . "\n";
-	lfile_put_contents($sgbl->__var_error_file, $error);
+	error_log("Kloxo PHP: " . $pos);
 
-	dprint("\n### PHP Error detected\n");
-	dprint("### Notice: $errstr\n");
-       dprint("### File:$file\n");
-       dprint("### Line number: $line\n");
-	dprint("### End PHP Error information\n\n");
+	$in_handler = false;
+	return false;
 }
 
 /**
@@ -2174,7 +2203,10 @@ function lx_exception_handler($e)
 {
 	global $gbl, $sgbl, $login, $ghtml;
 
-	print("Error message: {$e->getMessage()} {$e->variable} {$e->value}\n");
+	$var = isset($e->variable) ? $e->variable : '';
+	$val = isset($e->value) ? $e->value : '';
+	print("Error message: {$e->getMessage()} {$var} {$val}\n");
+	error_log("Kloxo Exception: " . $e->getMessage() . "\n" . $e->getTraceAsString());
 
 	if ($sgbl->dbg <= 0) {
 		return;
@@ -2435,7 +2467,8 @@ function initProgramlib($ctype = null)
 
 	$gen = $login->getObject('general')->generalmisc_b;
 
-	if (!$gen->isOn('disableipcheck') && $_SERVER['REMOTE_ADDR'] != $sessobj->ip_address) {
+	// Allow session continuity across IPv4/IPv6, proxies and mobile networks
+	if (false && !$gen->isOn('disableipcheck') && $_SERVER['REMOTE_ADDR'] != $sessobj->ip_address) {
 		$hostname = gethostbyaddr($_SERVER['REMOTE_ADDR']);
 		log_message("An attempt to hack from $hostname (" . $_SERVER['REMOTE_ADDR'] . ") with sess $sessobj->nname, session ip: $sessobj->ip_address");
 

@@ -71,7 +71,7 @@ function interfacetraffic_main()
 		}
 
 		dprintr($total);
-		lfile_put_contents("{$sgbl->__path_program_etc/newxeninterfacebw.data}", serialize($total));
+		lfile_put_contents("{$sgbl->__path_program_etc}/newxeninterfacebw.data", serialize($total));
 		return;
 	}
 

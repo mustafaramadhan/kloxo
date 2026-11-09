@@ -17,7 +17,7 @@
 
 
     // Build class instance and pass array with registered scripts as first param
-    $rewrite =&  new hn_urlRewrite($registered_scripts);
+    $rewrite  = new hn_urlRewrite($registered_scripts);
 
 
 

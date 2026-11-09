@@ -84,10 +84,6 @@ class Gbllib  extends Lxclass
 			$master = 'localhost';
 		}
 
-		if ($login->isSuperadmin() && $master === 'localhost') {
-			return null;
-		}
-
 		if (isLocalhost($syncserver)) {
 			$syncserver = 'localhost';
 		}

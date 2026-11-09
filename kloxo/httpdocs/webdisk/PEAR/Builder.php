@@ -84,7 +84,7 @@ class PEAR_Builder extends PEAR_Common
         if (is_object($descfile)) {
             $pkg = $descfile;
         } else {
-            $pf = &new PEAR_PackageFile($this->config, $this->debug);
+            $pf = new PEAR_PackageFile($this->config, $this->debug);
             $pkg = &$pf->fromPackageFile($descfile, PEAR_VALIDATE_NORMAL);
             if (PEAR::isError($pkg)) {
                 return $pkg;
@@ -186,7 +186,7 @@ class PEAR_Builder extends PEAR_Common
 
         $ret = true;
         while (($ent = readdir($d)) !== false) {
-            if ($ent{0} == '.')
+            if ($ent[0] == '.')
                 continue;
 
             $full = $dirname . DIRECTORY_SEPARATOR . $ent;
@@ -251,7 +251,7 @@ class PEAR_Builder extends PEAR_Common
             $pkg = $descfile;
             $descfile = $pkg->getPackageFile();
         } else {
-            $pf = &new PEAR_PackageFile($this->config);
+            $pf = new PEAR_PackageFile($this->config);
             $pkg = &$pf->fromPackageFile($descfile, PEAR_VALIDATE_NORMAL);
             if (PEAR::isError($pkg)) {
                 return $pkg;

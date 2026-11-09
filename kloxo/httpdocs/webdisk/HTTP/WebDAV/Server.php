@@ -1387,7 +1387,7 @@ class HTTP_WebDAV_Server
         }
         $this->http_status($http_stat);
         
-        if ($http_stat{0} == 2) { // 2xx states are ok 
+        if ($http_stat[0] == 2) { // 2xx states are ok 
             if ($options["timeout"]) {
                 // more than a million is considered an absolute timestamp
                 // less is more likely a relative value
@@ -1609,10 +1609,10 @@ class HTTP_WebDAV_Server
         $uuid = md5(microtime().getmypid());    // this should be random enough for now
 
         // set variant and version fields for 'true' random uuid
-        $uuid{12} = "4";
-        $n = 8 + (ord($uuid{16}) & 3);
+        $uuid[12] = "4";
+        $n = 8 + (ord($uuid[16]) & 3);
         $hex = "0123456789abcdef";
-        $uuid{16} = $hex{$n};
+        $uuid[16] = $hex[$n];
 
         // return formated uuid
         return substr($uuid,  0, 8)."-"
@@ -1647,7 +1647,7 @@ class HTTP_WebDAV_Server
     function _if_header_lexer($string, &$pos) 
     {
         // skip whitespace
-        while (ctype_space($string{$pos})) {
+        while (ctype_space($string[$pos])) {
             ++$pos;
         }
 
@@ -1657,7 +1657,7 @@ class HTTP_WebDAV_Server
         }
 
         // get next character
-        $c = $string{$pos++};
+        $c = $string[$pos++];
 
         // now it depends on what we found
         switch ($c) {
@@ -1670,7 +1670,7 @@ class HTTP_WebDAV_Server
 
         case "[":
             //Etags are enclosed in [...]
-            if ($string{$pos} == "W") {
+            if ($string[$pos] == "W") {
                 $type = "ETAG_WEAK";
                 $pos += 2;
             } else {
@@ -1799,7 +1799,7 @@ class HTTP_WebDAV_Server
                     // but if opaquelocktokens are used (RFC2518 6.4)
                     // we have to check the format (litmus tests this)
                     if (!strncmp($condition, "<opaquelocktoken:", strlen("<opaquelocktoken"))) {
-                        if (!preg_match('/^<opaquelocktoken:[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}>$/', $condition)) {
+                        if (!preg_match('/^<opaquelocktoken:[[:xdigit:]][8]-[[:xdigit:]][4]-[[:xdigit:]][4]-[[:xdigit:]][4]-[[:xdigit:]][12]>$/', $condition)) {
                             $this->http_status("423 Locked");
                             return false;
                         }
@@ -2030,7 +2030,7 @@ class HTTP_WebDAV_Server
      */
     function _mergePathes($parent, $child) 
     {
-        if ($child{0} == '/') {
+        if ($child[0] == '/') {
             return $this->_unslashify($parent).$child;
         } else {
             return $this->_slashify($parent).$child;

@@ -560,7 +560,7 @@ class HTTP_WebDAV_Server_Filesystem extends HTTP_WebDAV_Server
         if (!$new) {
             if ($options["overwrite"]) {
                 $stat = $this->DELETE(array("path" => $options["dest"]));
-                if (($stat{0} != "2") && (substr($stat, 0, 3) != "404")) {
+                if (($stat[0] != "2") && (substr($stat, 0, 3) != "404")) {
                     return $stat; 
                 }
             } else {

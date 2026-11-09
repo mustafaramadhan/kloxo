@@ -1,0 +1,20 @@
+[Unit]
+Description=Mfklixo Next.js Modern Control Panel Dashboard
+Documentation=https://github.com/feizezadeh/Mfklixo
+After=network.target kloxo-web.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/usr/local/lxlabs/kloxo/frontend
+Environment=NODE_ENV=production
+Environment=PORT=3000
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

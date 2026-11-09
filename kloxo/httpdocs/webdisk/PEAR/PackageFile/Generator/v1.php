@@ -115,7 +115,7 @@ class PEAR_PackageFile_Generator_v1
         // }}}
         $packagexml = $this->toPackageFile($where, PEAR_VALIDATE_PACKAGING, 'package.xml', true);
         if ($packagexml) {
-            $tar =& new Archive_Tar($dest_package, $compress);
+            $tar = new Archive_Tar($dest_package, $compress);
             $tar->setErrorHandling(PEAR_ERROR_RETURN); // XXX Don't print errors
             // ----- Creates with the package.xml file
             $ok = $tar->createModify(array($packagexml), '', $where);
@@ -873,13 +873,13 @@ class PEAR_PackageFile_Generator_v1
                 }
                 //o <install as=..> tags for <file name=... platform=!... install-as=..>
                 if (isset($package['platform'][$file]) &&
-                      $package['platform'][$file]{0} == '!') {
+                      $package['platform'][$file][0] == '!') {
                     $generic[] = $file;
                     continue;
                 }
                 //o <ignore> tags for <file name=... platform=... install-as=..>
                 if (isset($package['platform'][$file]) &&
-                      $package['platform'][$file]{0} != '!') {
+                      $package['platform'][$file][0] != '!') {
                     $genericIgnore[] = $file;
                     continue;
                 }
@@ -888,7 +888,7 @@ class PEAR_PackageFile_Generator_v1
                 if (isset($package['install-as'][$file])) {
                     continue;
                 }
-                if ($platform{0} != '!') {
+                if ($platform[0] != '!') {
                     //o <ignore> tags for <file name=... platform=...>
                     $genericIgnore[] = $file;
                 }
@@ -897,7 +897,7 @@ class PEAR_PackageFile_Generator_v1
                 $oses = $notplatform = $platform = array();
                 foreach ($package['platform'] as $file => $os) {
                     // get a list of oses
-                    if ($os{0} == '!') {
+                    if ($os[0] == '!') {
                         if (isset($oses[substr($os, 1)])) {
                             continue;
                         }
@@ -943,7 +943,7 @@ class PEAR_PackageFile_Generator_v1
                         //  <file name=... platform=!other platform install-as=..>
                         if (isset($package['platform'][$file]) &&
                               $package['platform'][$file] != "!$os" &&
-                              $package['platform'][$file]{0} == '!') {
+                              $package['platform'][$file][0] == '!') {
                             $release[$releaseNum]['filelist']['install'][] =
                                 array(
                                     'attribs' => array(
@@ -968,7 +968,7 @@ class PEAR_PackageFile_Generator_v1
                         //o <ignore> tags for
                         //  <file name=... platform=other platform install-as=..>
                         if (isset($package['platform'][$file]) &&
-                              $package['platform'][$file]{0} != '!' &&
+                              $package['platform'][$file][0] != '!' &&
                               $package['platform'][$file] != $os) {
                             $release[$releaseNum]['filelist']['ignore'][] =
                                 array(
@@ -994,7 +994,7 @@ class PEAR_PackageFile_Generator_v1
                             continue;
                         }
                         //o <ignore> tags for <file name=... platform=other platform>
-                        if ($platform{0} != '!' && $platform != $os) {
+                        if ($platform[0] != '!' && $platform != $os) {
                             $release[$releaseNum]['filelist']['ignore'][] =
                                 array(
                                     'attribs' => array(

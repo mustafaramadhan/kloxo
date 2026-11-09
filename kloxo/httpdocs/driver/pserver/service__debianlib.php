@@ -9,7 +9,11 @@ class Service__Debian extends lxDriverClass {
 
 function dbactionAdd()
 {
-	lxshell_return("update-rc.d", $this->main->servicename, 'defaults');
+	if (command_exists('systemctl')) {
+		lxshell_return("systemctl", "enable", $this->main->servicename);
+	} else {
+		lxshell_return("update-rc.d", $this->main->servicename, 'defaults');
+	}
 }
 
 
@@ -22,11 +26,21 @@ function dbactionUpdate($subaction)
 			{
 
 				if ($this->main->isOn('status')) {
-				//	lxshell_return("update-rc.d", $this->main->servicename, 'defaults');
-					lxshell_return("chkconfig", $this->main->servicename, 'on');
+					if (command_exists('systemctl')) {
+						lxshell_return("systemctl", "enable", $this->main->servicename);
+					} elseif (command_exists('update-rc.d')) {
+						lxshell_return("update-rc.d", $this->main->servicename, 'defaults');
+					} else {
+						lxshell_return("chkconfig", $this->main->servicename, 'on');
+					}
 				} else {
-				//	lxshell_return("update-rc.d", "-f", $this->main->servicename, 'remove');
-					lxshell_return("chkconfig", $this->main->servicename, 'off');
+					if (command_exists('systemctl')) {
+						lxshell_return("systemctl", "disable", $this->main->servicename);
+					} elseif (command_exists('update-rc.d')) {
+						lxshell_return("update-rc.d", "-f", $this->main->servicename, 'remove');
+					} else {
+						lxshell_return("chkconfig", $this->main->servicename, 'off');
+					}
 				}
 
 				break;
@@ -34,10 +48,11 @@ function dbactionUpdate($subaction)
 
 		case "toggle_state":
 			{
-				if ($this->main->isOn('state')) {
-					lxshell_return("service", "{$this->main->servicename}", "start");
+				$action = ($this->main->isOn('state')) ? "start" : "stop";
+				if (command_exists('systemctl')) {
+					lxshell_return("systemctl", $action, $this->main->servicename);
 				} else {
-					lxshell_return("service", "{$this->main->servicename}", "stop");
+					lxshell_return("service", "{$this->main->servicename}", $action);
 				}
 				break;
 			}

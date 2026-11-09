@@ -1,11 +1,16 @@
 <?php
 
+chdir(dirname(__FILE__) . '/../httpdocs');
 include_once "lib/html/include.php";
 
 initProgram('admin');
 
 $server = $login->getfromList('pserver', 'localhost');
-$server->getandwriteipaddress();
+if ($server) {
+	$server->getandwriteipaddress();
+}
 
 // MR -- fix issue when start/restart kloxo will be delete /opt/configs/<webserver>/conf/domains contents
-lxshell_return("sh", "/script/fixweb", "--nolog");
+if (file_exists("/script/fixweb")) {
+	lxshell_return("sh", "/script/fixweb", "--nolog");
+}

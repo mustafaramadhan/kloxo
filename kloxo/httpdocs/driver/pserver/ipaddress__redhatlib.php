@@ -139,17 +139,92 @@ class Ipaddress__Redhat extends LxDriverclass
 		createRestartFile("restart-dns");
 	}
 
+	static function getModernIps()
+	{
+		$result = array();
+		$json = @shell_exec("ip -j addr 2>/dev/null");
+		if ($json) {
+			$data = @json_decode($json, true);
+			if (is_array($data)) {
+				foreach ($data as $iface) {
+					$ifname = isset($iface['ifname']) ? $iface['ifname'] : '';
+					if (!$ifname || $ifname === 'lo') continue;
+					if (!empty($iface['addr_info']) && is_array($iface['addr_info'])) {
+						foreach ($iface['addr_info'] as $info) {
+							if (isset($info['family']) && $info['family'] === 'inet') {
+								$ip = isset($info['local']) ? $info['local'] : '';
+								if (!$ip || $ip === '127.0.0.1') continue;
+								$prefix = isset($info['prefixlen']) ? (int)$info['prefixlen'] : 24;
+								$netmask = long2ip(-1 << (32 - $prefix));
+								$devname = str_replace(':', '-', $ifname);
+								$result[] = array(
+									'devname' => $devname,
+									'ipaddr' => $ip,
+									'netmask' => $netmask,
+									'status' => 'yes',
+									'gateway' => '',
+									'bproto' => 'none',
+									'itype' => 'Ethernet',
+									'userctl' => 'no',
+									'peerdns' => 'no',
+									'ipv6init' => 'no'
+								);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if (empty($result)) {
+			$out = @shell_exec("ip -o -4 addr show 2>/dev/null");
+			if ($out) {
+				$lines = explode("\n", trim($out));
+				foreach ($lines as $line) {
+					$parts = preg_split('/\s+/', trim($line));
+					if (count($parts) >= 4) {
+						$devname = $parts[1];
+						if ($devname === 'lo') continue;
+						$cidr = $parts[3];
+						$cidr_parts = explode('/', $cidr);
+						$ip = $cidr_parts[0];
+						$prefix = isset($cidr_parts[1]) ? (int)$cidr_parts[1] : 24;
+						$netmask = long2ip(-1 << (32 - $prefix));
+						$devname = str_replace(':', '-', $devname);
+						$result[] = array(
+							'devname' => $devname,
+							'ipaddr' => $ip,
+							'netmask' => $netmask,
+							'status' => 'yes',
+							'gateway' => '',
+							'bproto' => 'none',
+							'itype' => 'Ethernet',
+							'userctl' => 'no',
+							'peerdns' => 'no',
+							'ipv6init' => 'no'
+						);
+					}
+				}
+			}
+		}
+
+		return $result;
+	}
+
 	static function getCurrentIps()
 	{
 		global $gbl, $sgbl, $login, $ghtml;
 
 		$path = $sgbl->__path_real_etc_root . "sysconfig/network-scripts";
 
-		$flist = lscandir($path);
+		$result1 = array();
+		if (is_dir($path)) {
+			$flist = lscandir($path);
 
-		foreach ($flist as $file) {
-			if (char_search_a($file, "ifcfg-")) {
-				$result1[] = self::get_network_data(str_replace("{$path}/ifcfg-", "", "{$path}/{$file}"));
+			foreach ((array)$flist as $file) {
+				if (char_search_a($file, "ifcfg-")) {
+					$result1[] = self::get_network_data(str_replace("{$path}/ifcfg-", "", "{$path}/{$file}"));
+				}
 			}
 		}
 
@@ -163,7 +238,10 @@ class Ipaddress__Redhat extends LxDriverclass
 			}
 
 			$result[] = $res;
+		}
 
+		if (empty($result)) {
+			$result = self::getModernIps();
 		}
 
 		return ($result);

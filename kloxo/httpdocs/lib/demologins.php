@@ -35,8 +35,8 @@ foreach($res as $k => $v) {
 	<tr >
 		<td style="<?= $color ?>">
 			<form name="<?= $formname ?>" method="<?= $sgbl->method ?>" action="/lib/php/">
-				<input type="hidden" name="frm_clientname" value="<?= {$v[0]} ?>">
-				<input type="hidden" name="frm_class" value="<?= {$v[1]} ?>">
+				<input type="hidden" name="frm_clientname" value="<?= $v[0] ?>">
+				<input type="hidden" name="frm_class" value="<?= $v[1] ?>">
 				<input type="hidden" name="frm_password" value="lxlabs">
 			</form>
 <?php
@@ -51,7 +51,9 @@ foreach($res as $k => $v) {
 		</td>
 		<td style="<?= $color ?>"><a href="javascript:document.<?= $formname ?>.submit()"> Click here to Login as <?= $k ?> (<?= $v[0] ?>)</a></td>
 	</tr>
+<?php
 }
+?>
 
 	<tr>
 		<td colspan='2'>&nbsp;</td>

@@ -227,7 +227,7 @@ http://pear.php.net/dtd/package-2.0.xsd',
                         foreach ($orig as $tag => $raw) {
                             $tag = str_replace($this->_packagefile->getTasksNs() . ':', '', $tag);
                             $task = "PEAR_Task_$tag";
-                            $task = &new $task($this->_packagefile->_config,
+                            $task = new $task($this->_packagefile->_config,
                                 $this->_packagefile->_logger,
                                 PEAR_TASK_PACKAGE);
                             $task->init($raw, $atts, null);
@@ -263,7 +263,7 @@ http://pear.php.net/dtd/package-2.0.xsd',
         }
         $packagexml = $this->toPackageFile($where, PEAR_VALIDATE_PACKAGING, $name);
         if ($packagexml) {
-            $tar =& new Archive_Tar($dest_package, $compress);
+            $tar = new Archive_Tar($dest_package, $compress);
             $tar->setErrorHandling(PEAR_ERROR_RETURN); // XXX Don't print errors
             // ----- Creates with the package.xml file
             $ok = $tar->createModify(array($packagexml), '', $where);
@@ -752,7 +752,7 @@ http://pear.php.net/dtd/package-2.0.xsd',
                     }
                 }
 
-                if (is_string($value) && $value && ($value{strlen($value) - 1} == "\n")) {
+                if (is_string($value) && $value && ($value[strlen($value) - 1] == "\n")) {
                     $value .= str_repeat($this->options['indent'], $this->_tagDepth);
                 }
                 $tmp .= $this->_createXMLTag(array(
@@ -1501,7 +1501,7 @@ class PEAR_PackageFile_Generator_v2_XML_Util {
     function isValidName($string)
     {
         // check for invalid chars
-        if (!preg_match("/^[[:alnum:]_\-.]$/", $string{0})) {
+        if (!preg_match("/^[[:alnum:]_\-.]$/", $string[0])) {
             return PEAR_PackageFile_Generator_v2_XML_Util::raiseError( "XML names may only start with letter or underscore", PEAR_PackageFile_Generator_v2_XML_Util_ERROR_INVALID_START );
         }
         
