@@ -402,6 +402,8 @@ impl Claims {
     pub fn normalized_role(&self) -> &'static str {
         if self.is_superadmin() {
             "superadmin"
+        } else if self.is_reseller() {
+            "reseller"
         } else {
             "client"
         }
@@ -414,10 +416,12 @@ pub fn issue_jwt(username: &str, role: &str, secret: &[u8]) -> Result<String, Ap
         .map_err(|e| ApiError::Internal(e.to_string()))?
         .as_secs();
 
-    let normalized_role = if role == "admin" || role == "superadmin" || username == "admin" {
-        "superadmin"
+    let (normalized_role, user_type) = if role == "admin" || role == "superadmin" || username == "admin" {
+        ("superadmin", "admin")
+    } else if role == "reseller" {
+        ("reseller", "reseller")
     } else {
-        "client"
+        ("client", "client")
     };
 
     let claims = Claims {
@@ -426,11 +430,7 @@ pub fn issue_jwt(username: &str, role: &str, secret: &[u8]) -> Result<String, Ap
         exp: now + 86_400,
         sub: username.to_string(),
         role: normalized_role.to_string(),
-        user_type: if normalized_role == "superadmin" {
-            "admin".to_string()
-        } else {
-            "client".to_string()
-        },
+        user_type: user_type.to_string(),
     };
 
     encode(
@@ -993,6 +993,8 @@ async fn auth_login(
         .unwrap_or_else(|_| "admin".to_string());
     let role = if cttype == "admin" || cttype == "superadmin" || username == "admin" {
         "superadmin"
+    } else if cttype == "reseller" {
+        "reseller"
     } else {
         "client"
     };
@@ -1041,11 +1043,23 @@ async fn auth_impersonate(
     claims: Claims,
     Json(payload): Json<ImpersonatePayload>,
 ) -> ApiResult<Value> {
-    if !claims.is_superadmin() {
-        return Err(ApiError::Forbidden("Only administrators can impersonate clients".to_string()));
+    if !claims.is_superadmin() && !claims.is_reseller() {
+        return Err(ApiError::Forbidden("Only administrators and resellers can impersonate clients".to_string()));
     }
 
     let target_user = payload.username.trim();
+
+    if claims.is_reseller() {
+        let owner_check = sqlx::query("SELECT nname FROM client WHERE nname = ? AND parent_clname = ? LIMIT 1")
+            .bind(target_user)
+            .bind(&claims.sub)
+            .fetch_optional(&state.db)
+            .await?;
+        if owner_check.is_none() {
+            return Err(ApiError::Forbidden("You can only login as your own customer accounts".to_string()));
+        }
+    }
+
     let row = sqlx::query("SELECT nname, cttype FROM client WHERE nname = ? LIMIT 1")
         .bind(target_user)
         .fetch_optional(&state.db)
@@ -2773,16 +2787,25 @@ async fn ftp_users_delete(
 
 /// `GET /api/v1/clients`
 async fn clients_list(State(state): State<AppState>, claims: Claims) -> ApiResult<Value> {
-    if !claims.is_superadmin() {
+    if !claims.is_superadmin() && !claims.is_reseller() {
         return Err(ApiError::Forbidden(
-            "Superadmin privileges required to view clients".to_string(),
+            "Privileges required to view clients".to_string(),
         ));
     }
-    let rows = sqlx::query(
-        "SELECT nname, cttype, contactemail, status, used_q_domain_num, priv_q_domain_num, used_q_clientdisk_usage, resourceplan_used FROM client ORDER BY nname ASC",
-    )
-    .fetch_all(&state.db)
-    .await?;
+    let rows = if claims.is_superadmin() {
+        sqlx::query(
+            "SELECT nname, cttype, contactemail, status, used_q_domain_num, priv_q_domain_num, used_q_clientdisk_usage, resourceplan_used FROM client ORDER BY nname ASC",
+        )
+        .fetch_all(&state.db)
+        .await?
+    } else {
+        sqlx::query(
+            "SELECT nname, cttype, contactemail, status, used_q_domain_num, priv_q_domain_num, used_q_clientdisk_usage, resourceplan_used FROM client WHERE parent_clname = ? ORDER BY nname ASC",
+        )
+        .bind(&claims.sub)
+        .fetch_all(&state.db)
+        .await?
+    };
 
     let clients: Vec<Value> = rows
         .into_iter()
@@ -2838,12 +2861,18 @@ async fn clients_create(
     claims: Claims,
     Json(payload): Json<CreateClientPayload>,
 ) -> ApiResult<Value> {
-    if !claims.is_superadmin() {
-        return Err(ApiError::Forbidden("Only superadmin can create clients".to_string()));
+    if !claims.is_superadmin() && !claims.is_reseller() {
+        return Err(ApiError::Forbidden("Only superadmin or reseller can create clients".to_string()));
     }
     sys::validate_ident(&payload.username, "client username")?;
     let email = payload.email.unwrap_or_else(|| format!("{}@example.com", payload.username));
-    let cttype = payload.client_type.unwrap_or_else(|| "customer".to_string());
+    
+    // Resellers can only create "customer" accounts
+    let cttype = if claims.is_reseller() {
+        "customer".to_string()
+    } else {
+        payload.client_type.unwrap_or_else(|| "customer".to_string())
+    };
     let pass_hash = bcrypt::hash(&payload.password, bcrypt::DEFAULT_COST)
         .map_err(|e| ApiError::Internal(e.to_string()))?;
 
@@ -3027,18 +3056,30 @@ async fn clients_delete(
     Query(q): Query<DeleteClientPayload>,
     body: Option<Json<DeleteClientPayload>>,
 ) -> ApiResult<Value> {
-    if !claims.is_superadmin() {
-        return Err(ApiError::Forbidden("Only superadmin can delete clients".to_string()));
+    if !claims.is_superadmin() && !claims.is_reseller() {
+        return Err(ApiError::Forbidden("Only superadmin or reseller can delete clients".to_string()));
     }
     let username = q
         .username
         .or_else(|| body.and_then(|b| b.0.username))
         .ok_or_else(|| ApiError::BadRequest("Username is required".to_string()))?;
 
-    if username == "admin" {
+    if username == "admin" || username == claims.sub {
         return Err(ApiError::BadRequest(
-            "Cannot delete primary admin account".to_string(),
+            "Cannot delete primary admin or own account".to_string(),
         ));
+    }
+
+    if claims.is_reseller() {
+        let is_owner = sqlx::query("SELECT nname FROM client WHERE nname = ? AND parent_clname = ?")
+            .bind(&username)
+            .bind(&claims.sub)
+            .fetch_optional(&state.db)
+            .await?
+            .is_some();
+        if !is_owner {
+            return Err(ApiError::Forbidden("You do not have permission to delete this client".to_string()));
+        }
     }
 
     sqlx::query("DELETE FROM client WHERE nname = ?")

@@ -42,7 +42,7 @@ export default function Shell({ children }: ShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState<{ username?: string; sub?: string; role?: string; type?: string } | null>(null);
+  const [user, setUser] = useState<{ username?: string; sub?: string; role?: string; type?: string; user_type?: string } | null>(null);
   const [impersonatingAdmin, setImpersonatingAdmin] = useState<string | null>(null);
 
   useEffect(() => {
@@ -106,12 +106,15 @@ export default function Shell({ children }: ShellProps) {
     user?.role === 'admin' ||
     user?.sub === 'admin' ||
     user?.username === 'admin';
-  const isReseller = user?.role === 'reseller' || user?.type === 'reseller';
+  const isReseller =
+    user?.role === 'reseller' ||
+    user?.type === 'reseller' ||
+    user?.user_type === 'reseller';
 
   useEffect(() => {
     if (!user) return;
     const adminOnlyRoutes = [
-      '/clients',
+      ...(isReseller ? [] : ['/clients']),
       '/custombuild',
       '/services',
       '/security',
@@ -119,10 +122,12 @@ export default function Shell({ children }: ShellProps) {
       '/php-advanced',
       '/logs',
     ];
-    if (!isSuperadmin && adminOnlyRoutes.some((route) => pathname.startsWith(route))) {
+    if (!isSuperadmin && !isReseller && adminOnlyRoutes.some((route) => pathname.startsWith(route))) {
+      router.push('/');
+    } else if (!isSuperadmin && isReseller && adminOnlyRoutes.filter((r) => r !== '/clients').some((route) => pathname.startsWith(route))) {
       router.push('/');
     }
-  }, [pathname, user, isSuperadmin, router]);
+  }, [pathname, user, isSuperadmin, isReseller, router]);
 
   const navGroups = [
     {
@@ -168,10 +173,10 @@ export default function Shell({ children }: ShellProps) {
     ...(isSuperadmin || isReseller
       ? [
           {
-            title: isSuperadmin ? 'System & Server' : 'Reseller Tools',
+            title: isSuperadmin ? 'System & Server' : 'Reseller Management',
             items: [
               ...(isSuperadmin ? [{ name: 'CustomBuild', href: '/custombuild', icon: Wrench, badge: 'DirectAdmin' }] : []),
-              { name: 'Clients', href: '/clients', icon: Users },
+              { name: isSuperadmin ? 'Clients & Resellers' : 'My Customers & Plans', href: '/clients', icon: Users },
               ...(isSuperadmin
                 ? [
                     { name: 'PHP Directives', href: '/php-config', icon: Sliders },
@@ -325,7 +330,7 @@ export default function Shell({ children }: ShellProps) {
                 <UserCheck className="h-3.5 w-3.5" />
               </span>
               <span>
-                You are currently viewing this panel as <strong className="text-white font-mono bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30">{user?.sub || user?.username}</strong> (Client View, Impersonated by {impersonatingAdmin})
+                You are currently viewing this panel as <strong className="text-white font-mono bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30">{user?.sub || user?.username}</strong> ({isReseller ? 'Reseller View' : 'Client View'}, Impersonated by {impersonatingAdmin})
               </span>
             </div>
             <button

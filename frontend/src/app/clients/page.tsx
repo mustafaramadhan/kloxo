@@ -26,6 +26,24 @@ import {
 
 export default function ClientsPage() {
   const [activeTab, setActiveTab] = useState<'clients' | 'plans'>('clients');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const token = getStoredToken();
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setCurrentUser(payload);
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, []);
+
+  const isReseller =
+    currentUser?.role === 'reseller' ||
+    currentUser?.type === 'reseller' ||
+    currentUser?.user_type === 'reseller';
 
   // Clients state
   const [clients, setClients] = useState<ClientItem[]>([]);
@@ -279,10 +297,12 @@ export default function ClientsPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
               <Users className="h-6 w-6 text-sky-400" />
-              Clients, Resellers & Packages
+              {isReseller ? 'My Customers & Hosting Packages' : 'Clients, Resellers & Packages'}
             </h1>
             <p className="text-sm text-slate-400">
-              Manage panel user accounts, hosting packages, and reseller quota allocations
+              {isReseller
+                ? 'Manage your customer accounts, assign hosting plans, and allocate quotas'
+                : 'Manage panel user accounts, hosting packages, and reseller quota allocations'}
             </p>
           </div>
 
@@ -300,15 +320,21 @@ export default function ClientsPage() {
             </button>
             {activeTab === 'clients' ? (
               <button
-                onClick={() => setShowAddClientModal(true)}
+                onClick={() => {
+                  setClientType('customer');
+                  setShowAddClientModal(true);
+                }}
                 className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-sky-500/20 hover:from-sky-400 hover:to-indigo-500 transition-all"
               >
                 <Plus className="h-4 w-4" />
-                Add User / Reseller
+                {isReseller ? 'Add Customer Account' : 'Add User / Reseller'}
               </button>
             ) : (
               <button
-                onClick={() => setShowAddPlanModal(true)}
+                onClick={() => {
+                  setNewPlanType('customer');
+                  setShowAddPlanModal(true);
+                }}
                 className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 hover:from-indigo-400 hover:to-purple-500 transition-all"
               >
                 <Plus className="h-4 w-4" />
@@ -351,7 +377,7 @@ export default function ClientsPage() {
             }`}
           >
             <Users className="h-4 w-4" />
-            Users & Accounts ({clients.length})
+            {isReseller ? 'My Customers' : 'Users & Accounts'} ({clients.length})
           </button>
           <button
             onClick={() => setActiveTab('plans')}
@@ -362,7 +388,7 @@ export default function ClientsPage() {
             }`}
           >
             <Package className="h-4 w-4" />
-            Hosting & Reseller Packages ({plans.length})
+            {isReseller ? 'Hosting Packages' : 'Hosting & Reseller Packages'} ({plans.length})
           </button>
         </div>
 
@@ -656,7 +682,7 @@ export default function ClientsPage() {
             <div className="flex items-center justify-between pb-4 border-b border-white/5">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <Users className="h-5 w-5 text-sky-400" />
-                Add New Client / Reseller
+                {isReseller ? 'Add New Customer Account' : 'Add New Client / Reseller'}
               </h2>
               <button
                 onClick={() => setShowAddClientModal(false)}
@@ -715,11 +741,12 @@ export default function ClientsPage() {
                   </label>
                   <select
                     value={clientType}
+                    disabled={isReseller}
                     onChange={(e) => setClientType(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-60"
                   >
                     <option value="customer">Customer (Web Hosting)</option>
-                    <option value="reseller">Reseller (Reseller Hub)</option>
+                    {!isReseller && <option value="reseller">Reseller (Reseller Hub)</option>}
                   </select>
                 </div>
 
@@ -732,7 +759,9 @@ export default function ClientsPage() {
                     onChange={(e) => setSelectedPlan(e.target.value)}
                     className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                   >
-                    {plans.map((p) => (
+                    {plans
+                      .filter((p) => !isReseller || (p.plan_type || 'customer') === 'customer')
+                      .map((p) => (
                       <option key={p.name} value={p.name}>
                         {p.name} ({p.disk_mb >= 1024 ? `${(p.disk_mb / 1024).toFixed(0)}GB` : `${p.disk_mb}MB`})
                       </option>
@@ -801,11 +830,12 @@ export default function ClientsPage() {
                   </label>
                   <select
                     value={newPlanType}
+                    disabled={isReseller}
                     onChange={(e) => setNewPlanType(e.target.value as 'customer' | 'reseller')}
-                    className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-60"
                   >
                     <option value="customer">Web Hosting (Customer)</option>
-                    <option value="reseller">Reseller Hosting (Sub-accounts)</option>
+                    {!isReseller && <option value="reseller">Reseller Hosting (Sub-accounts)</option>}
                   </select>
                 </div>
               </div>
